@@ -1,0 +1,72 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CLIENT
+}
+
+enum AssetType {
+  LOGO
+  FILE
+}
+
+enum FontUsage {
+  HEADING
+  BODY
+  ACCENT
+  OTHER
+}
+
+model User {
+  id              String       @id @default(cuid())
+  email           String       @unique
+  password        String?
+  name            String
+  role            Role         @default(CLIENT)
+  companyName     String?
+  gscProperty     String?
+  gscAccessToken  String?
+  gscRefreshToken String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  brandAssets     BrandAsset[]
+  brandColors     BrandColor[]
+  brandFonts      BrandFont[]
+}
+
+model BrandAsset {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         AssetType
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  createdAt    DateTime  @default(now())
+}
+
+model BrandColor {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  hex       String
+  createdAt DateTime @default(now())
+}
+
+model BrandFont {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  usage     FontUsage @default(OTHER)
+  createdAt DateTime  @default(now())
+}
