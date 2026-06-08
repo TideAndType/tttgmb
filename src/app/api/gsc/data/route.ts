@@ -48,18 +48,17 @@ export async function GET(req: NextRequest) {
     const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
     if (type === "keywords") {
-      const response = await searchconsole.searchanalytics.query({
+      const response = await (searchconsole.searchanalytics.query({
         siteUrl: user.gscProperty,
         requestBody: {
           startDate: formatDate(startDate),
           endDate: formatDate(endDate),
           dimensions: ["query"],
           rowLimit: 100,
-          orderBy: [{ field: "clicks", sortOrder: "DESCENDING" }],
         },
-      });
+      }) as any);
 
-      const keywords = (response.data.rows || []).map((row: any) => ({
+      const keywords = ((response.data?.rows || response.rows) || []).map((row: any) => ({
         query: row.keys[0],
         clicks: row.clicks,
         impressions: row.impressions,
@@ -71,7 +70,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Default: date-based chart data
-    const response = await searchconsole.searchanalytics.query({
+    const response = await (searchconsole.searchanalytics.query({
       siteUrl: user.gscProperty,
       requestBody: {
         startDate: formatDate(startDate),
@@ -79,9 +78,9 @@ export async function GET(req: NextRequest) {
         dimensions: ["date"],
         rowLimit: 90,
       },
-    });
+    }) as any);
 
-    const rows = (response.data.rows || []).map((row: any) => ({
+    const rows = ((response.data?.rows || response.rows) || []).map((row: any) => ({
       date: row.keys[0],
       clicks: row.clicks,
       impressions: row.impressions,
