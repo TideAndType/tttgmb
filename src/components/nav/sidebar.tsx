@@ -17,6 +17,7 @@ import {
   Clock,
   CheckCircle,
   FileText,
+  Receipt,
 } from "lucide-react";
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/approvals", label: "Approvals", icon: CheckCircle },
   { href: "/time", label: "Time Tracking", icon: Clock },
+  { href: "/invoices", label: "Invoices", icon: Receipt },
 ];
 
 export function Sidebar() {

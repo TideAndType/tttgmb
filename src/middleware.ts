@@ -22,7 +22,8 @@ export default withAuth(
         pathname.startsWith("/projects") ||
         pathname.startsWith("/time") ||
         pathname.startsWith("/approvals") ||
-        pathname.startsWith("/proposals")) &&
+        pathname.startsWith("/proposals") ||
+        pathname.startsWith("/invoices")) &&
       token?.role !== "CLIENT"
     ) {
       return NextResponse.redirect(new URL("/admin", req.url));
@@ -38,5 +39,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/tasks/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*"],
+  matcher: ["/admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/tasks/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*"],
 };

@@ -81,6 +81,7 @@ model User {
   deliverables    Deliverable[]
   timeEntries     TimeEntry[]
   proposals       Proposal[]
+  invoices        Invoice[]
 }
 
 model Proposal {
@@ -243,6 +244,25 @@ model AppSettings {
   primaryColor String   @default("#2dd4bf")
   accentColor  String   @default("#6366f1")
   updatedAt    DateTime @updatedAt
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoilessId   String    @unique
+  invoilessUrl  String?
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  number        String?
+  status        String    @default("Draft")
+  currency      String    @default("USD")
+  totalAmount   Float?
+  dueDate       DateTime?
+  invoiceDate   DateTime?
+  notes         String?
+  sentAt        DateTime?
+  lastSyncedAt  DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model TimeEntry {
