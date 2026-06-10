@@ -5,3 +5,4 @@ package-lock.json
 .env.local
 uploads/
 .next/
+next-env.d.ts
