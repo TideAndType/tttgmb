@@ -12,8 +12,9 @@ import {
   Key,
   BookOpen,
   BarChart2,
-  Briefcase,
   FileText,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -76,6 +77,47 @@ export default async function DashboardPage() {
 
   const projectIds = projects.map((p) => p.id);
   const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
+
+  // ── Onboarding checklist ──────────────────────────────────────────
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      companyName: true,
+      gscProperty: true,
+      _count: { select: { brandAssets: true, brandColors: true, brandFonts: true } },
+    },
+  });
+  const hasLogo = (user?._count.brandAssets ?? 0) > 0;
+
+  const onboardingSteps = [
+    {
+      label: "Add your company name",
+      done: !!user?.companyName,
+      href: "/profile",
+    },
+    {
+      label: "Connect Google Search Console",
+      done: !!user?.gscProperty,
+      href: "/seo",
+    },
+    {
+      label: "Upload your logo",
+      done: hasLogo,
+      href: "/brand-book",
+    },
+    {
+      label: "Add brand colors",
+      done: (user?._count.brandColors ?? 0) > 0,
+      href: "/brand-book",
+    },
+    {
+      label: "Add brand fonts",
+      done: (user?._count.brandFonts ?? 0) > 0,
+      href: "/brand-book",
+    },
+  ];
+  const onboardingComplete = onboardingSteps.every((s) => s.done);
+  const onboardingProgress = onboardingSteps.filter((s) => s.done).length;
 
   const [recentMessages, pendingApprovals, latestInvoice] = await Promise.all([
     prisma.message.findMany({
@@ -146,6 +188,52 @@ export default async function DashboardPage() {
         <h1 className="text-3xl font-bold text-foreground">Welcome back, {firstName}</h1>
         <p className="text-muted-foreground mt-1">{companyName}</p>
       </div>
+
+      {/* Onboarding checklist — hidden once all steps complete */}
+      {!onboardingComplete && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold">Get started</CardTitle>
+              <span className="text-sm text-muted-foreground">
+                {onboardingProgress} / {onboardingSteps.length} complete
+              </span>
+            </div>
+            <div className="w-full bg-border rounded-full h-1.5 mt-2">
+              <div
+                className="bg-primary h-1.5 rounded-full transition-all"
+                style={{ width: `${(onboardingProgress / onboardingSteps.length) * 100}%` }}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {onboardingSteps.map((step) => (
+                <li key={step.label}>
+                  <Link
+                    href={step.done ? "#" : step.href}
+                    className={`flex items-center gap-3 text-sm rounded-md px-2 py-1.5 -mx-2 transition-colors ${
+                      step.done
+                        ? "text-muted-foreground cursor-default"
+                        : "text-foreground hover:bg-primary/10"
+                    }`}
+                  >
+                    {step.done ? (
+                      <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
+                    ) : (
+                      <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <span className={step.done ? "line-through" : ""}>{step.label}</span>
+                    {!step.done && (
+                      <span className="ml-auto text-xs text-primary">→</span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Row 1 — Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
