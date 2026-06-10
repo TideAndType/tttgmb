@@ -17,10 +17,13 @@ export async function GET() {
   const userId = (session.user as any).id;
   const files = await prisma.brandAsset.findMany({
     where: { userId },
+    include: { _count: { select: { comments: true } } },
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ files });
+  return NextResponse.json({
+    files: files.map((f) => ({ ...f, commentCount: f._count.comments })),
+  });
 }
 
 export async function POST(req: NextRequest) {

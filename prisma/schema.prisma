@@ -131,29 +131,51 @@ model ApprovalComment {
 }
 
 model Task {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  status      TaskStatus   @default(PENDING)
-  priority    TaskPriority @default(MEDIUM)
+  status      TaskStatus    @default(PENDING)
+  priority    TaskPriority  @default(MEDIUM)
   dueDate     DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   timeEntries TimeEntry[]
+  comments    TaskComment[]
+}
+
+model TaskComment {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorName String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
 }
 
 model BrandAsset {
-  id           String    @id @default(cuid())
+  id           String        @id @default(cuid())
   userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   type         AssetType
   filename     String
   originalName String
   mimeType     String
   size         Int
-  createdAt    DateTime  @default(now())
+  createdAt    DateTime      @default(now())
+  comments     FileComment[]
+}
+
+model FileComment {
+  id         String     @id @default(cuid())
+  assetId    String
+  asset      BrandAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorName String
+  body       String     @db.Text
+  createdAt  DateTime   @default(now())
 }
 
 model BrandColor {

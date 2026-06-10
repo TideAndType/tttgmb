@@ -14,6 +14,7 @@ interface Task {
   dueDate?: string | null;
   createdAt: string;
   updatedAt: string;
+  commentCount?: number;
 }
 
 export default function TasksPage() {

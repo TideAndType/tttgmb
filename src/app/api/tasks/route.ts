@@ -14,19 +14,27 @@ export async function GET() {
 
   if (user.role === "ADMIN") {
     const tasks = await prisma.task.findMany({
-      include: { user: { select: { id: true, name: true, companyName: true } } },
+      include: {
+        user: { select: { id: true, name: true, companyName: true } },
+        _count: { select: { comments: true } },
+      },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
-    return NextResponse.json({ tasks });
+    return NextResponse.json({
+      tasks: tasks.map((t) => ({ ...t, commentCount: t._count.comments })),
+    });
   }
 
   // CLIENT: only their own tasks
   const tasks = await prisma.task.findMany({
     where: { userId: user.id },
+    include: { _count: { select: { comments: true } } },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });
 
-  return NextResponse.json({ tasks });
+  return NextResponse.json({
+    tasks: tasks.map((t) => ({ ...t, commentCount: t._count.comments })),
+  });
 }
 
 export async function POST(req: NextRequest) {

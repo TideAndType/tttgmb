@@ -11,11 +11,29 @@ import { Alert } from "@/components/ui/alert";
 import { FileUpload } from "@/components/brand/file-upload";
 import { ColorSwatch } from "@/components/brand/color-swatch";
 import { FontRow } from "@/components/brand/font-row";
-import { Download, File, Trash2, Plus } from "lucide-react";
+import { Download, File, Trash2, Plus, MessageSquare } from "lucide-react";
 
 interface BrandColor { id: string; name: string; hex: string; }
 interface BrandFont { id: string; name: string; usage: string; }
-interface BrandAsset { id: string; filename: string; originalName: string; type: string; mimeType: string; size: number; }
+interface BrandAsset { id: string; filename: string; originalName: string; type: string; mimeType: string; size: number; commentCount?: number; }
+
+interface FileComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+}
+
+interface FileCommentsState {
+  open: boolean;
+  fetched: boolean;
+  loading: boolean;
+  comments: FileComment[];
+  newComment: string;
+  postLoading: boolean;
+  commentCount: number;
+}
 
 export default function BrandBookPage() {
   const [logo, setLogo] = useState<BrandAsset | null>(null);
@@ -33,6 +51,9 @@ export default function BrandBookPage() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  // Per-file comment state keyed by asset id
+  const [fileComments, setFileComments] = useState<Record<string, FileCommentsState>>({});
 
   const fetchAll = async () => {
     const [colorsRes, fontsRes, filesRes] = await Promise.all([
@@ -130,6 +151,80 @@ export default function BrandBookPage() {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / 1048576).toFixed(1) + " MB";
+  };
+
+  const getFileCommentState = (file: BrandAsset): FileCommentsState => {
+    return fileComments[file.id] ?? {
+      open: false,
+      fetched: false,
+      loading: false,
+      comments: [],
+      newComment: "",
+      postLoading: false,
+      commentCount: file.commentCount ?? 0,
+    };
+  };
+
+  const updateFileCommentState = (id: string, patch: Partial<FileCommentsState>) => {
+    setFileComments((prev) => ({
+      ...prev,
+      [id]: { ...getFileCommentState({ id } as BrandAsset), ...prev[id], ...patch },
+    }));
+  };
+
+  const handleToggleFileComments = async (file: BrandAsset) => {
+    const state = getFileCommentState(file);
+    if (!state.open && !state.fetched) {
+      updateFileCommentState(file.id, { loading: true });
+      try {
+        const res = await fetch(`/api/brand/files/${file.id}/comments`);
+        if (res.ok) {
+          const data = await res.json();
+          updateFileCommentState(file.id, {
+            loading: false,
+            fetched: true,
+            comments: data.comments || [],
+            commentCount: data.comments?.length ?? state.commentCount,
+            open: true,
+          });
+          return;
+        }
+      } catch {
+        // silently fail
+      }
+      updateFileCommentState(file.id, { loading: false, open: true });
+      return;
+    }
+    updateFileCommentState(file.id, { open: !state.open });
+  };
+
+  const handlePostFileComment = async (file: BrandAsset) => {
+    const state = getFileCommentState(file);
+    if (!state.newComment.trim()) return;
+    updateFileCommentState(file.id, { postLoading: true });
+    try {
+      const res = await fetch(`/api/brand/files/${file.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body: state.newComment }),
+      });
+      if (res.ok) {
+        const listRes = await fetch(`/api/brand/files/${file.id}/comments`);
+        if (listRes.ok) {
+          const data = await listRes.json();
+          updateFileCommentState(file.id, {
+            comments: data.comments || [],
+            commentCount: data.comments?.length ?? state.commentCount,
+            newComment: "",
+            postLoading: false,
+          });
+          return;
+        }
+      }
+    } catch {
+      // silently fail
+    }
+    updateFileCommentState(file.id, { postLoading: false });
   };
 
   return (
@@ -346,38 +441,103 @@ export default function BrandBookPage() {
                 {files.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No files uploaded yet.</p>
                 ) : (
-                  <div className="space-y-2">
-                    {files.map((file) => (
-                      <div
-                        key={file.id}
-                        className="flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-primary/10 rounded">
-                            <File className="h-4 w-4 text-primary" />
+                  <div className="space-y-3">
+                    {files.map((file) => {
+                      const cs = getFileCommentState(file);
+                      return (
+                        <div
+                          key={file.id}
+                          className="rounded-md border border-border"
+                        >
+                          <div className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-primary/10 rounded">
+                                <File className="h-4 w-4 text-primary" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{file.originalName}</p>
+                                <p className="text-xs text-muted-foreground">{formatBytes(file.size)} &middot; {file.mimeType}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleToggleFileComments(file)}
+                                className="text-xs h-7 gap-1 text-muted-foreground"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5" />
+                                Comments ({cs.commentCount})
+                              </Button>
+                              <a href={`/api/uploads/${file.filename}`} download={file.originalName}>
+                                <Button size="sm" variant="outline">
+                                  <Download className="h-3 w-3 mr-1" />
+                                  Download
+                                </Button>
+                              </a>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteFile(file.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{file.originalName}</p>
-                            <p className="text-xs text-muted-foreground">{formatBytes(file.size)} &middot; {file.mimeType}</p>
-                          </div>
+
+                          {cs.open && (
+                            <div className="border-t border-border px-4 py-4 space-y-4">
+                              {cs.loading ? (
+                                <p className="text-sm text-muted-foreground">Loading comments...</p>
+                              ) : cs.comments.length === 0 ? (
+                                <p className="text-sm text-muted-foreground text-center py-2">No comments yet.</p>
+                              ) : (
+                                <div className="space-y-3">
+                                  {cs.comments.map((c) => (
+                                    <div key={c.id} className="flex gap-3">
+                                      <MessageSquare className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="font-medium text-sm text-foreground">{c.authorName}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {new Date(c.createdAt).toLocaleDateString("en-US", {
+                                              month: "short",
+                                              day: "numeric",
+                                              hour: "numeric",
+                                              minute: "2-digit",
+                                            })}
+                                          </span>
+                                        </div>
+                                        <p className="text-sm text-foreground/80">{c.body}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="space-y-2">
+                                <textarea
+                                  value={cs.newComment}
+                                  onChange={(e) =>
+                                    updateFileCommentState(file.id, { newComment: e.target.value })
+                                  }
+                                  placeholder="Add a comment..."
+                                  rows={3}
+                                  className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground resize-none"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handlePostFileComment(file)}
+                                  disabled={cs.postLoading || !cs.newComment.trim()}
+                                >
+                                  {cs.postLoading ? "Posting..." : "Post"}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <a href={`/api/uploads/${file.filename}`} download={file.originalName}>
-                            <Button size="sm" variant="outline">
-                              <Download className="h-3 w-3 mr-1" />
-                              Download
-                            </Button>
-                          </a>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteFile(file.id)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>
