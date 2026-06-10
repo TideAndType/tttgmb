@@ -1,4 +1,4 @@
-name: Deploy to DigitalOcean
+name: Deploy to Cloudways
 
 on:
   push:
@@ -12,13 +12,16 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DO_HOST }}
-          username: root
-          key: ${{ secrets.DO_SSH_KEY }}
+          host: ${{ secrets.CLOUDWAYS_HOST }}
+          username: ${{ secrets.CLOUDWAYS_SSH_USER }}
+          key: ${{ secrets.CLOUDWAYS_SSH_KEY }}
+          port: ${{ secrets.CLOUDWAYS_SSH_PORT || 22 }}
           script: |
-            cd /opt/portal
+            cd /home/master/applications/${{ secrets.CLOUDWAYS_APP_NAME }}/public_html
             git pull origin main
-            docker compose up -d --build
-            docker compose exec -T app npx prisma db push --skip-generate
-            docker compose exec -T nginx nginx -s reload
+            npm ci --production=false
+            npx prisma generate
+            npx prisma db push --skip-generate
+            npm run build
+            pm2 reload tttgmb-portal || pm2 start ecosystem.config.js && pm2 save
             echo "Deployed at $(date)"

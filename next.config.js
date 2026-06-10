@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
-  experimental: {},
+experimental: {},
   images: {
     domains: ["lh3.googleusercontent.com"],
   },
