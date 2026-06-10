@@ -37,7 +37,7 @@ export async function PATCH(req: NextRequest) {
   const settings = await prisma.appSettings.upsert({
     where: { id: "singleton" },
     update: data,
-    create: { id: "singleton", ...DEFAULTS, ...data },
+    create: { ...DEFAULTS, ...data, id: "singleton" },
   });
 
   return NextResponse.json(settings);
