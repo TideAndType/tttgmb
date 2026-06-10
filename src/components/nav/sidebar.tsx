@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
+import { useBrand } from "@/components/providers/brand-provider";
 import {
   LayoutDashboard,
   Search,
@@ -35,10 +36,20 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const user = session?.user as any;
+  const { logoUrl } = useBrand();
 
   return (
     <aside className="w-64 bg-card border-r border-border flex flex-col min-h-screen">
       <div className="p-6 border-b border-border">
+        {logoUrl && (
+          <div className="mb-3">
+            <img
+              src={logoUrl}
+              alt="Company logo"
+              style={{ maxHeight: "48px", width: "auto", objectFit: "contain" }}
+            />
+          </div>
+        )}
         <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Client Portal</p>
         <h2 className="font-semibold text-foreground truncate">{user?.companyName || "My Company"}</h2>
         <p className="text-sm text-muted-foreground truncate mt-0.5">{user?.name}</p>

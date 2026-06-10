@@ -236,6 +236,15 @@ model Card {
   updatedAt   DateTime   @updatedAt
 }
 
+model AppSettings {
+  id           String   @id @default("singleton")
+  appName      String   @default("Client Portal")
+  logoFilename String?
+  primaryColor String   @default("#2dd4bf")
+  accentColor  String   @default("#6366f1")
+  updatedAt    DateTime @updatedAt
+}
+
 model TimeEntry {
   id          String   @id @default(cuid())
   userId      String
