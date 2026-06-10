@@ -17,6 +17,10 @@ import {
   Timer,
   UserPlus,
   Activity,
+  MapPin,
+  Globe,
+  Phone,
+  Navigation,
 } from "lucide-react";
 
 interface GaMetrics {
@@ -55,6 +59,13 @@ interface GaProperty {
   displayName: string;
 }
 
+interface GmbMetrics {
+  totalImpressions: number;
+  websiteClicks: number;
+  callClicks: number;
+  directionRequests: number;
+}
+
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -64,6 +75,8 @@ function formatDuration(seconds: number): string {
 export default function ReportsPage() {
   const [gaConnected, setGaConnected] = useState(false);
   const [gscConnected, setGscConnected] = useState(false);
+  const [gmbConnected, setGmbConnected] = useState(false);
+  const [gmbMetrics, setGmbMetrics] = useState<GmbMetrics | null>(null);
   const [gaPropertySet, setGaPropertySet] = useState(false);
   const [gaMetrics, setGaMetrics] = useState<GaMetrics | null>(null);
   const [gaTimeSeries, setGaTimeSeries] = useState<GaTimeSeries[]>([]);
@@ -85,7 +98,7 @@ export default function ReportsPage() {
 
   const loadAll = async () => {
     setLoading(true);
-    await Promise.all([loadGaData(), loadGscData()]);
+    await Promise.all([loadGaData(), loadGscData(), loadGmbData()]);
     setLoading(false);
   };
 
@@ -124,6 +137,17 @@ export default function ReportsPage() {
     setGscRows(data.rows || []);
   };
 
+  const loadGmbData = async () => {
+    const res = await fetch("/api/gmb/data");
+    if (!res.ok) {
+      setGmbConnected(false);
+      return;
+    }
+    const data = await res.json();
+    setGmbConnected(true);
+    setGmbMetrics(data.metrics);
+  };
+
   const loadGaProperties = async () => {
     const res = await fetch("/api/ga/properties");
     if (res.ok) {
@@ -140,6 +164,12 @@ export default function ReportsPage() {
 
   const handleConnectGsc = async () => {
     const res = await fetch("/api/gsc/connect");
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+  };
+
+  const handleConnectGmb = async () => {
+    const res = await fetch("/api/gmb/connect");
     const data = await res.json();
     if (data.url) window.location.href = data.url;
   };
@@ -214,6 +244,15 @@ export default function ReportsPage() {
         {gscConnected && (
           <Badge variant="default">GSC Connected</Badge>
         )}
+        {!gmbConnected && (
+          <Button onClick={handleConnectGmb} variant="outline" className="gap-2">
+            <MapPin className="h-4 w-4" />
+            Connect Google My Business
+          </Button>
+        )}
+        {gmbConnected && (
+          <Badge variant="default">GMB Connected</Badge>
+        )}
       </div>
 
       {/* Property selector */}
@@ -271,6 +310,19 @@ export default function ReportsPage() {
         </>
       )}
 
+      {/* GMB stats */}
+      {gmbMetrics && (
+        <>
+          <h2 className="text-lg font-semibold mb-4 text-foreground">Google My Business</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <StatCard icon={Eye} label="Total Impressions" value={gmbMetrics.totalImpressions.toLocaleString()} />
+            <StatCard icon={Globe} label="Website Clicks" value={gmbMetrics.websiteClicks.toLocaleString()} />
+            <StatCard icon={Phone} label="Call Clicks" value={gmbMetrics.callClicks.toLocaleString()} />
+            <StatCard icon={Navigation} label="Direction Requests" value={gmbMetrics.directionRequests.toLocaleString()} />
+          </div>
+        </>
+      )}
+
       {/* Combined chart */}
       {chartData.length > 0 && (
         <Card>
@@ -285,7 +337,7 @@ export default function ReportsPage() {
       )}
 
       {/* Empty state when neither connected */}
-      {!gaConnected && !gscConnected && (
+      {!gaConnected && !gscConnected && !gmbConnected && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="p-4 bg-primary/10 rounded-full mb-4">
@@ -295,9 +347,10 @@ export default function ReportsPage() {
             <p className="text-muted-foreground max-w-md mb-6">
               Connect Google Analytics 4 and/or Google Search Console to see live performance stats.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 flex-wrap justify-center">
               <Button onClick={handleConnectGa}>Connect GA4</Button>
               <Button variant="outline" onClick={handleConnectGsc}>Connect Search Console</Button>
+              <Button variant="outline" onClick={handleConnectGmb}>Connect My Business</Button>
             </div>
           </CardContent>
         </Card>

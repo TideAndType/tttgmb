@@ -71,6 +71,10 @@ model User {
   gaAccessToken   String?
   gaRefreshToken  String?
   gaPropertyId    String?
+  gmbAccessToken  String?
+  gmbRefreshToken String?
+  gmbAccountId    String?
+  gmbLocationId   String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   brandAssets     BrandAsset[]
