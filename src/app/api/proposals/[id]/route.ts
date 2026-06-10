@@ -41,7 +41,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.proposal.update({
       where: { id: params.id },
       data: { status: "SENT", sentAt: new Date() },
+      include: { user: { select: { email: true, name: true } } },
     });
+    try {
+      const portalUrl = `${process.env.NEXTAUTH_URL || ""}/proposals`;
+      await sendProposalSentEmail(
+        updated.user.email,
+        updated.user.name,
+        updated.title,
+        portalUrl
+      );
+    } catch (err) {
+      console.error("Email notification failed:", err);
+    }
     return NextResponse.json(updated);
   }
 

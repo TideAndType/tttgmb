@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendProposalRespondedEmail } from "@/lib/email";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -28,6 +29,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: params.id },
       data: { status: "ACCEPTED", respondedAt: new Date(), acceptedBy: name },
     });
+    try {
+      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+      if (adminUser && clientUser) {
+        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/proposals`;
+        await sendProposalRespondedEmail(
+          adminUser.email,
+          adminUser.name,
+          clientUser.name,
+          proposal.title,
+          "accepted",
+          portalUrl
+        );
+      }
+    } catch (err) {
+      console.error("Email notification failed:", err);
+    }
     return NextResponse.json(updated);
   }
 
@@ -36,6 +54,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: params.id },
       data: { status: "DECLINED", respondedAt: new Date() },
     });
+    try {
+      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+      if (adminUser && clientUser) {
+        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/proposals`;
+        await sendProposalRespondedEmail(
+          adminUser.email,
+          adminUser.name,
+          clientUser.name,
+          proposal.title,
+          "declined",
+          portalUrl
+        );
+      }
+    } catch (err) {
+      console.error("Email notification failed:", err);
+    }
     return NextResponse.json(updated);
   }
 

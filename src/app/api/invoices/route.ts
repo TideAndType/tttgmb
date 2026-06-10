@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createInvoice } from "@/lib/invoiless";
+import { sendInvoiceEmail } from "@/lib/email";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -78,6 +79,22 @@ export async function POST(req: NextRequest) {
       lastSyncedAt: new Date(),
     },
   });
+
+  try {
+    const portalUrl = `${process.env.NEXTAUTH_URL || ""}/invoices`;
+    await sendInvoiceEmail(
+      clientUser.email,
+      clientUser.name,
+      invoice.number,
+      invoice.totalAmount,
+      invoice.currency,
+      invoice.dueDate,
+      invoice.invoilessUrl,
+      portalUrl
+    );
+  } catch (err) {
+    console.error("Email notification failed:", err);
+  }
 
   return NextResponse.json(invoice, { status: 201 });
 }

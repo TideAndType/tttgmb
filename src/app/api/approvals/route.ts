@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendApprovalNeededEmail } from "@/lib/email";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -91,6 +92,22 @@ export async function POST(req: NextRequest) {
         fileName,
       },
     });
+
+    try {
+      const clientUser = await prisma.user.findUnique({ where: { id: userId } });
+      if (clientUser) {
+        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/approvals`;
+        await sendApprovalNeededEmail(
+          clientUser.email,
+          clientUser.name,
+          title,
+          deliverable.type,
+          portalUrl
+        );
+      }
+    } catch (err) {
+      console.error("Email notification failed:", err);
+    }
 
     return NextResponse.json({ deliverable }, { status: 201 });
   } catch (error) {

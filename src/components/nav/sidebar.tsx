@@ -18,6 +18,7 @@ import {
   CheckCircle,
   FileText,
   Receipt,
+  User,
 } from "lucide-react";
 
 const navItems = [
@@ -79,7 +80,19 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
+      <div className="p-4 border-t border-border space-y-1">
+        <Link
+          href="/profile"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            pathname === "/profile" || pathname.startsWith("/profile/")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <User className="h-4 w-4 flex-shrink-0" />
+          Profile
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

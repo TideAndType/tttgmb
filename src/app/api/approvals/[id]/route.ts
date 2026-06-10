@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendApprovalRespondedEmail } from "@/lib/email";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -142,6 +143,24 @@ export async function PATCH(
       },
     });
 
+    try {
+      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+      if (adminUser && clientUser) {
+        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/approvals`;
+        await sendApprovalRespondedEmail(
+          adminUser.email,
+          adminUser.name,
+          clientUser.name,
+          deliverable.title,
+          "approved",
+          portalUrl
+        );
+      }
+    } catch (err) {
+      console.error("Email notification failed:", err);
+    }
+
     return NextResponse.json({ deliverable: updated });
   }
 
@@ -164,6 +183,24 @@ export async function PATCH(
         action: "changes_requested",
       },
     });
+
+    try {
+      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
+      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
+      if (adminUser && clientUser) {
+        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/approvals`;
+        await sendApprovalRespondedEmail(
+          adminUser.email,
+          adminUser.name,
+          clientUser.name,
+          deliverable.title,
+          "changes_requested",
+          portalUrl
+        );
+      }
+    } catch (err) {
+      console.error("Email notification failed:", err);
+    }
 
     return NextResponse.json({ deliverable: updated });
   }
