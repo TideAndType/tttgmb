@@ -36,6 +36,20 @@ enum TaskPriority {
   HIGH
 }
 
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum DeliverableType {
+  DESIGN
+  COPY
+  REPORT
+  CONTRACT
+  OTHER
+}
+
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
@@ -56,6 +70,34 @@ model User {
   brandFonts      BrandFont[]
   tasks           Task[]
   projects        Project[]
+  deliverables    Deliverable[]
+}
+
+model Deliverable {
+  id          String          @id @default(cuid())
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  type        DeliverableType @default(OTHER)
+  status      ApprovalStatus  @default(PENDING)
+  fileUrl     String?
+  fileName    String?
+  version     Int             @default(1)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  comments    ApprovalComment[]
+}
+
+model ApprovalComment {
+  id            String      @id @default(cuid())
+  deliverableId String
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  authorId      String
+  authorName    String
+  body          String      @db.Text
+  action        String?
+  createdAt     DateTime    @default(now())
 }
 
 model Task {
