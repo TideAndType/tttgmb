@@ -10,6 +10,8 @@ import {
   Key,
   BookOpen,
   LogOut,
+  BarChart2,
+  CheckSquare,
 } from "lucide-react";
 
 const navItems = [
@@ -17,6 +19,8 @@ const navItems = [
   { href: "/seo", label: "SEO Overview", icon: Search },
   { href: "/keywords", label: "Keywords", icon: Key },
   { href: "/brand-book", label: "Brand Book", icon: BookOpen },
+  { href: "/reports", label: "Reports", icon: BarChart2 },
+  { href: "/tasks", label: "Tasks", icon: CheckSquare },
 ];
 
 export function Sidebar() {
