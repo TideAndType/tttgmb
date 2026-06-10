@@ -71,6 +71,7 @@ model User {
   tasks           Task[]
   projects        Project[]
   deliverables    Deliverable[]
+  timeEntries     TimeEntry[]
 }
 
 model Deliverable {
@@ -111,6 +112,7 @@ model Task {
   dueDate     DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+  timeEntries TimeEntry[]
 }
 
 model BrandAsset {
@@ -155,6 +157,7 @@ model Project {
   messages    Message[]
   cards       Card[]
   columns     CardColumn[]
+  timeEntries TimeEntry[]
 }
 
 model Message {
@@ -203,4 +206,18 @@ model Card {
   dueDate     DateTime?
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  description String?
+  minutes     Int
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
 }

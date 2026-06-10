@@ -13,6 +13,8 @@ import {
   BarChart2,
   CheckSquare,
   FolderOpen,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
 
 const navItems = [
@@ -23,6 +25,8 @@ const navItems = [
   { href: "/brand-book", label: "Brand Book", icon: BookOpen },
   { href: "/reports", label: "Reports", icon: BarChart2 },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/approvals", label: "Approvals", icon: CheckCircle },
+  { href: "/time", label: "Time Tracking", icon: Clock },
 ];
 
 export function Sidebar() {
