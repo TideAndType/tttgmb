@@ -12,10 +12,12 @@ import {
   LogOut,
   BarChart2,
   CheckSquare,
+  FolderOpen,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/projects", label: "Projects", icon: FolderOpen },
   { href: "/seo", label: "SEO Overview", icon: Search },
   { href: "/keywords", label: "Keywords", icon: Key },
   { href: "/brand-book", label: "Brand Book", icon: BookOpen },
