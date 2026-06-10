@@ -1,0 +1,200 @@
+import nodemailer from "nodemailer";
+
+function createTransporter() {
+  if (!process.env.SMTP_HOST) return null;
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: parseInt(process.env.SMTP_PORT || "587") === 465,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+}
+
+const FROM = process.env.SMTP_FROM || "Client Portal <noreply@example.com>";
+const PORTAL_NAME = "Client Portal";
+
+function buildHtml(heading: string, body: string, ctaLabel: string, ctaUrl: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:40px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+        <tr>
+          <td style="background:#1e293b;padding:24px 32px;">
+            <span style="color:#ffffff;font-size:18px;font-weight:bold;">${PORTAL_NAME}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <h2 style="margin:0 0 16px;color:#0f172a;font-size:20px;">${heading}</h2>
+            <div style="color:#475569;font-size:15px;line-height:1.6;">${body}</div>
+            <div style="margin-top:28px;">
+              <a href="${ctaUrl}" style="display:inline-block;background:#2dd4bf;color:#0f172a;font-weight:bold;font-size:14px;padding:12px 24px;border-radius:6px;text-decoration:none;">${ctaLabel}</a>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
+            <p style="margin:0;color:#94a3b8;font-size:12px;">You're receiving this because you have an account on ${PORTAL_NAME}.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+async function sendMail(to: string, subject: string, html: string): Promise<void> {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.log(`[Email - no SMTP configured] To: ${to} | Subject: ${subject}`);
+    return;
+  }
+  await transporter.sendMail({ from: FROM, to, subject, html });
+}
+
+export async function sendProposalSentEmail(
+  to: string,
+  clientName: string,
+  proposalTitle: string,
+  portalUrl: string
+): Promise<void> {
+  try {
+    const html = buildHtml(
+      `You have a new proposal: ${proposalTitle}`,
+      `<p>Hi ${clientName},</p><p>A new proposal titled <strong>${proposalTitle}</strong> has been sent to you. Please review it at your earliest convenience.</p>`,
+      "View Proposal",
+      portalUrl
+    );
+    await sendMail(to, `New Proposal: ${proposalTitle}`, html);
+  } catch (err) {
+    console.error("[Email] sendProposalSentEmail failed:", err);
+  }
+}
+
+export async function sendTaskCreatedEmail(
+  to: string,
+  clientName: string,
+  taskTitle: string,
+  taskDescription: string | null,
+  dueDate: Date | null,
+  portalUrl: string
+): Promise<void> {
+  try {
+    const dueLine = dueDate
+      ? `<p><strong>Due:</strong> ${dueDate.toLocaleDateString("en-US", { dateStyle: "medium" })}</p>`
+      : "";
+    const descLine = taskDescription ? `<p>${taskDescription}</p>` : "";
+    const html = buildHtml(
+      `New task assigned: ${taskTitle}`,
+      `<p>Hi ${clientName},</p><p>A new task has been assigned to you: <strong>${taskTitle}</strong></p>${descLine}${dueLine}`,
+      "View Task",
+      portalUrl
+    );
+    await sendMail(to, `New Task: ${taskTitle}`, html);
+  } catch (err) {
+    console.error("[Email] sendTaskCreatedEmail failed:", err);
+  }
+}
+
+export async function sendApprovalNeededEmail(
+  to: string,
+  clientName: string,
+  deliverableTitle: string,
+  deliverableType: string,
+  portalUrl: string
+): Promise<void> {
+  try {
+    const html = buildHtml(
+      `Approval needed: ${deliverableTitle}`,
+      `<p>Hi ${clientName},</p><p>A new <strong>${deliverableType}</strong> deliverable is waiting for your review: <strong>${deliverableTitle}</strong>.</p><p>Please review and approve or request changes.</p>`,
+      "Review Now",
+      portalUrl
+    );
+    await sendMail(to, `Approval Needed: ${deliverableTitle}`, html);
+  } catch (err) {
+    console.error("[Email] sendApprovalNeededEmail failed:", err);
+  }
+}
+
+export async function sendInvoiceEmail(
+  to: string,
+  clientName: string,
+  invoiceNumber: string | null,
+  amount: number | null,
+  currency: string,
+  dueDate: Date | null,
+  invoilessUrl: string | null,
+  portalUrl: string
+): Promise<void> {
+  try {
+    const numLine = invoiceNumber ? `<p><strong>Invoice #:</strong> ${invoiceNumber}</p>` : "";
+    const amtLine =
+      amount !== null
+        ? `<p><strong>Amount:</strong> ${new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount)}</p>`
+        : "";
+    const dueLine = dueDate
+      ? `<p><strong>Due:</strong> ${dueDate.toLocaleDateString("en-US", { dateStyle: "medium" })}</p>`
+      : "";
+    const ctaUrl = invoilessUrl || portalUrl;
+    const html = buildHtml(
+      "You have a new invoice",
+      `<p>Hi ${clientName},</p><p>A new invoice has been issued for you.</p>${numLine}${amtLine}${dueLine}`,
+      "View Invoice",
+      ctaUrl
+    );
+    await sendMail(to, invoiceNumber ? `Invoice #${invoiceNumber}` : "New Invoice", html);
+  } catch (err) {
+    console.error("[Email] sendInvoiceEmail failed:", err);
+  }
+}
+
+export async function sendProposalRespondedEmail(
+  to: string,
+  adminName: string,
+  clientName: string,
+  proposalTitle: string,
+  action: "accepted" | "declined",
+  portalUrl: string
+): Promise<void> {
+  try {
+    const verb = action === "accepted" ? "accepted" : "declined";
+    const html = buildHtml(
+      `Proposal ${verb}: ${proposalTitle}`,
+      `<p>Hi ${adminName},</p><p><strong>${clientName}</strong> has <strong>${verb}</strong> the proposal: <em>${proposalTitle}</em>.</p>`,
+      "View Proposal",
+      portalUrl
+    );
+    await sendMail(to, `Proposal ${verb} by ${clientName}`, html);
+  } catch (err) {
+    console.error("[Email] sendProposalRespondedEmail failed:", err);
+  }
+}
+
+export async function sendApprovalRespondedEmail(
+  to: string,
+  adminName: string,
+  clientName: string,
+  deliverableTitle: string,
+  action: "approved" | "changes_requested",
+  portalUrl: string
+): Promise<void> {
+  try {
+    const label = action === "approved" ? "approved" : "requested changes on";
+    const html = buildHtml(
+      `Deliverable ${action === "approved" ? "approved" : "changes requested"}: ${deliverableTitle}`,
+      `<p>Hi ${adminName},</p><p><strong>${clientName}</strong> has <strong>${label}</strong> the deliverable: <em>${deliverableTitle}</em>.</p>`,
+      "View Deliverable",
+      portalUrl
+    );
+    await sendMail(to, `Deliverable ${action === "approved" ? "Approved" : "Changes Requested"}: ${deliverableTitle}`, html);
+  } catch (err) {
+    console.error("[Email] sendApprovalRespondedEmail failed:", err);
+  }
+}

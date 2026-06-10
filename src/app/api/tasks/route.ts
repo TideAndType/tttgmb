@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendTaskCreatedEmail } from "@/lib/email";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -55,6 +56,23 @@ export async function POST(req: NextRequest) {
       dueDate: dueDate ? new Date(dueDate) : null,
     },
   });
+
+  try {
+    const clientUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (clientUser) {
+      const portalUrl = `${process.env.NEXTAUTH_URL || ""}/tasks`;
+      await sendTaskCreatedEmail(
+        clientUser.email,
+        clientUser.name,
+        title,
+        description || null,
+        dueDate ? new Date(dueDate) : null,
+        portalUrl
+      );
+    }
+  } catch (err) {
+    console.error("Email notification failed:", err);
+  }
 
   return NextResponse.json({ task }, { status: 201 });
 }
