@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
-import { Users, Trash2, Plus, Globe } from "lucide-react";
+import { Users, Trash2, Plus, Globe, Eye } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -47,6 +47,15 @@ export default function AdminPage() {
     setDeleteId(null);
     setDeleteLoading(false);
     fetchClients();
+  };
+
+  const handleViewPortal = async (clientId: string) => {
+    await fetch("/api/admin/impersonate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId }),
+    });
+    window.location.href = "/tasks";
   };
 
   const handleGscSave = async () => {
@@ -143,6 +152,14 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewPortal(client.id)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          View
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"

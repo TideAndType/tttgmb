@@ -11,7 +11,7 @@ export default withAuth(
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    // Client routes - only for clients
+    // Client routes - only for clients (or admins who are impersonating)
     if (
       (pathname.startsWith("/dashboard") ||
         pathname.startsWith("/seo") ||
@@ -28,6 +28,10 @@ export default withAuth(
         pathname.startsWith("/profile")) &&
       token?.role !== "CLIENT"
     ) {
+      // Allow admins through if they have the impersonation cookie set
+      if (token?.role === "ADMIN" && req.cookies.get("adminViewingAs")?.value) {
+        return NextResponse.next();
+      }
       return NextResponse.redirect(new URL("/admin", req.url));
     }
 

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendTaskCreatedEmail } from "@/lib/email";
+import { cookies } from "next/headers";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,6 +14,21 @@ export async function GET() {
   const user = session.user as any;
 
   if (user.role === "ADMIN") {
+    const cookieStore = cookies();
+    const viewing = cookieStore.get("adminViewingAs");
+    if (viewing?.value) {
+      // Impersonating — show only that client's tasks
+      const tasks = await prisma.task.findMany({
+        where: { userId: viewing.value },
+        include: { _count: { select: { comments: true } } },
+        orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
+      });
+      return NextResponse.json({
+        tasks: tasks.map((t) => ({ ...t, commentCount: t._count.comments })),
+      });
+    }
+
+    // Not impersonating — return all tasks
     const tasks = await prisma.task.findMany({
       include: {
         user: { select: { id: true, name: true, companyName: true } },
@@ -49,7 +65,15 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { userId, title, description, priority, dueDate } = body;
+  const { title, description, priority, dueDate } = body;
+  let { userId } = body;
+
+  // If impersonating, use the impersonated client's userId
+  const cookieStore = cookies();
+  const viewing = cookieStore.get("adminViewingAs");
+  if (viewing?.value) {
+    userId = viewing.value;
+  }
 
   if (!userId || !title) {
     return NextResponse.json({ error: "userId and title are required" }, { status: 400 });
