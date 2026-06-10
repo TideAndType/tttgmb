@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCompanyUserIds } from "@/lib/company";
 
 export async function DELETE(
   req: NextRequest,
@@ -13,11 +14,10 @@ export async function DELETE(
   }
 
   const userId = (session.user as any).id;
-  const font = await prisma.brandFont.findFirst({
-    where: { id: params.id, userId },
-  });
+  const companyUserIds = await getCompanyUserIds(userId);
+  const font = await prisma.brandFont.findUnique({ where: { id: params.id } });
 
-  if (!font) {
+  if (!font || !companyUserIds.includes(font.userId)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

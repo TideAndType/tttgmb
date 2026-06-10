@@ -5,8 +5,25 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { getCompanyUserIds } from "@/lib/company";
 
 const UPLOADS_DIR = process.cwd() + "/uploads";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+  const companyUserIds = await getCompanyUserIds(userId);
+  const logo = await prisma.brandAsset.findFirst({
+    where: { userId: { in: companyUserIds }, type: "LOGO" },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return NextResponse.json({ logo: logo ?? null });
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);

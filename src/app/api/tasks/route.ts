@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendTaskCreatedEmail } from "@/lib/email";
 import { cookies } from "next/headers";
+import { getCompanyUserIds } from "@/lib/company";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -41,9 +42,10 @@ export async function GET() {
     });
   }
 
-  // CLIENT: only their own tasks
+  // CLIENT: all tasks for their company
+  const companyUserIds = await getCompanyUserIds(user.id);
   const tasks = await prisma.task.findMany({
-    where: { userId: user.id },
+    where: { userId: { in: companyUserIds } },
     include: { _count: { select: { comments: true } } },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });

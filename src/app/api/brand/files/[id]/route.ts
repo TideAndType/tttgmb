@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { unlink } from "fs/promises";
 import path from "path";
+import { getCompanyUserIds } from "@/lib/company";
 
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
@@ -17,11 +18,10 @@ export async function DELETE(
   }
 
   const userId = (session.user as any).id;
-  const asset = await prisma.brandAsset.findFirst({
-    where: { id: params.id, userId },
-  });
+  const companyUserIds = await getCompanyUserIds(userId);
+  const asset = await prisma.brandAsset.findUnique({ where: { id: params.id } });
 
-  if (!asset) {
+  if (!asset || !companyUserIds.includes(asset.userId)) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

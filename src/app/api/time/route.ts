@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCompanyUserIds } from "@/lib/company";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -26,7 +27,8 @@ export async function GET(req: NextRequest) {
     if (filterProjectId) where.projectId = filterProjectId;
     if (filterTaskId) where.taskId = filterTaskId;
   } else {
-    where.userId = user.id;
+    const companyUserIds = await getCompanyUserIds(user.id);
+    where.userId = { in: companyUserIds };
     if (filterProjectId) where.projectId = filterProjectId;
     if (filterTaskId) where.taskId = filterTaskId;
   }

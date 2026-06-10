@@ -58,6 +58,13 @@ enum ProposalStatus {
   DECLINED
 }
 
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  users     User[]
+}
+
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
@@ -65,6 +72,8 @@ model User {
   name            String
   role            Role         @default(CLIENT)
   companyName     String?
+  companyId       String?
+  company         Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
   gscProperty     String?
   gscAccessToken  String?
   gscRefreshToken String?

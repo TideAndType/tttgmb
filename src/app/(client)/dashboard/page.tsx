@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCompanyUserIds } from "@/lib/company";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +45,8 @@ export default async function DashboardPage() {
   const firstName = session?.user?.name?.split(" ")[0] ?? "there";
   const companyName = (session?.user as any)?.companyName ?? "Your Company";
 
+  const companyUserIds = await getCompanyUserIds(userId);
+
   // ── Batch 1 — all independent queries ─────────────────────────────
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -60,28 +63,28 @@ export default async function DashboardPage() {
     user,
     projects,
   ] = await Promise.all([
-    prisma.task.count({ where: { userId, status: { not: "COMPLETED" } } }),
-    prisma.deliverable.count({ where: { userId, status: "PENDING" } }),
+    prisma.task.count({ where: { userId: { in: companyUserIds }, status: { not: "COMPLETED" } } }),
+    prisma.deliverable.count({ where: { userId: { in: companyUserIds }, status: "PENDING" } }),
     prisma.timeEntry.aggregate({
       _sum: { minutes: true },
-      where: { userId, date: { gte: startOfMonth, lte: endOfMonth } },
+      where: { userId: { in: companyUserIds }, date: { gte: startOfMonth, lte: endOfMonth } },
     }),
     prisma.invoice.aggregate({
       _sum: { totalAmount: true },
-      where: { userId, status: { in: ["Unpaid", "Partial", "Pending"] } },
+      where: { userId: { in: companyUserIds }, status: { in: ["Unpaid", "Partial", "Pending"] } },
     }),
     prisma.task.findMany({
-      where: { userId, status: { not: "COMPLETED" } },
+      where: { userId: { in: companyUserIds }, status: { not: "COMPLETED" } },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       take: 5,
     }),
     prisma.deliverable.findMany({
-      where: { userId, status: "PENDING" },
+      where: { userId: { in: companyUserIds }, status: "PENDING" },
       orderBy: { createdAt: "desc" },
       take: 3,
     }),
     prisma.invoice.findFirst({
-      where: { userId },
+      where: { userId: { in: companyUserIds } },
       orderBy: { createdAt: "desc" },
     }),
     prisma.user.findUnique({
@@ -92,7 +95,7 @@ export default async function DashboardPage() {
         _count: { select: { brandAssets: true, brandColors: true, brandFonts: true } },
       },
     }),
-    prisma.project.findMany({ where: { userId }, select: { id: true, name: true } }),
+    prisma.project.findMany({ where: { userId: { in: companyUserIds } }, select: { id: true, name: true } }),
   ]);
 
   const hoursThisMonth = ((timeResult._sum.minutes ?? 0) / 60).toFixed(1);

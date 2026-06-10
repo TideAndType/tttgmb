@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { getCompanyUserIds } from "@/lib/company";
 
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
@@ -15,8 +16,9 @@ export async function GET() {
   }
 
   const userId = (session.user as any).id;
+  const companyUserIds = await getCompanyUserIds(userId);
   const files = await prisma.brandAsset.findMany({
-    where: { userId },
+    where: { userId: { in: companyUserIds } },
     include: { _count: { select: { comments: true } } },
     orderBy: { createdAt: "desc" },
   });
@@ -24,6 +26,31 @@ export async function GET() {
   return NextResponse.json({
     files: files.map((f) => ({ ...f, commentCount: f._count.comments })),
   });
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = (session.user as any).id;
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ error: "id is required" }, { status: 400 });
+  }
+
+  const companyUserIds = await getCompanyUserIds(userId);
+  const asset = await prisma.brandAsset.findUnique({ where: { id } });
+
+  if (!asset || !companyUserIds.includes(asset.userId)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  await prisma.brandAsset.delete({ where: { id } });
+  return NextResponse.json({ success: true });
 }
 
 export async function POST(req: NextRequest) {

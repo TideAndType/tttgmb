@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getCompanyUserIds } from "@/lib/company";
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -17,10 +18,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(proposals);
   }
 
-  // CLIENT: only non-draft proposals for this user
+  // CLIENT: non-draft proposals for their company
+  const companyUserIds = await getCompanyUserIds(user.id);
   const proposals = await prisma.proposal.findMany({
     where: {
-      userId: user.id,
+      userId: { in: companyUserIds },
       status: { not: "DRAFT" },
     },
     orderBy: { sentAt: "desc" },

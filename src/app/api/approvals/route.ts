@@ -6,6 +6,7 @@ import { sendApprovalNeededEmail } from "@/lib/email";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
+import { getCompanyUserIds } from "@/lib/company";
 
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
@@ -33,8 +34,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ deliverables });
   }
 
-  // CLIENT: only their own
-  const where: any = { userId: user.id };
+  // CLIENT: all deliverables for their company
+  const companyUserIds = await getCompanyUserIds(user.id);
+  const where: any = { userId: { in: companyUserIds } };
   if (statusFilter) where.status = statusFilter;
   const deliverables = await prisma.deliverable.findMany({
     where,

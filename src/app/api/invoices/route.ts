@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createInvoice } from "@/lib/invoiless";
 import { sendInvoiceEmail } from "@/lib/email";
+import { getCompanyUserIds } from "@/lib/company";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -21,9 +22,10 @@ export async function GET() {
     return NextResponse.json(invoices);
   }
 
-  // CLIENT — only their own invoices
+  // CLIENT — all invoices for their company
+  const companyUserIds = await getCompanyUserIds(user.id);
   const invoices = await prisma.invoice.findMany({
-    where: { userId: user.id },
+    where: { userId: { in: companyUserIds } },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json(invoices);

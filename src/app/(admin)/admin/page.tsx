@@ -21,6 +21,13 @@ interface Client {
   createdAt: string;
 }
 
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
 export default function AdminPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +37,14 @@ export default function AdminPage() {
   const [gscUrl, setGscUrl] = useState("");
   const [gscLoading, setGscLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Team dialog state
+  const [teamDialog, setTeamDialog] = useState<Client | null>(null);
+  const [teamMembers, setTeamMembers] = useState<Member[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [addMemberForm, setAddMemberForm] = useState({ name: "", email: "", password: "" });
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [teamError, setTeamError] = useState("");
 
   const fetchClients = async () => {
     const res = await fetch("/api/admin/clients");
@@ -75,6 +90,51 @@ export default function AdminPage() {
       fetchClients();
     }
     setGscLoading(false);
+  };
+
+  const openTeamDialog = async (client: Client) => {
+    setTeamDialog(client);
+    setTeamError("");
+    setAddMemberForm({ name: "", email: "", password: "" });
+    setTeamLoading(true);
+    const res = await fetch(`/api/admin/clients/${client.id}/members`);
+    const data = await res.json();
+    setTeamMembers(data.members ?? []);
+    setTeamLoading(false);
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!teamDialog) return;
+    const res = await fetch(`/api/admin/clients/${teamDialog.id}/members`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberId }),
+    });
+    if (res.ok) {
+      setTeamMembers((prev) => prev.filter((m) => m.id !== memberId));
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!teamDialog) return;
+    setTeamError("");
+    setAddMemberLoading(true);
+    const res = await fetch(`/api/admin/clients/${teamDialog.id}/members`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(addMemberForm),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      setTeamError(data.error || "Failed to add member");
+    } else {
+      setAddMemberForm({ name: "", email: "", password: "" });
+      // Refresh members list
+      const refreshRes = await fetch(`/api/admin/clients/${teamDialog.id}/members`);
+      const refreshData = await refreshRes.json();
+      setTeamMembers(refreshData.members ?? []);
+    }
+    setAddMemberLoading(false);
   };
 
   return (
@@ -163,6 +223,14 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openTeamDialog(client)}
+                        >
+                          <Users className="h-3 w-3 mr-1" />
+                          Team
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => { setGscDialog(client); setGscUrl(client.gscProperty || ""); }}
                         >
                           <Globe className="h-3 w-3 mr-1" />
@@ -228,6 +296,87 @@ export default function AdminPage() {
               {gscLoading ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Management Dialog */}
+      <Dialog open={!!teamDialog} onOpenChange={(open) => !open && setTeamDialog(null)}>
+        <DialogContent onClose={() => setTeamDialog(null)}>
+          <DialogHeader>
+            <DialogTitle>
+              Team Members — {teamDialog?.companyName || teamDialog?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          {teamLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
+          ) : (
+            <div className="space-y-4">
+              {teamMembers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-2">No additional team members yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {teamMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                      <div>
+                        <p className="text-sm font-medium">{member.name}</p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => handleRemoveMember(member.id)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t border-border pt-4 space-y-3">
+                <p className="text-sm font-semibold">Add Team Member</p>
+                {teamError && <Alert variant="destructive">{teamError}</Alert>}
+                <div className="space-y-2">
+                  <Label htmlFor="memberName">Name</Label>
+                  <Input
+                    id="memberName"
+                    placeholder="Jane Smith"
+                    value={addMemberForm.name}
+                    onChange={(e) => setAddMemberForm((f) => ({ ...f, name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="memberEmail">Email</Label>
+                  <Input
+                    id="memberEmail"
+                    type="email"
+                    placeholder="jane@company.com"
+                    value={addMemberForm.email}
+                    onChange={(e) => setAddMemberForm((f) => ({ ...f, email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="memberPassword">Password</Label>
+                  <Input
+                    id="memberPassword"
+                    type="password"
+                    placeholder="Temporary password"
+                    value={addMemberForm.password}
+                    onChange={(e) => setAddMemberForm((f) => ({ ...f, password: e.target.value }))}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleAddMember}
+                  disabled={addMemberLoading || !addMemberForm.name || !addMemberForm.email || !addMemberForm.password}
+                >
+                  {addMemberLoading ? "Adding..." : "Add Member"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
