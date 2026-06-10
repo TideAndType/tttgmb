@@ -4,6 +4,25 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendProposalRespondedEmail } from "@/lib/email";
 
+async function notifyProposalResponse(
+  userId: string,
+  proposalTitle: string,
+  action: "accepted" | "declined"
+) {
+  try {
+    const [clientUser, adminUser] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } }),
+      prisma.user.findFirst({ where: { role: "ADMIN" }, select: { email: true, name: true } }),
+    ]);
+    if (adminUser && clientUser) {
+      const portalUrl = process.env.NEXTAUTH_URL || "";
+      await sendProposalRespondedEmail(adminUser.email, adminUser.name, clientUser.name, proposalTitle, action, portalUrl);
+    }
+  } catch (err) {
+    console.error("Email notification failed:", err);
+  }
+}
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,23 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: params.id },
       data: { status: "ACCEPTED", respondedAt: new Date(), acceptedBy: name },
     });
-    try {
-      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
-      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-      if (adminUser && clientUser) {
-        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/proposals`;
-        await sendProposalRespondedEmail(
-          adminUser.email,
-          adminUser.name,
-          clientUser.name,
-          proposal.title,
-          "accepted",
-          portalUrl
-        );
-      }
-    } catch (err) {
-      console.error("Email notification failed:", err);
-    }
+    await notifyProposalResponse(user.id, proposal.title, "accepted");
     return NextResponse.json(updated);
   }
 
@@ -54,23 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       where: { id: params.id },
       data: { status: "DECLINED", respondedAt: new Date() },
     });
-    try {
-      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
-      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-      if (adminUser && clientUser) {
-        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/proposals`;
-        await sendProposalRespondedEmail(
-          adminUser.email,
-          adminUser.name,
-          clientUser.name,
-          proposal.title,
-          "declined",
-          portalUrl
-        );
-      }
-    } catch (err) {
-      console.error("Email notification failed:", err);
-    }
+    await notifyProposalResponse(user.id, proposal.title, "declined");
     return NextResponse.json(updated);
   }
 

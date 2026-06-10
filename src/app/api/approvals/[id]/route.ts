@@ -9,6 +9,25 @@ import { randomUUID } from "crypto";
 
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
+async function notifyApprovalResponse(
+  userId: string,
+  deliverableTitle: string,
+  action: "approved" | "changes_requested"
+) {
+  try {
+    const [clientUser, adminUser] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } }),
+      prisma.user.findFirst({ where: { role: "ADMIN" }, select: { email: true, name: true } }),
+    ]);
+    if (adminUser && clientUser) {
+      const portalUrl = process.env.NEXTAUTH_URL || "";
+      await sendApprovalRespondedEmail(adminUser.email, adminUser.name, clientUser.name, deliverableTitle, action, portalUrl);
+    }
+  } catch (err) {
+    console.error("Email notification failed:", err);
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -143,23 +162,7 @@ export async function PATCH(
       },
     });
 
-    try {
-      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
-      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-      if (adminUser && clientUser) {
-        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/approvals`;
-        await sendApprovalRespondedEmail(
-          adminUser.email,
-          adminUser.name,
-          clientUser.name,
-          deliverable.title,
-          "approved",
-          portalUrl
-        );
-      }
-    } catch (err) {
-      console.error("Email notification failed:", err);
-    }
+    await notifyApprovalResponse(user.id, deliverable.title, "approved");
 
     return NextResponse.json({ deliverable: updated });
   }
@@ -184,23 +187,7 @@ export async function PATCH(
       },
     });
 
-    try {
-      const clientUser = await prisma.user.findUnique({ where: { id: user.id } });
-      const adminUser = await prisma.user.findFirst({ where: { role: "ADMIN" } });
-      if (adminUser && clientUser) {
-        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/admin/approvals`;
-        await sendApprovalRespondedEmail(
-          adminUser.email,
-          adminUser.name,
-          clientUser.name,
-          deliverable.title,
-          "changes_requested",
-          portalUrl
-        );
-      }
-    } catch (err) {
-      console.error("Email notification failed:", err);
-    }
+    await notifyApprovalResponse(user.id, deliverable.title, "changes_requested");
 
     return NextResponse.json({ deliverable: updated });
   }
