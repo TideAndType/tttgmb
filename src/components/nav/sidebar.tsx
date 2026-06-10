@@ -15,10 +15,12 @@ import {
   FolderOpen,
   Clock,
   CheckCircle,
+  FileText,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/projects", label: "Projects", icon: FolderOpen },
   { href: "/seo", label: "SEO Overview", icon: Search },
   { href: "/keywords", label: "Keywords", icon: Key },

@@ -50,6 +50,14 @@ enum DeliverableType {
   OTHER
 }
 
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  DECLINED
+}
+
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
@@ -72,6 +80,26 @@ model User {
   projects        Project[]
   deliverables    Deliverable[]
   timeEntries     TimeEntry[]
+  proposals       Proposal[]
+}
+
+model Proposal {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  status       ProposalStatus @default(DRAFT)
+  currency     String         @default("USD")
+  validUntil   DateTime?
+  sections     Json           @default("[]")
+  totalAmount  Float?
+  sentAt       DateTime?
+  viewedAt     DateTime?
+  respondedAt  DateTime?
+  acceptedBy   String?
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 model Deliverable {

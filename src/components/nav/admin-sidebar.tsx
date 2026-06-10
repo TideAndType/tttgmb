@@ -4,11 +4,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Users, UserPlus, LayoutDashboard, LogOut, CheckSquare, FolderOpen, Clock, CheckCircle } from "lucide-react";
+import { Users, UserPlus, LayoutDashboard, LogOut, CheckSquare, FolderOpen, Clock, CheckCircle, FileText } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
+  { href: "/admin/proposals", label: "Proposals", icon: FileText },
   { href: "/admin/projects", label: "Projects", icon: FolderOpen },
   { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/admin/approvals", label: "Approvals", icon: CheckCircle },
