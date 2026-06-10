@@ -1,17 +1,12 @@
 import nodemailer from "nodemailer";
 
-function createTransporter() {
-  if (!process.env.SMTP_HOST) return null;
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: parseInt(process.env.SMTP_PORT || "587") === 465,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-}
+const transporter = process.env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT || 587),
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+    })
+  : null;
 
 const FROM = process.env.SMTP_FROM || "Client Portal <noreply@example.com>";
 const PORTAL_NAME = "Client Portal";
@@ -51,7 +46,6 @@ function buildHtml(heading: string, body: string, ctaLabel: string, ctaUrl: stri
 }
 
 async function sendMail(to: string, subject: string, html: string): Promise<void> {
-  const transporter = createTransporter();
   if (!transporter) {
     console.log(`[Email - no SMTP configured] To: ${to} | Subject: ${subject}`);
     return;
@@ -164,14 +158,13 @@ export async function sendProposalRespondedEmail(
   portalUrl: string
 ): Promise<void> {
   try {
-    const verb = action === "accepted" ? "accepted" : "declined";
     const html = buildHtml(
-      `Proposal ${verb}: ${proposalTitle}`,
-      `<p>Hi ${adminName},</p><p><strong>${clientName}</strong> has <strong>${verb}</strong> the proposal: <em>${proposalTitle}</em>.</p>`,
+      `Proposal ${action}: ${proposalTitle}`,
+      `<p>Hi ${adminName},</p><p><strong>${clientName}</strong> has <strong>${action}</strong> the proposal: <em>${proposalTitle}</em>.</p>`,
       "View Proposal",
       portalUrl
     );
-    await sendMail(to, `Proposal ${verb} by ${clientName}`, html);
+    await sendMail(to, `Proposal ${action} by ${clientName}`, html);
   } catch (err) {
     console.error("[Email] sendProposalRespondedEmail failed:", err);
   }

@@ -44,12 +44,22 @@ export default async function DashboardPage() {
   const firstName = session?.user?.name?.split(" ")[0] ?? "there";
   const companyName = (session?.user as any)?.companyName ?? "Your Company";
 
-  // ── Stat card queries ──────────────────────────────────────────────
+  // ── Batch 1 — all independent queries ─────────────────────────────
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-  const [openTaskCount, pendingApprovalCount, timeResult, invoiceOutstanding] = await Promise.all([
+  const [
+    openTaskCount,
+    pendingApprovalCount,
+    timeResult,
+    invoiceOutstanding,
+    upcomingTasks,
+    pendingApprovals,
+    latestInvoice,
+    user,
+    projects,
+  ] = await Promise.all([
     prisma.task.count({ where: { userId, status: { not: "COMPLETED" } } }),
     prisma.deliverable.count({ where: { userId, status: "PENDING" } }),
     prisma.timeEntry.aggregate({
@@ -60,33 +70,38 @@ export default async function DashboardPage() {
       _sum: { totalAmount: true },
       where: { userId, status: { in: ["Unpaid", "Partial", "Pending"] } },
     }),
-  ]);
-
-  const hoursThisMonth = ((timeResult._sum.minutes ?? 0) / 60).toFixed(1);
-  const outstandingAmount = invoiceOutstanding._sum.totalAmount ?? 0;
-
-  // ── Widget queries ─────────────────────────────────────────────────
-  const [upcomingTasks, projects] = await Promise.all([
     prisma.task.findMany({
       where: { userId, status: { not: "COMPLETED" } },
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       take: 5,
     }),
+    prisma.deliverable.findMany({
+      where: { userId, status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+    prisma.invoice.findFirst({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        companyName: true,
+        gscProperty: true,
+        _count: { select: { brandAssets: true, brandColors: true, brandFonts: true } },
+      },
+    }),
     prisma.project.findMany({ where: { userId }, select: { id: true, name: true } }),
   ]);
+
+  const hoursThisMonth = ((timeResult._sum.minutes ?? 0) / 60).toFixed(1);
+  const outstandingAmount = invoiceOutstanding._sum.totalAmount ?? 0;
 
   const projectIds = projects.map((p) => p.id);
   const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
 
   // ── Onboarding checklist ──────────────────────────────────────────
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      companyName: true,
-      gscProperty: true,
-      _count: { select: { brandAssets: true, brandColors: true, brandFonts: true } },
-    },
-  });
   const hasLogo = (user?._count.brandAssets ?? 0) > 0;
 
   const onboardingSteps = [
@@ -119,23 +134,13 @@ export default async function DashboardPage() {
   const onboardingComplete = onboardingSteps.every((s) => s.done);
   const onboardingProgress = onboardingSteps.filter((s) => s.done).length;
 
-  const [recentMessages, pendingApprovals, latestInvoice] = await Promise.all([
-    prisma.message.findMany({
-      where: { projectId: { in: projectIds } },
-      include: { _count: { select: { comments: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-    }),
-    prisma.deliverable.findMany({
-      where: { userId, status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-    }),
-    prisma.invoice.findFirst({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-    }),
-  ]);
+  // ── Batch 2 — needs projectIds ─────────────────────────────────────
+  const recentMessages = await prisma.message.findMany({
+    where: { projectId: { in: projectIds } },
+    include: { _count: { select: { comments: true } } },
+    orderBy: { createdAt: "desc" },
+    take: 4,
+  });
 
   const statCards = [
     {
