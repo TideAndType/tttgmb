@@ -191,3 +191,21 @@ export async function sendApprovalRespondedEmail(
     console.error("[Email] sendApprovalRespondedEmail failed:", err);
   }
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  resetUrl: string
+): Promise<void> {
+  try {
+    const html = buildHtml(
+      "Reset your password",
+      `Hi ${name},<br><br>We received a request to reset your password. Click the button below to choose a new one. This link expires in 1 hour.<br><br>If you didn't request this, you can safely ignore this email.`,
+      "Reset Password",
+      resetUrl
+    );
+    await sendMail(to, "Reset your password", html);
+  } catch (err) {
+    console.error("Password reset email failed:", err);
+  }
+}
