@@ -1,24 +1,71 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Trash2, UserPlus, Mail } from "lucide-react";
+
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: string;
+}
+
+function StatusBanner({ status }: { status: { type: "success" | "error"; message: string } | null }) {
+  if (!status) return null;
+  return (
+    <div className={`rounded-md px-3 py-2 text-sm ${
+      status.type === "success"
+        ? "bg-green-500/10 text-green-600 border border-green-500/20"
+        : "bg-destructive/10 text-destructive border border-destructive/20"
+    }`}>
+      {status.message}
+    </div>
+  );
+}
 
 export default function ProfilePage() {
   const { data: session, update } = useSession();
   const user = session?.user as any;
 
+  // Profile
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [profileStatus, setProfileStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
 
+  // Password
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordStatus, setPasswordStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Team
+  const [members, setMembers] = useState<Member[]>([]);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [inviteFirstName, setInviteFirstName] = useState("");
+  const [inviteLastName, setInviteLastName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const fetchMembers = useCallback(async () => {
+    setTeamLoading(true);
+    try {
+      const res = await fetch("/api/team");
+      const data = await res.json();
+      setMembers(data.members ?? []);
+    } catch {
+      // silently fail
+    }
+    setTeamLoading(false);
+  }, []);
+
+  useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,11 +123,55 @@ export default function ProfilePage() {
     setPasswordLoading(false);
   };
 
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInviteLoading(true);
+    setInviteStatus(null);
+    try {
+      const res = await fetch("/api/team", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName: inviteFirstName, lastName: inviteLastName, email: inviteEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setInviteStatus({ type: "error", message: data.error || "Failed to send invite." });
+      } else {
+        setInviteStatus({ type: "success", message: `Invite sent to ${inviteEmail}. They'll receive an email to set their password.` });
+        setInviteFirstName("");
+        setInviteLastName("");
+        setInviteEmail("");
+        fetchMembers();
+      }
+    } catch {
+      setInviteStatus({ type: "error", message: "An unexpected error occurred." });
+    }
+    setInviteLoading(false);
+  };
+
+  const handleRemove = async (memberId: string) => {
+    if (!confirm("Remove this team member? They will lose access to the portal.")) return;
+    setRemovingId(memberId);
+    try {
+      const res = await fetch("/api/team", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId }),
+      });
+      if (res.ok) {
+        setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      }
+    } catch {
+      // silently fail
+    }
+    setRemovingId(null);
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Profile</h1>
-        <p className="text-muted-foreground mt-1">Manage your account information</p>
+        <p className="text-muted-foreground mt-1">Manage your account and team</p>
       </div>
 
       {/* Profile Information */}
@@ -91,56 +182,22 @@ export default function ProfilePage() {
         <CardContent>
           <form onSubmit={handleProfileSave} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground" htmlFor="name">
-                Name
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="text-sm font-medium text-foreground" htmlFor="name">Name</label>
+              <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} required
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="text-sm font-medium text-foreground" htmlFor="email">Email</label>
+              <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground" htmlFor="company">
-                Company Name
-              </label>
-              <input
-                id="company"
-                type="text"
-                value={user?.companyName ?? ""}
-                readOnly
-                disabled
-                className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
-              />
+              <label className="text-sm font-medium text-foreground" htmlFor="company">Business Name</label>
+              <input id="company" type="text" value={user?.companyName ?? ""} readOnly disabled
+                className="w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground cursor-not-allowed" />
               <p className="text-xs text-muted-foreground">Only your account team can change this.</p>
             </div>
-            {profileStatus && (
-              <div
-                className={`rounded-md px-3 py-2 text-sm ${
-                  profileStatus.type === "success"
-                    ? "bg-green-500/10 text-green-600 border border-green-500/20"
-                    : "bg-destructive/10 text-destructive border border-destructive/20"
-                }`}
-              >
-                {profileStatus.message}
-              </div>
-            )}
+            <StatusBanner status={profileStatus} />
             <Button type="submit" disabled={profileLoading}>
               {profileLoading ? "Saving…" : "Save Changes"}
             </Button>
@@ -156,59 +213,97 @@ export default function ProfilePage() {
         <CardContent>
           <form onSubmit={handlePasswordSave} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground" htmlFor="currentPassword">
-                Current Password
-              </label>
-              <input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="text-sm font-medium text-foreground" htmlFor="currentPassword">Current Password</label>
+              <input id="currentPassword" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground" htmlFor="newPassword">
-                New Password
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="text-sm font-medium text-foreground" htmlFor="newPassword">New Password</label>
+              <input id="newPassword" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-foreground" htmlFor="confirmPassword">
-                Confirm New Password
-              </label>
-              <input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="text-sm font-medium text-foreground" htmlFor="confirmPassword">Confirm New Password</label>
+              <input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
-            {passwordStatus && (
-              <div
-                className={`rounded-md px-3 py-2 text-sm ${
-                  passwordStatus.type === "success"
-                    ? "bg-green-500/10 text-green-600 border border-green-500/20"
-                    : "bg-destructive/10 text-destructive border border-destructive/20"
-                }`}
-              >
-                {passwordStatus.message}
-              </div>
-            )}
+            <StatusBanner status={passwordStatus} />
             <Button type="submit" disabled={passwordLoading}>
               {passwordLoading ? "Saving…" : "Change Password"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Team Members */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Team Members</CardTitle>
+          <CardDescription>Invite colleagues to access this portal alongside you.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Current members */}
+          {teamLoading ? (
+            <p className="text-sm text-muted-foreground">Loading…</p>
+          ) : members.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No team members yet.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {members.map((m) => (
+                <li key={m.id} className="flex items-center justify-between py-2.5 gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
+                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                      <Mail className="h-3 w-3" />{m.email}
+                    </p>
+                  </div>
+                  {m.id !== user?.id && (
+                    <button
+                      onClick={() => handleRemove(m.id)}
+                      disabled={removingId === m.id}
+                      className="text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0 p-1 rounded"
+                      title="Remove from team"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Invite form */}
+          <div className="border-t border-border pt-5">
+            <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Invite a team member
+            </p>
+            <form onSubmit={handleInvite} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-foreground" htmlFor="inviteFirst">First Name</label>
+                  <input id="inviteFirst" type="text" value={inviteFirstName} onChange={(e) => setInviteFirstName(e.target.value)} required placeholder="Jane"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-foreground" htmlFor="inviteLast">Last Name</label>
+                  <input id="inviteLast" type="text" value={inviteLastName} onChange={(e) => setInviteLastName(e.target.value)} required placeholder="Smith"
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-foreground" htmlFor="inviteEmail">Email Address</label>
+                <input id="inviteEmail" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required placeholder="jane@company.com"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <StatusBanner status={inviteStatus} />
+              <Button type="submit" disabled={inviteLoading} className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                {inviteLoading ? "Sending invite…" : "Send Invite"}
+              </Button>
+              <p className="text-xs text-muted-foreground">They'll receive an email with a link to set their own password.</p>
+            </form>
+          </div>
         </CardContent>
       </Card>
     </div>
