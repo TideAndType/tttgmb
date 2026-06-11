@@ -16,6 +16,19 @@ interface Client {
   companyName?: string | null;
 }
 
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+}
+
+function hashColor(id: string): string {
+  const colors = ["#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#14b8a6"];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
+}
+
 export default function NewTaskPage() {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
@@ -29,6 +42,9 @@ export default function NewTaskPage() {
     dueDate: "",
   });
   const [visibleToClient, setVisibleToClient] = useState(true);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+  const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
 
   useEffect(() => {
     fetch("/api/admin/clients").then((r) => r.json()).then((data) => {
@@ -36,10 +52,34 @@ export default function NewTaskPage() {
     });
   }, []);
 
+  // Load team members when a client is selected
+  useEffect(() => {
+    if (!form.userId) {
+      setTeamMembers([]);
+      setSelectedAssigneeIds([]);
+      return;
+    }
+    setLoadingMembers(true);
+    setSelectedAssigneeIds([]);
+    fetch(`/api/admin/clients/${form.userId}/members`)
+      .then((r) => r.json())
+      .then((data) => {
+        setTeamMembers(data.members || []);
+      })
+      .catch(() => setTeamMembers([]))
+      .finally(() => setLoadingMembers(false));
+  }, [form.userId]);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const toggleAssignee = (memberId: string) => {
+    setSelectedAssigneeIds((prev) =>
+      prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,7 +87,7 @@ export default function NewTaskPage() {
     setLoading(true);
     setError("");
 
-    const body: any = {
+    const body: Record<string, unknown> = {
       userId: form.userId,
       title: form.title,
       priority: form.priority,
@@ -55,6 +95,7 @@ export default function NewTaskPage() {
     };
     if (form.description) body.description = form.description;
     if (form.dueDate) body.dueDate = form.dueDate;
+    if (selectedAssigneeIds.length > 0) body.assigneeIds = selectedAssigneeIds;
 
     const res = await fetch("/api/tasks", {
       method: "POST",
@@ -71,6 +112,8 @@ export default function NewTaskPage() {
 
     router.push("/admin/tasks");
   };
+
+  const selectedClient = clients.find((c) => c.id === form.userId);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -169,6 +212,51 @@ export default function NewTaskPage() {
                 />
               </div>
             </div>
+
+            {/* Assignees multi-select — shown when a client with team members is selected */}
+            {form.userId && (
+              <div className="space-y-2">
+                <Label>
+                  Assignees
+                  <span className="text-muted-foreground font-normal ml-1 text-xs">(optional — owner is always included)</span>
+                </Label>
+                {loadingMembers ? (
+                  <p className="text-sm text-muted-foreground">Loading team members...</p>
+                ) : teamMembers.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {selectedClient ? "No other team members in this company." : ""}
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {teamMembers.map((m) => {
+                      const checked = selectedAssigneeIds.includes(m.id);
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => toggleAssignee(m.id)}
+                          disabled={loading}
+                          className={`inline-flex items-center gap-1.5 text-sm rounded-full px-3 py-1 border transition-colors ${
+                            checked
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          <span
+                            className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium text-white flex-shrink-0"
+                            style={{ backgroundColor: hashColor(m.id) }}
+                          >
+                            {m.name[0].toUpperCase()}
+                          </span>
+                          {m.name}
+                          {checked && <span className="text-xs">✓</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex items-center gap-2 pt-1">
               <input

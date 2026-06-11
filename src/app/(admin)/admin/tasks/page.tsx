@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2 } from "lucide-react";
+import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2, Users, ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +14,10 @@ interface TaskLink {
   id: string;
   url: string;
   label: string;
+}
+
+interface Assignee {
+  user: { id: string; name: string };
 }
 
 interface Task {
@@ -24,8 +28,16 @@ interface Task {
   priority: "LOW" | "MEDIUM" | "HIGH";
   dueDate?: string | null;
   visibleToClient: boolean;
+  userId: string;
   user: { id: string; name: string; companyName?: string | null };
   links?: TaskLink[];
+  assignees?: Assignee[];
+}
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
 }
 
 function getLinkIcon(url: string) {
@@ -42,6 +54,13 @@ function getLinkIcon(url: string) {
     return <span className="font-bold text-green-600">GDrive</span>;
   }
   return <ExternalLink className="h-3 w-3" />;
+}
+
+function hashColor(id: string): string {
+  const colors = ["#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#14b8a6"];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  return colors[Math.abs(hash) % colors.length];
 }
 
 const priorityConfig = {
@@ -62,6 +81,13 @@ export default function AdminTasksPage() {
   const [linkUrl, setLinkUrl] = useState("");
   const [savingLink, setSavingLink] = useState(false);
   const [deletingLink, setDeletingLink] = useState<string | null>(null);
+
+  // Assignee panel state
+  const [expandedAssignees, setExpandedAssignees] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
+  const [loadingMembers, setLoadingMembers] = useState<string | null>(null);
+  const [addingAssignee, setAddingAssignee] = useState<string | null>(null);
+  const [removingAssignee, setRemovingAssignee] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -154,6 +180,77 @@ export default function AdminTasksPage() {
     setTogglingVisibility(null);
   };
 
+  const handleToggleAssigneePanel = async (task: Task) => {
+    if (expandedAssignees === task.id) {
+      setExpandedAssignees(null);
+      return;
+    }
+    setExpandedAssignees(task.id);
+    // Load team members for this task's owner if not already loaded
+    if (!teamMembers[task.userId]) {
+      setLoadingMembers(task.userId);
+      try {
+        const res = await fetch(`/api/admin/clients/${task.userId}/members`);
+        const data = await res.json();
+        setTeamMembers((prev) => ({ ...prev, [task.userId]: data.members || [] }));
+      } catch {
+        // ignore
+      }
+      setLoadingMembers(null);
+    }
+  };
+
+  const handleAddAssignee = async (taskId: string, userId: string) => {
+    setAddingAssignee(userId);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/assignees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, assignees: [...(t.assignees || []), data.assignee] }
+              : t
+          )
+        );
+      } else {
+        setError("Failed to add assignee");
+      }
+    } catch {
+      setError("Failed to add assignee");
+    }
+    setAddingAssignee(null);
+  };
+
+  const handleRemoveAssignee = async (taskId: string, userId: string) => {
+    setRemovingAssignee(userId);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/assignees`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      if (res.ok) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, assignees: (t.assignees || []).filter((a) => a.user.id !== userId) }
+              : t
+          )
+        );
+      } else {
+        setError("Failed to remove assignee");
+      }
+    } catch {
+      setError("Failed to remove assignee");
+    }
+    setRemovingAssignee(null);
+  };
+
   // Unique clients for filter
   const clients = Array.from(
     new Map(tasks.map((t) => [t.user.id, t.user])).values()
@@ -229,6 +326,10 @@ export default function AdminTasksPage() {
             const priority = priorityConfig[task.priority];
             const dueDate = task.dueDate ? new Date(task.dueDate) : null;
             const isOverdue = dueDate && dueDate < new Date() && task.status !== "COMPLETED";
+            const isAssigneeExpanded = expandedAssignees === task.id;
+            const members = teamMembers[task.userId] || [];
+            const currentAssigneeIds = new Set((task.assignees || []).map((a) => a.user.id));
+            const availableToAdd = members.filter((m) => !currentAssigneeIds.has(m.id));
 
             return (
               <Card key={task.id} className={cn(task.status === "COMPLETED" && "opacity-60")}>
@@ -252,6 +353,21 @@ export default function AdminTasksPage() {
                     </p>
                     {task.description && (
                       <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{task.description}</p>
+                    )}
+                    {/* Assignee avatars */}
+                    {task.assignees && task.assignees.length > 1 && (
+                      <div className="flex items-center gap-1 mt-1.5">
+                        {task.assignees.map((a) => (
+                          <span
+                            key={a.user.id}
+                            title={a.user.name}
+                            className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-medium text-white"
+                            style={{ backgroundColor: hashColor(a.user.id) }}
+                          >
+                            {a.user.name[0].toUpperCase()}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
@@ -358,6 +474,83 @@ export default function AdminTasksPage() {
                       Add link
                     </Button>
                   )}
+
+                  {/* Assignees section */}
+                  <div className="mt-2 border-t pt-2">
+                    <button
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => handleToggleAssigneePanel(task)}
+                    >
+                      <Users className="h-3 w-3" />
+                      Assignees ({(task.assignees || []).length})
+                      {isAssigneeExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                    </button>
+
+                    {isAssigneeExpanded && (
+                      <div className="mt-2 space-y-1.5">
+                        {/* Current assignees */}
+                        {(task.assignees || []).length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No assignees yet.</p>
+                        ) : (
+                          (task.assignees || []).map((a) => (
+                            <div key={a.user.id} className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-medium text-white flex-shrink-0"
+                                  style={{ backgroundColor: hashColor(a.user.id) }}
+                                >
+                                  {a.user.name[0].toUpperCase()}
+                                </span>
+                                <span className="text-xs">{a.user.name}</span>
+                                {a.user.id === task.userId && (
+                                  <span className="text-xs text-muted-foreground">(owner)</span>
+                                )}
+                              </div>
+                              {a.user.id !== task.userId && (
+                                <button
+                                  className="text-muted-foreground hover:text-red-600 transition-colors"
+                                  onClick={() => handleRemoveAssignee(task.id, a.user.id)}
+                                  disabled={removingAssignee === a.user.id}
+                                  title="Remove assignee"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))
+                        )}
+
+                        {/* Add assignee dropdown */}
+                        {loadingMembers === task.userId ? (
+                          <p className="text-xs text-muted-foreground">Loading team members...</p>
+                        ) : availableToAdd.length > 0 ? (
+                          <div className="mt-2">
+                            <p className="text-xs text-muted-foreground mb-1">Add assignee:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {availableToAdd.map((m) => (
+                                <button
+                                  key={m.id}
+                                  onClick={() => handleAddAssignee(task.id, m.id)}
+                                  disabled={addingAssignee === m.id}
+                                  className="inline-flex items-center gap-1 text-xs border border-dashed border-muted-foreground/40 rounded px-2 py-0.5 hover:border-primary hover:text-primary transition-colors"
+                                >
+                                  <span
+                                    className="inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-medium text-white flex-shrink-0"
+                                    style={{ backgroundColor: hashColor(m.id) }}
+                                  >
+                                    {m.name[0].toUpperCase()}
+                                  </span>
+                                  {m.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ) : members.length === 0 && !loadingMembers ? (
+                          <p className="text-xs text-muted-foreground mt-1">No other team members in this company.</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
