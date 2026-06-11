@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2 } from "lucide-react";
+import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Project {
@@ -14,8 +14,25 @@ interface Project {
   description: string | null;
   color: string;
   createdAt: string;
+  visibility: string;
+  memberIds: string[];
+  userId: string;
   user: { name: string; companyName: string | null };
   _count: { messages: number; cards: number };
+}
+
+interface Member {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface VisibilityState {
+  project: Project;
+  visibility: string;
+  memberIds: string[];
+  members: Member[];
+  saving: boolean;
 }
 
 export default function AdminProjectsPage() {
@@ -23,6 +40,7 @@ export default function AdminProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [filterClient, setFilterClient] = useState("all");
+  const [visDialog, setVisDialog] = useState<VisibilityState | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -44,6 +62,37 @@ export default function AdminProjectsPage() {
       setProjects((prev) => prev.filter((p) => p.id !== id));
     }
     setDeleting(null);
+  };
+
+  const openVisDialog = async (project: Project) => {
+    const res = await fetch(`/api/admin/company-members/${project.userId}`);
+    const members = res.ok ? await res.json() : [];
+    setVisDialog({
+      project,
+      visibility: project.visibility || "company",
+      memberIds: project.memberIds || [],
+      members: Array.isArray(members) ? members : [],
+      saving: false,
+    });
+  };
+
+  const saveVisibility = async () => {
+    if (!visDialog) return;
+    setVisDialog((prev) => prev ? { ...prev, saving: true } : null);
+    const res = await fetch(`/api/projects/${visDialog.project.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibility: visDialog.visibility, memberIds: visDialog.memberIds }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setProjects((prev) =>
+        prev.map((p) => (p.id === updated.id ? { ...p, visibility: updated.visibility, memberIds: updated.memberIds } : p))
+      );
+      setVisDialog(null);
+    } else {
+      setVisDialog((prev) => prev ? { ...prev, saving: false } : null);
+    }
   };
 
   const clients = Array.from(
@@ -128,6 +177,12 @@ export default function AdminProjectsPage() {
                       <Badge variant="outline" className="text-xs font-normal">
                         {project.user.companyName || project.user.name}
                       </Badge>
+                      <Badge
+                        variant={project.visibility === "private" ? "destructive" : "secondary"}
+                        className="text-xs font-normal"
+                      >
+                        {project.visibility === "private" ? "Private" : "Company"}
+                      </Badge>
                     </div>
                     {project.description && (
                       <p className="text-sm text-muted-foreground">{project.description}</p>
@@ -145,18 +200,118 @@ export default function AdminProjectsPage() {
                     </div>
                   </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive flex-shrink-0"
-                  onClick={() => handleDelete(project.id)}
-                  disabled={deleting === project.id}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                    onClick={() => openVisDialog(project)}
+                    title="Visibility settings"
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => handleDelete(project.id)}
+                    disabled={deleting === project.id}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
             </Card>
           ))}
+        </div>
+      )}
+
+      {/* Visibility Dialog */}
+      {visDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Visibility Settings</h2>
+              <button
+                onClick={() => setVisDialog(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Project: <span className="font-medium text-foreground">{visDialog.project.name}</span>
+            </p>
+
+            <div className="space-y-3 mb-6">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="company"
+                  checked={visDialog.visibility === "company"}
+                  onChange={() => setVisDialog((prev) => prev ? { ...prev, visibility: "company" } : null)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-sm font-medium">Visible to all team members</p>
+                  <p className="text-xs text-muted-foreground">Everyone in the company can see this project</p>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="visibility"
+                  value="private"
+                  checked={visDialog.visibility === "private"}
+                  onChange={() => setVisDialog((prev) => prev ? { ...prev, visibility: "private" } : null)}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-sm font-medium">Private — specific members only</p>
+                  <p className="text-xs text-muted-foreground">Only selected members can see this project</p>
+                </div>
+              </label>
+            </div>
+
+            {visDialog.visibility === "private" && visDialog.members.length > 0 && (
+              <div className="mb-6">
+                <p className="text-sm font-medium mb-2">Select members with access:</p>
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-border rounded-md p-3">
+                  {visDialog.members.map((member) => (
+                    <label key={member.id} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={visDialog.memberIds.includes(member.id)}
+                        onChange={(e) => {
+                          setVisDialog((prev) => {
+                            if (!prev) return null;
+                            const ids = e.target.checked
+                              ? [...prev.memberIds, member.id]
+                              : prev.memberIds.filter((id) => id !== member.id);
+                            return { ...prev, memberIds: ids };
+                          });
+                        }}
+                      />
+                      <div>
+                        <p className="text-sm">{member.name}</p>
+                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setVisDialog(null)}>
+                Cancel
+              </Button>
+              <Button onClick={saveVisibility} disabled={visDialog.saving}>
+                {visDialog.saving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
