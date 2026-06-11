@@ -18,11 +18,13 @@ import {
   Settings,
   Receipt,
   Activity,
+  AlertCircle,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/activity", label: "Activity", icon: Activity },
+  { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
   { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
   { href: "/admin/proposals", label: "Proposals", icon: FileText },
   { href: "/admin/invoices", label: "Invoices", icon: Receipt },

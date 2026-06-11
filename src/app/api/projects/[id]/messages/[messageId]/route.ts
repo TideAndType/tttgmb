@@ -19,7 +19,7 @@ export async function GET(
 
   const message = await prisma.message.findUnique({
     where: { id: params.messageId },
-    include: { comments: { orderBy: { createdAt: "asc" } } },
+    include: { comments: { orderBy: { createdAt: "asc" } }, links: true },
   });
 
   if (!message || message.projectId !== params.id) {

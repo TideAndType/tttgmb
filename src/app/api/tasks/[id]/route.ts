@@ -22,11 +22,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { status } = body;
+  const { status, visibleToClient } = body;
+
+  const updateData: Record<string, unknown> = {};
+  if (status !== undefined) updateData.status = status;
+  if (visibleToClient !== undefined) updateData.visibleToClient = visibleToClient;
 
   const updated = await prisma.task.update({
     where: { id: params.id },
-    data: { status },
+    data: updateData,
   });
 
   return NextResponse.json({ task: updated });

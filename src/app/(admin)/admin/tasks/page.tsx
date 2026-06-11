@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { Plus, CalendarDays, AlertCircle, Trash2 } from "lucide-react";
+import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +16,7 @@ interface Task {
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   priority: "LOW" | "MEDIUM" | "HIGH";
   dueDate?: string | null;
+  visibleToClient: boolean;
   user: { id: string; name: string; companyName?: string | null };
 }
 
@@ -31,6 +32,7 @@ export default function AdminTasksPage() {
   const [error, setError] = useState("");
   const [filterClient, setFilterClient] = useState("all");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -58,6 +60,22 @@ export default function AdminTasksPage() {
       setError("Failed to delete task");
     }
     setDeleting(null);
+  };
+
+  const handleToggleVisibility = async (task: Task) => {
+    setTogglingVisibility(task.id);
+    const res = await fetch(`/api/tasks/${task.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ visibleToClient: !task.visibleToClient }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, visibleToClient: data.task.visibleToClient } : t)));
+    } else {
+      setError("Failed to update visibility");
+    }
+    setTogglingVisibility(null);
   };
 
   // Unique clients for filter
@@ -147,6 +165,11 @@ export default function AdminTasksPage() {
                       <Badge variant={task.status === "COMPLETED" ? "default" : "outline"} className="text-xs">
                         {task.status === "PENDING" ? "Pending" : task.status === "IN_PROGRESS" ? "In Progress" : "Completed"}
                       </Badge>
+                      {!task.visibleToClient && (
+                        <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 bg-amber-50">
+                          Hidden from client
+                        </Badge>
+                      )}
                     </div>
                     <p className={cn("font-semibold text-foreground", task.status === "COMPLETED" && "line-through")}>
                       {task.title}
@@ -159,6 +182,23 @@ export default function AdminTasksPage() {
                     <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full border", priority.className)}>
                       {priority.label}
                     </span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className={cn(
+                        "h-7 w-7 p-0",
+                        task.visibleToClient ? "text-teal-600 hover:text-teal-700" : "text-muted-foreground hover:text-foreground"
+                      )}
+                      onClick={() => handleToggleVisibility(task)}
+                      disabled={togglingVisibility === task.id}
+                      title={task.visibleToClient ? "Visible to client — click to hide" : "Hidden from client — click to show"}
+                    >
+                      {task.visibleToClient ? (
+                        <Eye className="h-3.5 w-3.5" />
+                      ) : (
+                        <EyeOff className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"

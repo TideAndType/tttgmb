@@ -21,7 +21,7 @@ export async function GET() {
       // Impersonating — show only that client's tasks
       const tasks = await prisma.task.findMany({
         where: { userId: viewing.value },
-        include: { _count: { select: { comments: true } } },
+        include: { _count: { select: { comments: true } }, links: true },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       });
       return NextResponse.json({
@@ -34,6 +34,7 @@ export async function GET() {
       include: {
         user: { select: { id: true, name: true, companyName: true } },
         _count: { select: { comments: true } },
+        links: true,
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
@@ -42,11 +43,11 @@ export async function GET() {
     });
   }
 
-  // CLIENT: all tasks for their company
+  // CLIENT: all tasks for their company (only visible ones)
   const companyUserIds = await getCompanyUserIds(user.id);
   const tasks = await prisma.task.findMany({
-    where: { userId: { in: companyUserIds } },
-    include: { _count: { select: { comments: true } } },
+    where: { userId: { in: companyUserIds }, visibleToClient: true },
+    include: { _count: { select: { comments: true } }, links: true },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });
 
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, priority, dueDate } = body;
+  const { title, description, priority, dueDate, visibleToClient } = body;
   let { userId } = body;
 
   // If impersonating, use the impersonated client's userId
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
       description: description || null,
       priority: priority || "MEDIUM",
       dueDate: dueDate ? new Date(dueDate) : null,
+      visibleToClient: visibleToClient !== false,
     },
   });
 

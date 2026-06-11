@@ -28,6 +28,7 @@ export default function NewTaskPage() {
     priority: "MEDIUM",
     dueDate: "",
   });
+  const [visibleToClient, setVisibleToClient] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/clients").then((r) => r.json()).then((data) => {
@@ -50,6 +51,7 @@ export default function NewTaskPage() {
       userId: form.userId,
       title: form.title,
       priority: form.priority,
+      visibleToClient,
     };
     if (form.description) body.description = form.description;
     if (form.dueDate) body.dueDate = form.dueDate;
@@ -166,6 +168,20 @@ export default function NewTaskPage() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                id="visibleToClient"
+                type="checkbox"
+                checked={visibleToClient}
+                onChange={(e) => setVisibleToClient(e.target.checked)}
+                disabled={loading}
+                className="h-4 w-4 rounded border-input accent-primary"
+              />
+              <Label htmlFor="visibleToClient" className="cursor-pointer font-normal">
+                Visible to client
+              </Label>
             </div>
 
             <div className="flex gap-3 pt-2">

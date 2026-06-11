@@ -20,7 +20,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const messages = await prisma.message.findMany({
     where: { projectId: params.id },
-    include: { _count: { select: { comments: true } } },
+    include: { _count: { select: { comments: true } }, links: true },
     orderBy: { createdAt: "desc" },
   });
 
@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { title, body: messageBody } = body;
+  const { title, body: messageBody, links } = body;
 
   if (!title || !messageBody) {
     return NextResponse.json({ error: "title and body are required" }, { status: 400 });
@@ -52,5 +52,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     },
   });
 
-  return NextResponse.json(message, { status: 201 });
+  if (Array.isArray(links) && links.length > 0) {
+    await prisma.messageLink.createMany({
+      data: links
+        .filter((l: { url?: string; label?: string }) => l.url && l.label)
+        .map((l: { url: string; label: string }) => ({
+          messageId: message.id,
+          url: l.url,
+          label: l.label,
+        })),
+    });
+  }
+
+  const messageWithLinks = await prisma.message.findUnique({
+    where: { id: message.id },
+    include: { links: true },
+  });
+
+  return NextResponse.json(messageWithLinks, { status: 201 });
 }
