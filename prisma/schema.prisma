@@ -95,6 +95,7 @@ model User {
   timeEntries     TimeEntry[]
   proposals       Proposal[]
   invoices        Invoice[]
+  assignedTasks   TaskAssignee[]
 }
 
 model Proposal {
@@ -158,6 +159,18 @@ model Task {
   timeEntries     TimeEntry[]
   comments        TaskComment[]
   links           TaskLink[]
+  assignees       TaskAssignee[]
+}
+
+model TaskAssignee {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@unique([taskId, userId])
 }
 
 model TaskLink {

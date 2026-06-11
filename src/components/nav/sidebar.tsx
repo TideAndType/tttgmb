@@ -20,6 +20,8 @@ import {
   Receipt,
   User,
   MapPin,
+  CalendarDays,
+  GanttChart,
 } from "lucide-react";
 
 const navItems = [
@@ -32,6 +34,8 @@ const navItems = [
   { href: "/reports", label: "Reports", icon: BarChart2 },
   { href: "/gmb", label: "My Business", icon: MapPin },
   { href: "/tasks", label: "Tasks", icon: CheckSquare },
+  { href: "/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/timeline", label: "Timeline", icon: GanttChart },
   { href: "/approvals", label: "Approvals", icon: CheckCircle },
   { href: "/time", label: "Time Tracking", icon: Clock },
   { href: "/invoices", label: "Invoices", icon: Receipt },

@@ -19,12 +19,16 @@ import {
   Receipt,
   Activity,
   AlertCircle,
+  CalendarDays,
+  GanttChart,
 } from "lucide-react";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/activity", label: "Activity", icon: Activity },
   { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
+  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/admin/timeline", label: "Timeline", icon: GanttChart },
   { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
   { href: "/admin/proposals", label: "Proposals", icon: FileText },
   { href: "/admin/invoices", label: "Invoices", icon: Receipt },

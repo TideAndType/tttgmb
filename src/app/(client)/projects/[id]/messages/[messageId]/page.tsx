@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Clock, Trash2 } from "lucide-react";
+import { Clock, Trash2, ExternalLink } from "lucide-react";
 
 interface Comment {
   id: string;
@@ -13,6 +13,12 @@ interface Comment {
   body: string;
   createdAt: string;
   authorId: string;
+}
+
+interface MessageLink {
+  id: string;
+  url: string;
+  label: string;
 }
 
 interface Message {
@@ -23,6 +29,23 @@ interface Message {
   authorId: string;
   createdAt: string;
   comments: Comment[];
+  links: MessageLink[];
+}
+
+function getLinkIcon(url: string) {
+  if (url.includes("figma.com")) {
+    return <span className="font-bold text-purple-600">Fg</span>;
+  }
+  if (url.includes("docs.google.com")) {
+    return <span className="font-bold text-blue-600">GDoc</span>;
+  }
+  if (url.includes("dropbox.com")) {
+    return <span className="font-bold text-blue-500">DB</span>;
+  }
+  if (url.includes("drive.google.com")) {
+    return <span className="font-bold text-green-600">GDrive</span>;
+  }
+  return <ExternalLink className="h-3 w-3" />;
 }
 
 export default function MessagePage() {
@@ -110,6 +133,22 @@ export default function MessagePage() {
         </CardHeader>
         <CardContent>
           <p className="text-foreground whitespace-pre-wrap">{message.body}</p>
+          {message.links && message.links.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {message.links.map((link) => (
+                <a
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline border border-primary/30 rounded px-2 py-0.5 bg-primary/5"
+                >
+                  {getLinkIcon(link.url)}
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 

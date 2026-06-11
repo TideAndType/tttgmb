@@ -5,9 +5,16 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
-import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+
+interface TaskLink {
+  id: string;
+  url: string;
+  label: string;
+}
 
 interface Task {
   id: string;
@@ -18,6 +25,23 @@ interface Task {
   dueDate?: string | null;
   visibleToClient: boolean;
   user: { id: string; name: string; companyName?: string | null };
+  links?: TaskLink[];
+}
+
+function getLinkIcon(url: string) {
+  if (url.includes("figma.com")) {
+    return <span className="font-bold text-purple-600">Fg</span>;
+  }
+  if (url.includes("docs.google.com")) {
+    return <span className="font-bold text-blue-600">GDoc</span>;
+  }
+  if (url.includes("dropbox.com")) {
+    return <span className="font-bold text-blue-500">DB</span>;
+  }
+  if (url.includes("drive.google.com")) {
+    return <span className="font-bold text-green-600">GDrive</span>;
+  }
+  return <ExternalLink className="h-3 w-3" />;
 }
 
 const priorityConfig = {
@@ -33,6 +57,11 @@ export default function AdminTasksPage() {
   const [filterClient, setFilterClient] = useState("all");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
+  const [addingLinkFor, setAddingLinkFor] = useState<string | null>(null);
+  const [linkLabel, setLinkLabel] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [savingLink, setSavingLink] = useState(false);
+  const [deletingLink, setDeletingLink] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTasks();
@@ -60,6 +89,53 @@ export default function AdminTasksPage() {
       setError("Failed to delete task");
     }
     setDeleting(null);
+  };
+
+  const handleAddLink = async (taskId: string) => {
+    if (!linkLabel.trim() || !linkUrl.trim()) return;
+    setSavingLink(true);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: linkUrl.trim(), label: linkLabel.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, links: [...(t.links || []), data.link] } : t
+          )
+        );
+        setLinkLabel("");
+        setLinkUrl("");
+        setAddingLinkFor(null);
+      } else {
+        setError("Failed to add link");
+      }
+    } catch {
+      setError("Failed to add link");
+    }
+    setSavingLink(false);
+  };
+
+  const handleDeleteLink = async (taskId: string, linkId: string) => {
+    setDeletingLink(linkId);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/links?linkId=${linkId}`, { method: "DELETE" });
+      if (res.ok) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, links: (t.links || []).filter((l) => l.id !== linkId) } : t
+          )
+        );
+      } else {
+        setError("Failed to delete link");
+      }
+    } catch {
+      setError("Failed to delete link");
+    }
+    setDeletingLink(null);
   };
 
   const handleToggleVisibility = async (task: Task) => {
@@ -210,15 +286,79 @@ export default function AdminTasksPage() {
                     </Button>
                   </div>
                 </CardHeader>
-                {dueDate && (
-                  <CardContent>
-                    <span className={cn("flex items-center gap-1 text-xs", isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
+                <CardContent>
+                  {dueDate && (
+                    <span className={cn("flex items-center gap-1 text-xs mb-3", isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
                       {isOverdue && <AlertCircle className="h-3 w-3" />}
                       <CalendarDays className="h-3 w-3" />
                       Due {dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </span>
-                  </CardContent>
-                )}
+                  )}
+                  {/* Links */}
+                  {task.links && task.links.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {task.links.map((link) => (
+                        <span key={link.id} className="inline-flex items-center gap-1 text-xs border border-primary/30 rounded px-2 py-0.5 bg-primary/5">
+                          <a href={link.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
+                            {getLinkIcon(link.url)}
+                            {link.label}
+                          </a>
+                          <button
+                            onClick={() => handleDeleteLink(task.id, link.id)}
+                            disabled={deletingLink === link.id}
+                            className="ml-1 text-muted-foreground hover:text-red-600 transition-colors"
+                            title="Remove link"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Add link form */}
+                  {addingLinkFor === task.id ? (
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        placeholder="Label"
+                        value={linkLabel}
+                        onChange={(e) => setLinkLabel(e.target.value)}
+                        className="h-7 text-xs w-28"
+                      />
+                      <Input
+                        placeholder="https://..."
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        className="h-7 text-xs flex-1"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs px-3"
+                        onClick={() => handleAddLink(task.id)}
+                        disabled={savingLink || !linkLabel.trim() || !linkUrl.trim()}
+                      >
+                        {savingLink ? "..." : "Add"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 text-xs px-2"
+                        onClick={() => { setAddingLinkFor(null); setLinkLabel(""); setLinkUrl(""); }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground mt-1"
+                      onClick={() => { setAddingLinkFor(task.id); setLinkLabel(""); setLinkUrl(""); }}
+                    >
+                      <Link2 className="h-3 w-3 mr-1" />
+                      Add link
+                    </Button>
+                  )}
+                </CardContent>
               </Card>
             );
           })}

@@ -6,6 +6,10 @@ import { sendTaskCreatedEmail } from "@/lib/email";
 import { cookies } from "next/headers";
 import { getCompanyUserIds } from "@/lib/company";
 
+const assigneesInclude = {
+  assignees: { include: { user: { select: { id: true, name: true } } } },
+};
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -21,7 +25,7 @@ export async function GET() {
       // Impersonating — show only that client's tasks
       const tasks = await prisma.task.findMany({
         where: { userId: viewing.value },
-        include: { _count: { select: { comments: true } }, links: true },
+        include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       });
       return NextResponse.json({
@@ -35,6 +39,7 @@ export async function GET() {
         user: { select: { id: true, name: true, companyName: true } },
         _count: { select: { comments: true } },
         links: true,
+        ...assigneesInclude,
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
@@ -43,11 +48,17 @@ export async function GET() {
     });
   }
 
-  // CLIENT: all tasks for their company (only visible ones)
-  const companyUserIds = await getCompanyUserIds(user.id);
+  // CLIENT: tasks for their company (only visible ones), plus tasks where they are an assignee
+  const sessionUser = session.user as any;
+  const companyUserIds = await getCompanyUserIds(sessionUser.id);
   const tasks = await prisma.task.findMany({
-    where: { userId: { in: companyUserIds }, visibleToClient: true },
-    include: { _count: { select: { comments: true } }, links: true },
+    where: {
+      OR: [
+        { userId: { in: companyUserIds }, visibleToClient: true },
+        { assignees: { some: { userId: sessionUser.id } }, visibleToClient: true },
+      ],
+    },
+    include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });
 
@@ -68,7 +79,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, priority, dueDate, visibleToClient } = body;
+  const { title, description, priority, dueDate, visibleToClient, assigneeIds } = body;
   let { userId } = body;
 
   // If impersonating, use the impersonated client's userId
@@ -92,6 +103,20 @@ export async function POST(req: NextRequest) {
       visibleToClient: visibleToClient !== false,
     },
   });
+
+  // Create assignee records — always include the owner, plus any additional assigneeIds
+  const idsToAssign = new Set<string>([userId]);
+  if (Array.isArray(assigneeIds)) {
+    for (const id of assigneeIds) {
+      if (typeof id === "string") idsToAssign.add(id);
+    }
+  }
+  if (idsToAssign.size > 0) {
+    await prisma.taskAssignee.createMany({
+      data: Array.from(idsToAssign).map((uid) => ({ taskId: task.id, userId: uid })),
+      skipDuplicates: true,
+    });
+  }
 
   try {
     const clientUser = await prisma.user.findUnique({ where: { id: userId } });

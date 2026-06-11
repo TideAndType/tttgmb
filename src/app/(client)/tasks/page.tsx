@@ -15,6 +15,8 @@ interface Task {
   createdAt: string;
   updatedAt: string;
   commentCount?: number;
+  links?: { id: string; url: string; label: string }[];
+  assignees?: { user: { id: string; name: string } }[];
 }
 
 export default function TasksPage() {
