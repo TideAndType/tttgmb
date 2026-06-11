@@ -41,11 +41,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updated = await prisma.proposal.update({
       where: { id: params.id },
       data: { status: "SENT", sentAt: new Date() },
-      include: { user: { select: { email: true, name: true } } },
+      include: { user: { select: { email: true, name: true, notifyProposalSent: true } } },
     });
     try {
       const portalUrl = `${process.env.NEXTAUTH_URL || ""}/proposals`;
-      await sendProposalSentEmail(
+      if (updated.user.notifyProposalSent) await sendProposalSentEmail(
         updated.user.email,
         updated.user.name,
         updated.title,

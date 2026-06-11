@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const clientUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (clientUser) {
+    if (clientUser?.notifyTaskCreated) {
       const portalUrl = `${process.env.NEXTAUTH_URL || ""}/tasks`;
       await sendTaskCreatedEmail(
         clientUser.email,

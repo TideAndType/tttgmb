@@ -37,9 +37,9 @@ export default async function ClientLayout({ children }: { children: React.React
     <BrandProvider>
       <div className="flex min-h-screen bg-background">
         <Sidebar />
-        <div className="flex-1 flex flex-col overflow-auto">
+        <div className="flex-1 flex flex-col overflow-auto min-w-0">
           {impersonationBanner}
-          <main className="flex-1 p-8">{children}</main>
+          <main className="flex-1 p-4 lg:p-8">{children}</main>
         </div>
       </div>
     </BrandProvider>

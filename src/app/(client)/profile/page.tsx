@@ -43,6 +43,15 @@ export default function ProfilePage() {
   const [passwordStatus, setPasswordStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  // Notifications
+  const [notifyTaskCreated, setNotifyTaskCreated] = useState(true);
+  const [notifyTaskCompleted, setNotifyTaskCompleted] = useState(true);
+  const [notifyApprovalNeeded, setNotifyApprovalNeeded] = useState(true);
+  const [notifyProposalSent, setNotifyProposalSent] = useState(true);
+  const [notifyInvoiceSent, setNotifyInvoiceSent] = useState(true);
+  const [notifStatus, setNotifStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [notifLoading, setNotifLoading] = useState(false);
+
   // Team
   const [members, setMembers] = useState<Member[]>([]);
   const [teamLoading, setTeamLoading] = useState(true);
@@ -66,6 +75,40 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
+
+  useEffect(() => {
+    fetch("/api/profile/notifications")
+      .then((r) => r.json())
+      .then((d) => {
+        setNotifyTaskCreated(d.notifyTaskCreated ?? true);
+        setNotifyTaskCompleted(d.notifyTaskCompleted ?? true);
+        setNotifyApprovalNeeded(d.notifyApprovalNeeded ?? true);
+        setNotifyProposalSent(d.notifyProposalSent ?? true);
+        setNotifyInvoiceSent(d.notifyInvoiceSent ?? true);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleNotifSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotifLoading(true);
+    setNotifStatus(null);
+    try {
+      const res = await fetch("/api/profile/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notifyTaskCreated, notifyTaskCompleted, notifyApprovalNeeded, notifyProposalSent, notifyInvoiceSent }),
+      });
+      if (!res.ok) {
+        setNotifStatus({ type: "error", message: "Failed to save preferences." });
+      } else {
+        setNotifStatus({ type: "success", message: "Notification preferences saved." });
+      }
+    } catch {
+      setNotifStatus({ type: "error", message: "An unexpected error occurred." });
+    }
+    setNotifLoading(false);
+  };
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,6 +273,39 @@ export default function ProfilePage() {
             <StatusBanner status={passwordStatus} />
             <Button type="submit" disabled={passwordLoading}>
               {passwordLoading ? "Saving…" : "Change Password"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Notification Preferences */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-semibold">Email Notifications</CardTitle>
+          <CardDescription>Choose which emails you want to receive.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleNotifSave} className="space-y-4">
+            {[
+              { id: "notifyTaskCreated", label: "New task assigned to you", value: notifyTaskCreated, setter: setNotifyTaskCreated },
+              { id: "notifyTaskCompleted", label: "Task marked as completed", value: notifyTaskCompleted, setter: setNotifyTaskCompleted },
+              { id: "notifyApprovalNeeded", label: "New deliverable needs approval", value: notifyApprovalNeeded, setter: setNotifyApprovalNeeded },
+              { id: "notifyProposalSent", label: "New proposal sent to you", value: notifyProposalSent, setter: setNotifyProposalSent },
+              { id: "notifyInvoiceSent", label: "New invoice issued", value: notifyInvoiceSent, setter: setNotifyInvoiceSent },
+            ].map(({ id, label, value, setter }) => (
+              <label key={id} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={value}
+                  onChange={(e) => setter(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                <span className="text-sm text-foreground">{label}</span>
+              </label>
+            ))}
+            <StatusBanner status={notifStatus} />
+            <Button type="submit" disabled={notifLoading}>
+              {notifLoading ? "Saving…" : "Save Preferences"}
             </Button>
           </form>
         </CardContent>

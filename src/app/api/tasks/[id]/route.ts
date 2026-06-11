@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendTaskCompletedEmail } from "@/lib/email";
 
 const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
@@ -74,6 +75,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     data: updateData,
     include: { ...assigneesInclude, links: true },
   });
+
+  // Send completion email when status transitions to COMPLETED
+  if (status === "COMPLETED" && task.status !== "COMPLETED") {
+    const owner = await prisma.user.findUnique({
+      where: { id: task.userId },
+      select: { email: true, name: true, notifyTaskCompleted: true },
+    });
+    if (owner?.notifyTaskCompleted) {
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      sendTaskCompletedEmail(owner.email, owner.name, task.title, `${baseUrl}/tasks`);
+    }
+  }
 
   // Replace assignees if provided (admin only)
   if (Array.isArray(assigneeIds) && sessionUser.role === "ADMIN") {

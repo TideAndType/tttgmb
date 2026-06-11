@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const clientUser = await prisma.user.findUnique({ where: { id: userId } });
-      if (clientUser) {
+      if (clientUser?.notifyApprovalNeeded) {
         const portalUrl = `${process.env.NEXTAUTH_URL || ""}/approvals`;
         await sendApprovalNeededEmail(
           clientUser.email,

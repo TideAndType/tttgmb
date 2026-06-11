@@ -84,6 +84,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const portalUrl = `${process.env.NEXTAUTH_URL || ""}/invoices`;
+    if (!clientUser.notifyInvoiceSent) return NextResponse.json(invoice, { status: 201 });
     await sendInvoiceEmail(
       clientUser.email,
       clientUser.name,

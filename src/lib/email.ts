@@ -149,6 +149,25 @@ export async function sendInvoiceEmail(
   }
 }
 
+export async function sendTaskCompletedEmail(
+  to: string,
+  clientName: string,
+  taskTitle: string,
+  portalUrl: string
+): Promise<void> {
+  try {
+    const html = buildHtml(
+      `Task completed: ${taskTitle}`,
+      `<p>Hi ${clientName},</p><p>Great news — the task <strong>${taskTitle}</strong> has been marked as completed.</p>`,
+      "View Task",
+      portalUrl
+    );
+    await sendMail(to, `Task Completed: ${taskTitle}`, html);
+  } catch (err) {
+    console.error("[Email] sendTaskCompletedEmail failed:", err);
+  }
+}
+
 export async function sendProposalRespondedEmail(
   to: string,
   adminName: string,
