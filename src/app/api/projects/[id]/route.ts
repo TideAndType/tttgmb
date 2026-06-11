@@ -23,6 +23,31 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   return NextResponse.json(project);
 }
 
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const user = session.user as any;
+  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const body = await req.json();
+  const { visibility, memberIds, name, description, color } = body;
+
+  const data: Record<string, any> = {};
+  if (visibility !== undefined) data.visibility = visibility;
+  if (memberIds !== undefined) data.memberIds = memberIds;
+  if (name !== undefined) data.name = name;
+  if (description !== undefined) data.description = description;
+  if (color !== undefined) data.color = color;
+
+  const project = await prisma.project.update({
+    where: { id: params.id },
+    data,
+  });
+
+  return NextResponse.json(project);
+}
+
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
