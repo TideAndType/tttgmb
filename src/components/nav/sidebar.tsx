@@ -18,6 +18,7 @@ import {
   CheckCircle,
   FileText,
   Receipt,
+  MessageCircle,
   User,
   MapPin,
   CalendarDays,
@@ -87,6 +88,18 @@ export function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-border space-y-1">
+        <Link
+          href="/messages"
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            pathname === "/messages" || pathname.startsWith("/messages/")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <MessageCircle className="h-4 w-4 flex-shrink-0" />
+          Messages
+        </Link>
         <Link
           href="/profile"
           className={cn(

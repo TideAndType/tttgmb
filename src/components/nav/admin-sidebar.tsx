@@ -18,6 +18,7 @@ import {
   Settings,
   Receipt,
   Activity,
+  MessageCircle,
   AlertCircle,
   CalendarDays,
   GanttChart,
@@ -26,6 +27,7 @@ import {
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/activity", label: "Activity", icon: Activity },
+  { href: "/admin/messages", label: "Messages", icon: MessageCircle },
   { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/timeline", label: "Timeline", icon: GanttChart },
