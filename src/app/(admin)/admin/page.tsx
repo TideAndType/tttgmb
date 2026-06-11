@@ -42,7 +42,7 @@ export default function AdminPage() {
   const [teamDialog, setTeamDialog] = useState<Client | null>(null);
   const [teamMembers, setTeamMembers] = useState<Member[]>([]);
   const [teamLoading, setTeamLoading] = useState(false);
-  const [addMemberForm, setAddMemberForm] = useState({ name: "", email: "", password: "" });
+  const [addMemberForm, setAddMemberForm] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [addMemberLoading, setAddMemberLoading] = useState(false);
   const [teamError, setTeamError] = useState("");
 
@@ -95,7 +95,7 @@ export default function AdminPage() {
   const openTeamDialog = async (client: Client) => {
     setTeamDialog(client);
     setTeamError("");
-    setAddMemberForm({ name: "", email: "", password: "" });
+    setAddMemberForm({ firstName: "", lastName: "", email: "", password: "" });
     setTeamLoading(true);
     const res = await fetch(`/api/admin/clients/${client.id}/members`);
     const data = await res.json();
@@ -122,13 +122,17 @@ export default function AdminPage() {
     const res = await fetch(`/api/admin/clients/${teamDialog.id}/members`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(addMemberForm),
+      body: JSON.stringify({
+        name: `${addMemberForm.firstName.trim()} ${addMemberForm.lastName.trim()}`.trim(),
+        email: addMemberForm.email,
+        password: addMemberForm.password,
+      }),
     });
     if (!res.ok) {
       const data = await res.json();
       setTeamError(data.error || "Failed to add member");
     } else {
-      setAddMemberForm({ name: "", email: "", password: "" });
+      setAddMemberForm({ firstName: "", lastName: "", email: "", password: "" });
       // Refresh members list
       const refreshRes = await fetch(`/api/admin/clients/${teamDialog.id}/members`);
       const refreshData = await refreshRes.json();
@@ -338,14 +342,25 @@ export default function AdminPage() {
               <div className="border-t border-border pt-4 space-y-3">
                 <p className="text-sm font-semibold">Add Team Member</p>
                 {teamError && <Alert variant="destructive">{teamError}</Alert>}
-                <div className="space-y-2">
-                  <Label htmlFor="memberName">Name</Label>
-                  <Input
-                    id="memberName"
-                    placeholder="Jane Smith"
-                    value={addMemberForm.name}
-                    onChange={(e) => setAddMemberForm((f) => ({ ...f, name: e.target.value }))}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="memberFirstName">First Name</Label>
+                    <Input
+                      id="memberFirstName"
+                      placeholder="Jane"
+                      value={addMemberForm.firstName}
+                      onChange={(e) => setAddMemberForm((f) => ({ ...f, firstName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="memberLastName">Last Name</Label>
+                    <Input
+                      id="memberLastName"
+                      placeholder="Smith"
+                      value={addMemberForm.lastName}
+                      onChange={(e) => setAddMemberForm((f) => ({ ...f, lastName: e.target.value }))}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="memberEmail">Email</Label>
@@ -370,7 +385,7 @@ export default function AdminPage() {
                 <Button
                   className="w-full"
                   onClick={handleAddMember}
-                  disabled={addMemberLoading || !addMemberForm.name || !addMemberForm.email || !addMemberForm.password}
+                  disabled={addMemberLoading || !addMemberForm.firstName || !addMemberForm.lastName || !addMemberForm.email || !addMemberForm.password}
                 >
                   {addMemberLoading ? "Adding..." : "Add Member"}
                 </Button>

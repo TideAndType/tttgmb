@@ -15,7 +15,8 @@ export default function NewClientPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     password: "",
     companyName: "",
@@ -33,7 +34,14 @@ export default function NewClientPage() {
     const res = await fetch("/api/admin/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email,
+        password: form.password,
+        companyName: form.companyName,
+      }),
     });
 
     if (!res.ok) {
@@ -64,15 +72,41 @@ export default function NewClientPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <Alert variant="destructive">{error}</Alert>}
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                <Input
+                  id="firstName"
+                  name="firstName"
+                  placeholder="Jane"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                <Input
+                  id="lastName"
+                  name="lastName"
+                  placeholder="Smith"
+                  value={form.lastName}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="companyName">Business Name</Label>
               <Input
-                id="name"
-                name="name"
-                placeholder="John Smith"
-                value={form.name}
+                id="companyName"
+                name="companyName"
+                placeholder="Acme Corp"
+                value={form.companyName}
                 onChange={handleChange}
-                required
                 disabled={loading}
               />
             </div>
@@ -83,7 +117,7 @@ export default function NewClientPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="john@example.com"
+                placeholder="jane@example.com"
                 value={form.email}
                 onChange={handleChange}
                 required
@@ -104,18 +138,7 @@ export default function NewClientPage() {
                 disabled={loading}
                 minLength={8}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                name="companyName"
-                placeholder="Acme Corp"
-                value={form.companyName}
-                onChange={handleChange}
-                disabled={loading}
-              />
+              <p className="text-xs text-muted-foreground">Min. 8 characters. The client can change this from their profile.</p>
             </div>
 
             <div className="flex gap-3 pt-2">
