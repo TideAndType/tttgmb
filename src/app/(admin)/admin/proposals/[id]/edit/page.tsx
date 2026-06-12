@@ -25,6 +25,9 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { LayoutSection, Selection, makeLayoutSection, Block, Column, uid } from "./layout-types";
+import { LayoutSectionEditor } from "./layout-section";
+import { PropertiesBar } from "./properties-bar";
 
 type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number };
 type ServiceItem = { id: string; icon: string; name: string; description: string };
@@ -43,7 +46,8 @@ type Section =
   | { id: string; type: "testimonials"; heading: string; items: TestimonialItem[] }
   | { id: string; type: "faq"; heading: string; items: FaqItem[] }
   | { id: string; type: "cta"; heading: string; subtext: string; buttonLabel: string; buttonUrl: string; bgColor: string }
-  | { id: string; type: "timeline"; heading: string; steps: TimelineStep[] };
+  | { id: string; type: "timeline"; heading: string; steps: TimelineStep[] }
+  | LayoutSection;
 
 type Brand = { primaryColor: string; accentColor: string; font: string; logoUrl: string };
 
@@ -71,12 +75,12 @@ function fmt(amount: number, currency: string) {
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
   cover: FileText, text: Type, pricing: Table, terms: ScrollText, signature: PenLine,
-  hero: Layout, services: Star, testimonials: MessageSquare, faq: HelpCircle, cta: Megaphone, timeline: GitBranch,
+  hero: Layout, services: Star, testimonials: MessageSquare, faq: HelpCircle, cta: Megaphone, timeline: GitBranch, layout: Layout,
 };
 
 const SECTION_LABELS: Record<string, string> = {
   cover: "Cover", text: "Text Block", pricing: "Pricing Table", terms: "Terms & Conditions", signature: "Signature",
-  hero: "Hero Banner", services: "Services", testimonials: "Testimonials", faq: "FAQ", cta: "Call to Action", timeline: "Timeline",
+  hero: "Hero Banner", services: "Services", testimonials: "Testimonials", faq: "FAQ", cta: "Call to Action", timeline: "Timeline", layout: "Layout Block",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -402,6 +406,7 @@ export default function ProposalEditPage() {
   const [currency, setCurrency] = useState("USD");
   const [brand, setBrand] = useState<Brand>(DEFAULT_BRAND);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [layoutSelection, setLayoutSelection] = useState<Selection | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -461,6 +466,7 @@ export default function ProposalEditPage() {
       case "faq": section = { id: sid, type: "faq", heading: "Frequently Asked Questions", items: [{ id: newId(), question: "How long does the project take?", answer: "Typically 4–6 weeks depending on scope." }] }; break;
       case "cta": section = { id: sid, type: "cta", heading: "Ready to Get Started?", subtext: "Let's build something great together.", buttonLabel: "Contact Us", buttonUrl: "", bgColor: "#7c3aed" }; break;
       case "timeline": section = { id: sid, type: "timeline", heading: "Our Process", steps: [{ id: newId(), title: "Discovery", description: "We learn about your goals and requirements." }] }; break;
+      case "layout": section = makeLayoutSection("1col"); break;
       default: return;
     }
     const ns = [...sections, section]; setSections(ns); setSelectedId(sid); setAddMenuOpen(false); scheduleSave(ns, title, brand);
@@ -507,6 +513,36 @@ export default function ProposalEditPage() {
           {status === "DRAFT" ? "Send to Client" : "Already Sent"}
         </Button>
       </div>
+      {/* PropertiesBar: shown when a layout section or block is selected */}
+      {(() => {
+        const layoutSel = layoutSelection;
+        if (!layoutSel) return null;
+        const sec = sections.find((s) => s.id === layoutSel.sectionId) as LayoutSection | undefined;
+        if (!sec || sec.type !== "layout") return null;
+        let block: import("./layout-types").Block | null = null;
+        if (layoutSel.kind === "block") {
+          for (const col of sec.columns) { const b = col.blocks.find((bl) => bl.id === layoutSel.blockId); if (b) { block = b; break; } }
+        }
+        return (
+          <PropertiesBar
+            selection={layoutSel}
+            section={sec}
+            block={block}
+            onUpdateSection={(patch) => {
+              const updated: LayoutSection = { ...sec, ...patch } as LayoutSection;
+              updateSection(updated);
+            }}
+            onUpdateBlock={(patch) => {
+              if (layoutSel.kind !== "block") return;
+              const newCols = sec.columns.map((col) => ({
+                ...col,
+                blocks: col.blocks.map((bl) => bl.id === layoutSel.blockId ? { ...bl, ...patch } as import("./layout-types").Block : bl),
+              }));
+              updateSection({ ...sec, columns: newCols });
+            }}
+          />
+        );
+      })()}
       <div className="flex flex-1 min-h-0">
         <div className="w-64 border-r border-border bg-card flex flex-col shrink-0">
           <div className="flex border-b border-border">
@@ -534,6 +570,8 @@ export default function ProposalEditPage() {
                       const Icon = SECTION_ICONS[type];
                       return <button key={type} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors" onClick={() => addSection(type)}><Icon className="h-4 w-4 text-muted-foreground" /> {label}</button>;
                     })}
+                    <div className="border-t border-border my-1" />
+                    <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors" onClick={() => addSection("layout")}><Layout className="h-4 w-4 text-muted-foreground" /> Layout Block</button>
                   </div>
                 )}
               </div>
@@ -557,7 +595,7 @@ export default function ProposalEditPage() {
                 </div>
                 <div className="px-12 py-2">
                   {sections.map((section) => (
-                    <div key={section.id} ref={(el) => { sectionRefs.current[section.id] = el; }} onClick={() => setSelectedId(section.id)} className={`relative group/canvas transition-all rounded-sm ${selectedId === section.id ? "ring-2 ring-blue-200 ring-offset-4" : ""}`}>
+                    <div key={section.id} ref={(el) => { sectionRefs.current[section.id] = el; }} onClick={() => { setSelectedId(section.id); if (section.type !== "layout") setLayoutSelection(null); }} className={`relative group/canvas transition-all rounded-sm ${selectedId === section.id ? "ring-2 ring-blue-200 ring-offset-4" : ""}`}>
                       <SectionHoverToolbar onDuplicate={() => duplicateSection(section.id)} onDelete={() => deleteSection(section.id)} />
                       {section.type === "cover" && <WysiwygCover section={section} clientName={clientName} date={proposalDate} onChange={updateSection} />}
                       {section.type === "text" && <WysiwygText section={section} onChange={updateSection} />}
@@ -570,6 +608,14 @@ export default function ProposalEditPage() {
                       {section.type === "faq" && <WysiwygFaq section={section} onChange={updateSection} />}
                       {section.type === "cta" && <WysiwygCta section={section} onChange={updateSection} />}
                       {section.type === "timeline" && <WysiwygTimeline section={section} onChange={updateSection} />}
+                      {section.type === "layout" && (
+                        <LayoutSectionEditor
+                          section={section as LayoutSection}
+                          selection={layoutSelection?.sectionId === section.id ? layoutSelection : null}
+                          onSelect={(sel) => { setLayoutSelection(sel); setSelectedId(section.id); }}
+                          onUpdate={(updated) => updateSection(updated)}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
