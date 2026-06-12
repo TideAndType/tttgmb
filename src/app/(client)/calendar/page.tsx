@@ -13,7 +13,17 @@ interface Task {
   dueDate: string | null;
 }
 
-// ── Calendar helpers ────────────────────────────────────────────────
+interface ProjectCard {
+  id: string;
+  title: string;
+  dueDate: string;
+  project: { id: string; name: string; color: string };
+}
+
+type CalendarEvent =
+  | { type: "task"; data: Task }
+  | { type: "card"; data: ProjectCard };
+
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
 }
@@ -49,33 +59,25 @@ const statusLabels: Record<string, string> = {
   COMPLETED: "Completed",
 };
 
-// ── Popover ─────────────────────────────────────────────────────────
-interface PopoverTask extends Task {}
+// ── Popovers ─────────────────────────────────────────────────────────
 
-interface TaskPopoverProps {
-  task: PopoverTask;
-  anchorRef: React.RefObject<HTMLButtonElement | null>;
-  onClose: () => void;
+function useClickOutside(refs: React.RefObject<Element | null>[], onClose: () => void) {
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (refs.every((r) => r.current && !r.current.contains(e.target as Node))) onClose();
+    }
+    document.addEventListener("mousedown", handle);
+    return () => document.removeEventListener("mousedown", handle);
+  }, [refs, onClose]);
 }
 
-function TaskPopover({ task, anchorRef, onClose }: TaskPopoverProps) {
+function TaskPopover({ task, anchorRef, onClose }: {
+  task: Task;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}) {
   const popoverRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        anchorRef.current &&
-        !anchorRef.current.contains(e.target as Node)
-      ) {
-        onClose();
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [anchorRef, onClose]);
-
+  useClickOutside([popoverRef, anchorRef], onClose);
   const colors = priorityColors[task.priority] ?? priorityColors.MEDIUM;
 
   return (
@@ -90,7 +92,7 @@ function TaskPopover({ task, anchorRef, onClose }: TaskPopoverProps) {
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2 mb-3 flex-wrap">
         <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", colors.chip)}>
           {task.priority.charAt(0) + task.priority.slice(1).toLowerCase()} priority
         </span>
@@ -98,18 +100,45 @@ function TaskPopover({ task, anchorRef, onClose }: TaskPopoverProps) {
           {statusLabels[task.status]}
         </span>
       </div>
-      <Link
-        href={`/tasks`}
-        className="text-primary text-xs font-medium hover:underline"
-        onClick={onClose}
-      >
+      <Link href="/tasks" className="text-primary text-xs font-medium hover:underline" onClick={onClose}>
         View task →
       </Link>
     </div>
   );
 }
 
-// ── Task chip ────────────────────────────────────────────────────────
+function CardPopover({ card, anchorRef, onClose }: {
+  card: ProjectCard;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+  useClickOutside([popoverRef, anchorRef], onClose);
+
+  return (
+    <div
+      ref={popoverRef}
+      className="absolute z-50 w-64 bg-white dark:bg-card border border-border rounded-lg shadow-lg p-3 text-sm"
+      style={{ top: "calc(100% + 4px)", left: 0 }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="font-semibold text-foreground leading-snug">{card.title}</p>
+        <button onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <p className="text-xs text-muted-foreground mb-3">
+        Project: <span className="font-medium text-foreground">{card.project.name}</span>
+      </p>
+      <Link href={`/projects/${card.project.id}/cards`} className="text-primary text-xs font-medium hover:underline" onClick={onClose}>
+        View project →
+      </Link>
+    </div>
+  );
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────
+
 function TaskChip({ task }: { task: Task }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -120,39 +149,59 @@ function TaskChip({ task }: { task: Task }) {
       <button
         ref={btnRef}
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
-        className={cn(
-          "w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-left truncate",
-          colors.chip
-        )}
+        className={cn("w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-left truncate", colors.chip)}
         title={task.title}
       >
         <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", colors.dot)} />
         <span className="truncate">{task.title}</span>
       </button>
-      {open && (
-        <TaskPopover
-          task={task}
-          anchorRef={btnRef}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      {open && <TaskPopover task={task} anchorRef={btnRef} onClose={() => setOpen(false)} />}
     </div>
   );
 }
 
-// ── Calendar grid ────────────────────────────────────────────────────
-interface CalendarGridProps {
-  year: number;
-  month: number;
-  tasksByDate: Map<string, Task[]>;
-  today: Date;
+function CardChip({ card }: { card: ProjectCard }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-left truncate border"
+        style={{
+          backgroundColor: card.project.color + "20",
+          borderColor: card.project.color + "60",
+          color: card.project.color,
+        }}
+        title={`${card.title} · ${card.project.name}`}
+      >
+        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: card.project.color }} />
+        <span className="truncate">{card.title}</span>
+      </button>
+      {open && <CardPopover card={card} anchorRef={btnRef} onClose={() => setOpen(false)} />}
+    </div>
+  );
 }
+
+// ── Calendar grid ─────────────────────────────────────────────────────
 
 function dateKey(y: number, m: number, d: number): string {
   return `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-function CalendarGrid({ year, month, tasksByDate, today }: CalendarGridProps) {
+interface DayEvents {
+  tasks: Task[];
+  cards: ProjectCard[];
+}
+
+function CalendarGrid({ year, month, eventsByDate, today }: {
+  year: number;
+  month: number;
+  eventsByDate: Map<string, DayEvents>;
+  today: Date;
+}) {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
   const daysInPrevMonth = getDaysInMonth(year, month - 1 < 0 ? 11 : month - 1);
@@ -162,16 +211,12 @@ function CalendarGrid({ year, month, tasksByDate, today }: CalendarGridProps) {
   const nextYear = month + 1 > 11 ? year + 1 : year;
 
   const cells: { day: number; m: number; y: number; current: boolean }[] = [];
-
-  // Prev month tail
   for (let i = firstDay - 1; i >= 0; i--) {
     cells.push({ day: daysInPrevMonth - i, m: prevMonth, y: prevYear, current: false });
   }
-  // Current month
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push({ day: d, m: month, y: year, current: true });
   }
-  // Next month head (fill to 6 rows = 42 cells)
   let next = 1;
   while (cells.length < 42) {
     cells.push({ day: next++, m: nextMonth, y: nextYear, current: false });
@@ -180,46 +225,35 @@ function CalendarGrid({ year, month, tasksByDate, today }: CalendarGridProps) {
   return (
     <div className="grid grid-cols-7 border-l border-t border-border">
       {DAY_NAMES.map((d) => (
-        <div
-          key={d}
-          className="border-r border-b border-border px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/40 text-center"
-        >
+        <div key={d} className="border-r border-b border-border px-2 py-1.5 text-xs font-semibold text-muted-foreground bg-muted/40 text-center">
           {d}
         </div>
       ))}
       {cells.map((cell, idx) => {
         const key = dateKey(cell.y, cell.m, cell.day);
-        const dayTasks = tasksByDate.get(key) ?? [];
-        const visible = dayTasks.slice(0, 3);
-        const overflow = dayTasks.length - 3;
+        const { tasks = [], cards = [] } = eventsByDate.get(key) ?? {};
+        const allCount = tasks.length + cards.length;
+        const visibleTasks = tasks.slice(0, 2);
+        const visibleCards = cards.slice(0, Math.max(0, 3 - visibleTasks.length));
+        const overflow = allCount - visibleTasks.length - visibleCards.length;
         const isToday = isSameDay(new Date(cell.y, cell.m, cell.day), today);
 
         return (
           <div
             key={idx}
-            className={cn(
-              "border-r border-b border-border p-1.5 min-h-[100px] flex flex-col",
-              !cell.current && "bg-muted/20"
-            )}
+            className={cn("border-r border-b border-border p-1.5 min-h-[100px] flex flex-col", !cell.current && "bg-muted/20")}
           >
-            <span
-              className={cn(
-                "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 self-start",
-                isToday ? "bg-primary text-primary-foreground font-bold" : "",
-                !cell.current && !isToday ? "text-muted-foreground" : "text-foreground"
-              )}
-            >
+            <span className={cn(
+              "text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-1 self-start",
+              isToday ? "bg-primary text-primary-foreground font-bold" : "",
+              !cell.current && !isToday ? "text-muted-foreground" : "text-foreground"
+            )}>
               {cell.day}
             </span>
             <div className="flex flex-col gap-0.5 flex-1">
-              {visible.map((t) => (
-                <TaskChip key={t.id} task={t} />
-              ))}
-              {overflow > 0 && (
-                <span className="text-xs text-muted-foreground px-1">
-                  +{overflow} more
-                </span>
-              )}
+              {visibleTasks.map((t) => <TaskChip key={t.id} task={t} />)}
+              {visibleCards.map((c) => <CardChip key={c.id} card={c} />)}
+              {overflow > 0 && <span className="text-xs text-muted-foreground px-1">+{overflow} more</span>}
             </div>
           </div>
         );
@@ -228,27 +262,28 @@ function CalendarGrid({ year, month, tasksByDate, today }: CalendarGridProps) {
   );
 }
 
-// ── Mobile list view ─────────────────────────────────────────────────
-function MobileListView({ year, month, tasksByDate }: { year: number; month: number; tasksByDate: Map<string, Task[]> }) {
+// ── Mobile list view ──────────────────────────────────────────────────
+
+function MobileListView({ year, month, eventsByDate }: { year: number; month: number; eventsByDate: Map<string, DayEvents> }) {
   const daysInMonth = getDaysInMonth(year, month);
   const today = new Date();
-  const entries: { day: number; tasks: Task[] }[] = [];
+  const entries: { day: number; events: DayEvents }[] = [];
 
   for (let d = 1; d <= daysInMonth; d++) {
     const key = dateKey(year, month, d);
-    const tasks = tasksByDate.get(key) ?? [];
-    if (tasks.length > 0) {
-      entries.push({ day: d, tasks });
+    const events = eventsByDate.get(key);
+    if (events && (events.tasks.length > 0 || events.cards.length > 0)) {
+      entries.push({ day: d, events });
     }
   }
 
   if (entries.length === 0) {
-    return <p className="text-muted-foreground text-sm py-8 text-center">No tasks with due dates this month.</p>;
+    return <p className="text-muted-foreground text-sm py-8 text-center">No events this month.</p>;
   }
 
   return (
     <div className="space-y-4">
-      {entries.map(({ day, tasks }) => {
+      {entries.map(({ day, events }) => {
         const date = new Date(year, month, day);
         const isToday = isSameDay(date, today);
         return (
@@ -257,7 +292,8 @@ function MobileListView({ year, month, tasksByDate }: { year: number; month: num
               {date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             </div>
             <div className="p-2 space-y-1">
-              {tasks.map((t) => <TaskChip key={t.id} task={t} />)}
+              {events.tasks.map((t) => <TaskChip key={t.id} task={t} />)}
+              {events.cards.map((c) => <CardChip key={c.id} card={c} />)}
             </div>
           </div>
         );
@@ -266,12 +302,35 @@ function MobileListView({ year, month, tasksByDate }: { year: number; month: num
   );
 }
 
-// ── Main page ────────────────────────────────────────────────────────
+// ── Legend ────────────────────────────────────────────────────────────
+
+function Legend() {
+  return (
+    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-red-500" /> High priority task
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-amber-500" /> Medium priority task
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-blue-500" /> Low priority task
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="h-2 w-2 rounded-full bg-indigo-500" /> Project card
+      </span>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────
+
 export default function CalendarPage() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [cards, setCards] = useState<ProjectCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -283,27 +342,32 @@ export default function CalendarPage() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/tasks")
+    fetch("/api/calendar-events")
       .then((r) => r.json())
       .then((data) => {
-        const all: Task[] = (data.tasks ?? []).filter((t: Task) => !!t.dueDate);
-        setTasks(all);
+        setTasks((data.tasks ?? []).filter((t: Task) => !!t.dueDate));
+        setCards(data.cards ?? []);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  const tasksByDate = useCallback((): Map<string, Task[]> => {
-    const map = new Map<string, Task[]>();
+  const eventsByDate = useCallback((): Map<string, DayEvents> => {
+    const map = new Map<string, DayEvents>();
+    const getOrCreate = (k: string) => {
+      if (!map.has(k)) map.set(k, { tasks: [], cards: [] });
+      return map.get(k)!;
+    };
     for (const t of tasks) {
       if (!t.dueDate) continue;
-      // Parse ISO date preserving local date
       const d = new Date(t.dueDate);
-      const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
-      if (!map.has(k)) map.set(k, []);
-      map.get(k)!.push(t);
+      getOrCreate(dateKey(d.getFullYear(), d.getMonth(), d.getDate())).tasks.push(t);
+    }
+    for (const c of cards) {
+      const d = new Date(c.dueDate);
+      getOrCreate(dateKey(d.getFullYear(), d.getMonth(), d.getDate())).cards.push(c);
     }
     return map;
-  }, [tasks]);
+  }, [tasks, cards]);
 
   const prevMonth = () => {
     if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -317,12 +381,11 @@ export default function CalendarPage() {
 
   const goToday = () => { setYear(today.getFullYear()); setMonth(today.getMonth()); };
 
-  const map = tasksByDate();
+  const map = eventsByDate();
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <CalendarDays className="h-7 w-7 text-primary" />
           <div>
@@ -331,30 +394,21 @@ export default function CalendarPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={goToday}
-            className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-muted transition-colors"
-          >
+          <button onClick={goToday} className="px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-muted transition-colors">
             Today
           </button>
-          <button
-            onClick={prevMonth}
-            className="p-1.5 border border-border rounded-md hover:bg-muted transition-colors"
-            aria-label="Previous month"
-          >
+          <button onClick={prevMonth} className="p-1.5 border border-border rounded-md hover:bg-muted transition-colors" aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-sm font-semibold w-36 text-center">
-            {MONTH_NAMES[month]} {year}
-          </span>
-          <button
-            onClick={nextMonth}
-            className="p-1.5 border border-border rounded-md hover:bg-muted transition-colors"
-            aria-label="Next month"
-          >
+          <span className="text-sm font-semibold w-36 text-center">{MONTH_NAMES[month]} {year}</span>
+          <button onClick={nextMonth} className="p-1.5 border border-border rounded-md hover:bg-muted transition-colors" aria-label="Next month">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
+      </div>
+
+      <div className="mb-4 hidden md:block">
+        <Legend />
       </div>
 
       {loading ? (
@@ -362,10 +416,10 @@ export default function CalendarPage() {
           Loading calendar…
         </div>
       ) : isMobile ? (
-        <MobileListView year={year} month={month} tasksByDate={map} />
+        <MobileListView year={year} month={month} eventsByDate={map} />
       ) : (
         <div className="flex-1 overflow-auto rounded-lg border border-border">
-          <CalendarGrid year={year} month={month} tasksByDate={map} today={today} />
+          <CalendarGrid year={year} month={month} eventsByDate={map} today={today} />
         </div>
       )}
     </div>

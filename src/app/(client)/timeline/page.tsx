@@ -5,15 +5,15 @@ import { TimelineView, TimelineTask } from "@/components/timeline/timeline-view"
 import { GanttChart } from "lucide-react";
 
 export default function TimelinePage() {
-  const [tasks, setTasks] = useState<TimelineTask[]>([]);
+  const [items, setItems] = useState<TimelineTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/tasks")
+    fetch("/api/calendar-events")
       .then((r) => r.json())
       .then((data) => {
-        const mapped: TimelineTask[] = (data.tasks ?? [])
+        const tasks: TimelineTask[] = (data.tasks ?? [])
           .filter((t: any) => t.dueDate)
           .map((t: any) => ({
             id: t.id,
@@ -22,10 +22,25 @@ export default function TimelinePage() {
             priority: t.priority,
             dueDate: t.dueDate,
             createdAt: t.createdAt,
+            groupLabel: "Tasks",
           }));
-        setTasks(mapped);
+
+        const cards: TimelineTask[] = (data.cards ?? [])
+          .filter((c: any) => c.dueDate)
+          .map((c: any) => ({
+            id: `card-${c.id}`,
+            title: c.title,
+            status: "PENDING" as const,
+            priority: "MEDIUM" as const,
+            dueDate: c.dueDate,
+            createdAt: c.createdAt,
+            barColor: c.project.color,
+            groupLabel: c.project.name,
+          }));
+
+        setItems([...tasks, ...cards]);
       })
-      .catch(() => setError("Failed to load tasks"))
+      .catch(() => setError("Failed to load timeline"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -49,7 +64,7 @@ export default function TimelinePage() {
       )}
 
       {!loading && !error && (
-        <TimelineView tasks={tasks} groupByClient={false} />
+        <TimelineView tasks={items} groupByClient={true} />
       )}
     </div>
   );
