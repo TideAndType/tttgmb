@@ -68,6 +68,7 @@ export default async function AdminProposalsPage() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Total</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Created</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Updated</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Viewed</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -94,6 +95,18 @@ export default async function AdminProposalsPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {new Date(proposal.updatedAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    {proposal.viewedAt ? (
+                      <span className="flex items-center gap-1 text-green-600 text-xs" title={new Date(proposal.viewedAt).toLocaleString()}>
+                        <Eye className="h-3 w-3" />
+                        {new Date(proposal.viewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      </span>
+                    ) : proposal.sentAt ? (
+                      <span className="text-xs text-muted-foreground">Not yet</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
