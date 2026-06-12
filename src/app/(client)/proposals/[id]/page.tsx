@@ -37,6 +37,7 @@ export default async function ClientProposalPage({
         acceptedBy: proposal.acceptedBy,
         respondedAt: proposal.respondedAt?.toISOString() ?? null,
         createdAt: proposal.createdAt.toISOString(),
+        brand: proposal.brand as any ?? null,
         user: proposal.user,
       }}
     />
