@@ -118,6 +118,7 @@ model Proposal {
   respondedAt  DateTime?
   acceptedBy   String?
   notes        String?
+  brand        Json?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }

@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json(updated);
   }
 
-  const { title, sections, totalAmount, validUntil, currency, notes, status } = body;
+  const { title, sections, totalAmount, validUntil, currency, notes, status, brand } = body;
 
   const updated = await prisma.proposal.update({
     where: { id: params.id },
@@ -66,6 +66,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(currency !== undefined && { currency }),
       ...(notes !== undefined && { notes }),
       ...(status !== undefined && { status }),
+      ...(brand !== undefined && { brand }),
     },
   });
 
