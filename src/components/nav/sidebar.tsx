@@ -26,6 +26,7 @@ import {
   MapPin,
   CalendarDays,
   GanttChart,
+  Paperclip,
 } from "lucide-react";
 
 const navItems = [
@@ -43,6 +44,7 @@ const navItems = [
   { href: "/approvals", label: "Approvals", icon: CheckCircle },
   { href: "/time", label: "Time Tracking", icon: Clock },
   { href: "/invoices", label: "Invoices", icon: Receipt },
+  { href: "/files", label: "Files", icon: Paperclip },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {

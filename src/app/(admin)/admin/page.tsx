@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
-import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History } from "lucide-react";
+import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History, Paperclip } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 
@@ -44,6 +44,13 @@ export default function AdminPage() {
   const [notesLoading, setNotesLoading] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
+
+  const [filesDialog, setFilesDialog] = useState<Client | null>(null);
+  const [clientFiles, setClientFiles] = useState<{ id: string; originalName: string; label: string | null; size: number; filename: string }[]>([]);
+  const [filesLoading, setFilesLoading] = useState(false);
+  const [uploadLabel, setUploadLabel] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Team dialog state
   const [teamDialog, setTeamDialog] = useState<Client | null>(null);
@@ -128,6 +135,43 @@ export default function AdminPage() {
     if (!notesDialog) return;
     await fetch(`/api/admin/clients/${notesDialog.id}/notes?noteId=${noteId}`, { method: "DELETE" });
     setNotes((prev) => prev.filter((n) => n.id !== noteId));
+  };
+
+  const formatFileSize = (bytes: number) =>
+    bytes < 1024 * 1024
+      ? `${(bytes / 1024).toFixed(0)} KB`
+      : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+  const openFilesDialog = async (client: Client) => {
+    setFilesDialog(client);
+    setUploadFile(null);
+    setUploadLabel("");
+    setFilesLoading(true);
+    const res = await fetch(`/api/files?userId=${client.id}`);
+    const data = await res.json();
+    setClientFiles(Array.isArray(data) ? data : []);
+    setFilesLoading(false);
+  };
+
+  const handleFileUpload = async () => {
+    if (!filesDialog || !uploadFile) return;
+    setUploadingFile(true);
+    const form = new FormData();
+    form.append("file", uploadFile);
+    form.append("userId", filesDialog.id);
+    if (uploadLabel.trim()) form.append("label", uploadLabel.trim());
+    await fetch("/api/files", { method: "POST", body: form });
+    const res = await fetch(`/api/files?userId=${filesDialog.id}`);
+    const data = await res.json();
+    setClientFiles(Array.isArray(data) ? data : []);
+    setUploadFile(null);
+    setUploadLabel("");
+    setUploadingFile(false);
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    await fetch(`/api/files/${fileId}`, { method: "DELETE" });
+    setClientFiles((prev) => prev.filter((f) => f.id !== fileId));
   };
 
   const openTeamDialog = async (client: Client) => {
@@ -281,6 +325,14 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openFilesDialog(client)}
+                        >
+                          <Paperclip className="h-3 w-3 mr-1" />
+                          Files
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => { setGscDialog(client); setGscUrl(client.gscProperty || ""); }}
                         >
                           <Globe className="h-3 w-3 mr-1" />
@@ -308,6 +360,74 @@ export default function AdminPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Files Dialog */}
+      <Dialog open={!!filesDialog} onOpenChange={(open) => !open && setFilesDialog(null)}>
+        <DialogContent onClose={() => setFilesDialog(null)}>
+          <DialogHeader>
+            <DialogTitle>
+              Files — {filesDialog?.companyName || filesDialog?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {filesLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {clientFiles.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No files uploaded yet.</p>
+                ) : (
+                  clientFiles.map((file) => (
+                    <div key={file.id} className="flex items-center justify-between gap-2 py-2 border-b border-border last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{file.originalName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {file.label ? `${file.label} · ` : ""}{formatFileSize(file.size)}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => handleDeleteFile(file.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="border-t border-border pt-4 space-y-3">
+                <p className="text-sm font-semibold">Upload File</p>
+                <div className="space-y-2">
+                  <Label htmlFor="uploadFile">File</Label>
+                  <Input
+                    id="uploadFile"
+                    type="file"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="uploadLabel">Label (optional)</Label>
+                  <Input
+                    id="uploadLabel"
+                    placeholder="e.g. Q1 Report"
+                    value={uploadLabel}
+                    onChange={(e) => setUploadLabel(e.target.value)}
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleFileUpload}
+                  disabled={uploadingFile || !uploadFile}
+                >
+                  {uploadingFile ? "Uploading..." : "Upload"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirm Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

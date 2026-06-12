@@ -211,6 +211,27 @@ export async function sendApprovalRespondedEmail(
   }
 }
 
+export async function sendTaskDueReminderEmail(
+  to: string,
+  clientName: string,
+  taskTitle: string,
+  dueDate: Date,
+  portalUrl: string
+): Promise<void> {
+  try {
+    const dueLine = dueDate.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+    const html = buildHtml(
+      `Reminder: "${taskTitle}" is due soon`,
+      `<p>Hi ${clientName},</p><p>This is a reminder that the task <strong>${taskTitle}</strong> is due on <strong>${dueLine}</strong>.</p><p>Log in to your portal to view or update the task.</p>`,
+      "View Task",
+      portalUrl
+    );
+    await sendMail(to, `Reminder: Task due soon — ${taskTitle}`, html);
+  } catch (err) {
+    console.error("[Email] sendTaskDueReminderEmail failed:", err);
+  }
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   name: string,
