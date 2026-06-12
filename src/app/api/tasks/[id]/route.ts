@@ -76,15 +76,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     include: { ...assigneesInclude, links: true },
   });
 
-  // Send completion email when status transitions to COMPLETED
+  // Send completion emails when status transitions to COMPLETED
   if (status === "COMPLETED" && task.status !== "COMPLETED") {
-    const owner = await prisma.user.findUnique({
-      where: { id: task.userId },
-      select: { email: true, name: true, notifyTaskCompleted: true },
-    });
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const [owner, admins] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: task.userId },
+        select: { email: true, name: true, notifyTaskCompleted: true },
+      }),
+      prisma.user.findMany({ where: { role: "ADMIN" }, select: { email: true, name: true } }),
+    ]);
     if (owner?.notifyTaskCompleted) {
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
       sendTaskCompletedEmail(owner.email, owner.name, task.title, `${baseUrl}/tasks`);
+    }
+    for (const admin of admins) {
+      sendTaskCompletedEmail(admin.email, admin.name, task.title, `${baseUrl}/admin/tasks`);
     }
   }
 

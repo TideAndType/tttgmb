@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
-import { Users, Trash2, Plus, Globe, Eye, StickyNote, X } from "lucide-react";
+import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 
@@ -286,6 +286,12 @@ export default function AdminPage() {
                           <Globe className="h-3 w-3 mr-1" />
                           GSC
                         </Button>
+                        <Link href={`/admin/clients/${client.id}/history`}>
+                          <Button size="sm" variant="outline">
+                            <History className="h-3 w-3 mr-1" />
+                            History
+                          </Button>
+                        </Link>
                         <Button
                           size="sm"
                           variant="destructive"

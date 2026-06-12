@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useBrand } from "@/components/providers/brand-provider";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { ThemeToggle } from "@/components/nav/theme-toggle";
 import {
   LayoutDashboard,
   Search,
@@ -117,13 +118,16 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <User className="h-4 w-4 flex-shrink-0" />
           Profile
         </Link>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 px-3 py-2 w-full rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+          <ThemeToggle />
+        </div>
       </div>
     </div>
   );
