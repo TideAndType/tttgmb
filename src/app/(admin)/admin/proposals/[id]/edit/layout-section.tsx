@@ -18,6 +18,15 @@ import {
   SeparatorHorizontal, Minus, List, Quote, Pointer,
 } from "lucide-react";
 
+function getLayoutEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&playsinline=1`;
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1&loop=1&background=1`;
+  return null;
+}
+
 // ─── Editable text helper ────────────────────────────────────────────────────
 
 function EditableText({
@@ -452,11 +461,13 @@ export function LayoutSectionEditor({
   const activeBlock = activeBlockId ? findBlock(activeBlockId) : null;
   const gridCols = section.columns.map((c) => `${c.widthFr}fr`).join(" ");
 
+  const embedUrl = section.bgVideo ? getLayoutEmbedUrl(section.bgVideo) : null;
+
   return (
     <div
-      className={`rounded-sm transition-all ${sectionIsSelected ? "ring-2 ring-blue-300 ring-offset-2" : ""}`}
+      className={`relative rounded-sm transition-all overflow-hidden ${sectionIsSelected ? "ring-2 ring-blue-300 ring-offset-2" : ""}`}
       style={{
-        background: section.bgColor || undefined,
+        background: embedUrl ? undefined : (section.bgColor || undefined),
         paddingTop: section.paddingTop ?? 48,
         paddingBottom: section.paddingBottom ?? 48,
       }}
@@ -465,9 +476,15 @@ export function LayoutSectionEditor({
         onSelect({ kind: "section", sectionId: section.id });
       }}
     >
+      {embedUrl && (
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
+          <iframe src={embedUrl} style={{ position: "absolute", top: "50%", left: "50%", width: "177.78vh", minWidth: "100%", height: "56.25vw", minHeight: "100%", transform: "translate(-50%,-50%)", border: 0 }} allow="autoplay; fullscreen" />
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} />
+        </div>
+      )}
       <DndContext sensors={sensors} collisionDetection={closestCenter}
         onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-        <div style={{ display: "grid", gridTemplateColumns: gridCols, alignItems: "start" }}>
+        <div style={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: gridCols, alignItems: "start" }}>
           {section.columns.map((col, idx) => (
             <div key={col.id} className="flex">
               <ColumnView column={col} selection={selection}

@@ -82,8 +82,11 @@ export function PropertiesBar({ selection, section, block, onUpdateSection, onUp
           );
         })}
         <Separator />
-        <ColorDot label="Background" value={section.bgColor || "#ffffff"}
+        <ColorDot label="Bg Color" value={section.bgColor || "#ffffff"}
           onChange={(v) => onUpdateSection({ bgColor: v === "#ffffff" ? undefined : v })} />
+        <Separator />
+        <span className="text-xs text-gray-500 shrink-0">Video URL:</span>
+        <input value={section.bgVideo || ""} onChange={(e) => onUpdateSection({ bgVideo: e.target.value || undefined })} placeholder="YouTube or Vimeo…" className="w-52 text-xs border border-gray-200 rounded px-2 py-1 shrink-0" />
         <Separator />
         <span className="text-xs text-gray-500 shrink-0">Padding:</span>
         <div className="flex items-center gap-1">

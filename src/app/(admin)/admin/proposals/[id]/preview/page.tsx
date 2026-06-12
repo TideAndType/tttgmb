@@ -77,12 +77,36 @@ function TermsSection({ section }: { section: Section }) {
   );
 }
 
-function HeroSection({ section }: { section: Section }) {
+function getEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&playsinline=1`;
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1&loop=1&background=1`;
+  return null;
+}
+
+function VideoBackground({ url }: { url: string }) {
+  const embed = getEmbedUrl(url);
+  if (!embed) return null;
   return (
-    <div className="min-h-[320px] flex flex-col items-center justify-center text-center py-20 border-b border-gray-100" style={{ backgroundColor: section.bgColor || "#2563eb" }}>
-      <h1 className="text-5xl font-bold text-white mb-4 leading-tight">{section.headline}</h1>
-      {section.subheadline && <p className="text-xl text-white/80 mb-10">{section.subheadline}</p>}
-      {section.ctaLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.ctaLabel}</span>}
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
+      <iframe src={embed} style={{ position: "absolute", top: "50%", left: "50%", width: "177.78vh", minWidth: "100%", height: "56.25vw", minHeight: "100%", transform: "translate(-50%,-50%)", border: 0 }} allow="autoplay; fullscreen" />
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} />
+    </div>
+  );
+}
+
+function HeroSection({ section }: { section: Section }) {
+  const hasVideo = !!section.bgVideo;
+  return (
+    <div className="min-h-[320px] flex flex-col items-center justify-center text-center py-20 border-b border-gray-100" style={{ position: "relative", overflow: "hidden", ...(hasVideo ? {} : { backgroundColor: section.bgColor || "#2563eb" }) }}>
+      {hasVideo && <VideoBackground url={section.bgVideo} />}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <h1 className="text-5xl font-bold text-white mb-4 leading-tight">{section.headline}</h1>
+        {section.subheadline && <p className="text-xl text-white/80 mb-10">{section.subheadline}</p>}
+        {section.ctaLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.ctaLabel}</span>}
+      </div>
     </div>
   );
 }
@@ -145,11 +169,15 @@ function FaqSection({ section }: { section: Section }) {
 }
 
 function CtaSection({ section }: { section: Section }) {
+  const hasVideo = !!section.bgVideo;
   return (
-    <div className="py-16 text-center border-b border-gray-100" style={{ backgroundColor: section.bgColor || "#7c3aed" }}>
-      <h2 className="text-3xl font-bold text-white mb-3">{section.heading}</h2>
-      {section.subtext && <p className="text-white/80 mb-8">{section.subtext}</p>}
-      {section.buttonLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.buttonLabel}</span>}
+    <div className="py-16 text-center border-b border-gray-100" style={{ position: "relative", overflow: "hidden", ...(hasVideo ? {} : { backgroundColor: section.bgColor || "#7c3aed" }) }}>
+      {hasVideo && <VideoBackground url={section.bgVideo} />}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        <h2 className="text-3xl font-bold text-white mb-3">{section.heading}</h2>
+        {section.subtext && <p className="text-white/80 mb-8">{section.subtext}</p>}
+        {section.buttonLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.buttonLabel}</span>}
+      </div>
     </div>
   );
 }

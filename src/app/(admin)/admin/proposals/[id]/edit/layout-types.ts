@@ -22,6 +22,7 @@ export type LayoutSection = {
   type: "layout";
   columns: Column[];
   bgColor?: string;
+  bgVideo?: string;
   paddingTop?: number;
   paddingBottom?: number;
 };

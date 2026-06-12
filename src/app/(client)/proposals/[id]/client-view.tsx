@@ -82,12 +82,38 @@ function TermsSection({ section }: { section: Section }) {
   );
 }
 
-function HeroSection({ section }: { section: Section }) {
+function getEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  // YouTube watch or short URLs
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&playsinline=1`;
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1&loop=1&background=1`;
+  return null;
+}
+
+function VideoBackground({ url }: { url: string }) {
+  const embed = getEmbedUrl(url);
+  if (!embed) return null;
   return (
-    <div className="min-h-[320px] flex flex-col items-center justify-center text-center py-20 border-b border-gray-100" style={{ backgroundColor: section.bgColor || "#2563eb" }}>
-      <h1 className="text-5xl font-bold text-white mb-4 leading-tight">{section.headline}</h1>
-      {section.subheadline && <p className="text-xl text-white/80 mb-10">{section.subheadline}</p>}
-      {section.ctaLabel && <a href={section.ctaUrl || "#"} className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow hover:shadow-md transition-shadow">{section.ctaLabel}</a>}
+    <div className="absolute inset-0 overflow-hidden z-0 pointer-events-none">
+      <iframe src={embed} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full border-0" allow="autoplay; fullscreen" />
+      <div className="absolute inset-0 bg-black/30" />
+    </div>
+  );
+}
+
+function HeroSection({ section }: { section: Section }) {
+  const hasVideo = !!section.bgVideo;
+  return (
+    <div className="relative min-h-[320px] flex flex-col items-center justify-center text-center py-20 border-b border-gray-100 overflow-hidden" style={hasVideo ? {} : { backgroundColor: section.bgColor || "#2563eb" }}>
+      {hasVideo && <VideoBackground url={section.bgVideo} />}
+      <div className="relative z-10">
+        <h1 className="text-5xl font-bold text-white mb-4 leading-tight">{section.headline}</h1>
+        {section.subheadline && <p className="text-xl text-white/80 mb-10">{section.subheadline}</p>}
+        {section.ctaLabel && <a href={section.ctaUrl || "#"} className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow hover:shadow-md transition-shadow">{section.ctaLabel}</a>}
+      </div>
     </div>
   );
 }
@@ -153,11 +179,15 @@ function FaqSection({ section }: { section: Section }) {
 }
 
 function CtaSection({ section }: { section: Section }) {
+  const hasVideo = !!section.bgVideo;
   return (
-    <div className="py-16 text-center border-b border-gray-100" style={{ backgroundColor: section.bgColor || "#7c3aed" }}>
-      <h2 className="text-3xl font-bold text-white mb-3">{section.heading}</h2>
-      {section.subtext && <p className="text-white/80 mb-8">{section.subtext}</p>}
-      {section.buttonLabel && <a href={section.buttonUrl || "#"} className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow hover:shadow-md transition-shadow">{section.buttonLabel}</a>}
+    <div className="relative py-16 text-center border-b border-gray-100 overflow-hidden" style={hasVideo ? {} : { backgroundColor: section.bgColor || "#7c3aed" }}>
+      {hasVideo && <VideoBackground url={section.bgVideo} />}
+      <div className="relative z-10">
+        <h2 className="text-3xl font-bold text-white mb-3">{section.heading}</h2>
+        {section.subtext && <p className="text-white/80 mb-8">{section.subtext}</p>}
+        {section.buttonLabel && <a href={section.buttonUrl || "#"} className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow hover:shadow-md transition-shadow">{section.buttonLabel}</a>}
+      </div>
     </div>
   );
 }

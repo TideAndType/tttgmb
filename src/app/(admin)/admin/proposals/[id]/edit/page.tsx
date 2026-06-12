@@ -41,11 +41,11 @@ type Section =
   | { id: string; type: "pricing"; heading: string; rows: PricingRow[] }
   | { id: string; type: "terms"; heading: string; body: string }
   | { id: string; type: "signature"; heading: string; message: string }
-  | { id: string; type: "hero"; headline: string; subheadline: string; ctaLabel: string; ctaUrl: string; bgColor: string }
+  | { id: string; type: "hero"; headline: string; subheadline: string; ctaLabel: string; ctaUrl: string; bgColor: string; bgVideo?: string }
   | { id: string; type: "services"; heading: string; items: ServiceItem[] }
   | { id: string; type: "testimonials"; heading: string; items: TestimonialItem[] }
   | { id: string; type: "faq"; heading: string; items: FaqItem[] }
-  | { id: string; type: "cta"; heading: string; subtext: string; buttonLabel: string; buttonUrl: string; bgColor: string }
+  | { id: string; type: "cta"; heading: string; subtext: string; buttonLabel: string; buttonUrl: string; bgColor: string; bgVideo?: string }
   | { id: string; type: "timeline"; heading: string; steps: TimelineStep[] }
   | LayoutSection;
 
@@ -234,13 +234,41 @@ function WysiwygSignature({ section, onChange }: { section: Extract<Section, { t
   );
 }
 
-function WysiwygHero({ section, onChange }: { section: Extract<Section, { type: "hero" }>; onChange: (s: Section) => void }) {
+function getEmbedUrl(url: string): string | null {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&playsinline=1`;
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1&loop=1&background=1`;
+  return null;
+}
+
+function EditorVideoBackground({ url }: { url: string }) {
+  const embed = getEmbedUrl(url);
+  if (!embed) return null;
   return (
-    <div className="border-b border-gray-100" style={{ backgroundColor: section.bgColor }}>
-      <div className="py-20 px-8 text-center">
-        <div className="flex items-center justify-end mb-4 gap-2">
-          <label className="text-white/70 text-xs">Background:</label>
-          <input type="color" value={section.bgColor} onChange={(e) => onChange({ ...section, bgColor: e.target.value })} className="h-6 w-10 rounded border-0 cursor-pointer bg-transparent" />
+    <div className="absolute inset-0 overflow-hidden z-0 pointer-events-none rounded-sm">
+      <iframe src={embed} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[177.78vh] min-w-full h-[56.25vw] min-h-full border-0" allow="autoplay; fullscreen" />
+      <div className="absolute inset-0 bg-black/30" />
+    </div>
+  );
+}
+
+function WysiwygHero({ section, onChange }: { section: Extract<Section, { type: "hero" }>; onChange: (s: Section) => void }) {
+  const hasVideo = !!section.bgVideo;
+  return (
+    <div className="relative border-b border-gray-100 overflow-hidden" style={hasVideo ? {} : { backgroundColor: section.bgColor }}>
+      {hasVideo && <EditorVideoBackground url={section.bgVideo!} />}
+      <div className="relative z-10 py-20 px-8 text-center">
+        <div className="flex items-center justify-end mb-4 gap-2 flex-wrap">
+          {!hasVideo && (
+            <>
+              <label className="text-white/70 text-xs">Color:</label>
+              <input type="color" value={section.bgColor} onChange={(e) => onChange({ ...section, bgColor: e.target.value })} className="h-6 w-10 rounded border-0 cursor-pointer bg-transparent" />
+            </>
+          )}
+          <label className="text-white/70 text-xs">Video URL:</label>
+          <input value={section.bgVideo || ""} onChange={(e) => onChange({ ...section, bgVideo: e.target.value || undefined })} placeholder="YouTube or Vimeo URL..." className="text-xs rounded px-2 py-1 bg-white/20 text-white placeholder:text-white/40 border border-white/30 w-52 outline-none focus:bg-white/30" />
         </div>
         <Editable sectionId={section.id} value={section.headline} onChange={(v) => onChange({ ...section, headline: v })} tag="h1" placeholder="Your compelling headline" singleLine className="wysiwyg-editable text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight min-w-[200px] focus:ring-2 focus:ring-white/30 focus:rounded px-2 -mx-2" />
         <Editable sectionId={section.id} value={section.subheadline} onChange={(v) => onChange({ ...section, subheadline: v })} tag="p" placeholder="Supporting subheadline..." singleLine className="wysiwyg-editable text-xl text-white/80 mb-10 min-w-[160px] focus:ring-2 focus:ring-white/30 focus:rounded px-2 -mx-2" />
@@ -322,12 +350,20 @@ function WysiwygFaq({ section, onChange }: { section: Extract<Section, { type: "
 }
 
 function WysiwygCta({ section, onChange }: { section: Extract<Section, { type: "cta" }>; onChange: (s: Section) => void }) {
+  const hasVideo = !!section.bgVideo;
   return (
-    <div className="border-b border-gray-100" style={{ backgroundColor: section.bgColor }}>
-      <div className="py-16 px-8 text-center">
-        <div className="flex items-center justify-end mb-4 gap-2">
-          <label className="text-white/70 text-xs">Background:</label>
-          <input type="color" value={section.bgColor} onChange={(e) => onChange({ ...section, bgColor: e.target.value })} className="h-6 w-10 rounded border-0 cursor-pointer bg-transparent" />
+    <div className="relative border-b border-gray-100 overflow-hidden" style={hasVideo ? {} : { backgroundColor: section.bgColor }}>
+      {hasVideo && <EditorVideoBackground url={section.bgVideo!} />}
+      <div className="relative z-10 py-16 px-8 text-center">
+        <div className="flex items-center justify-end mb-4 gap-2 flex-wrap">
+          {!hasVideo && (
+            <>
+              <label className="text-white/70 text-xs">Color:</label>
+              <input type="color" value={section.bgColor} onChange={(e) => onChange({ ...section, bgColor: e.target.value })} className="h-6 w-10 rounded border-0 cursor-pointer bg-transparent" />
+            </>
+          )}
+          <label className="text-white/70 text-xs">Video URL:</label>
+          <input value={section.bgVideo || ""} onChange={(e) => onChange({ ...section, bgVideo: e.target.value || undefined })} placeholder="YouTube or Vimeo URL..." className="text-xs rounded px-2 py-1 bg-white/20 text-white placeholder:text-white/40 border border-white/30 w-52 outline-none focus:bg-white/30" />
         </div>
         <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Ready to get started?" singleLine className="wysiwyg-editable text-3xl font-bold text-white mb-3 focus:ring-2 focus:ring-white/30 focus:rounded px-2 -mx-2" />
         <Editable sectionId={section.id} value={section.subtext} onChange={(v) => onChange({ ...section, subtext: v })} tag="p" placeholder="Supporting text..." singleLine className="wysiwyg-editable text-white/80 mb-8 focus:ring-2 focus:ring-white/30 focus:rounded px-2 -mx-2" />
