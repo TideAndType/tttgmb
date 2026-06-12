@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
-import { Users, Trash2, Plus, Globe, Eye } from "lucide-react";
+import { Users, Trash2, Plus, Globe, Eye, StickyNote, X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 
 interface Client {
@@ -37,6 +38,12 @@ export default function AdminPage() {
   const [gscUrl, setGscUrl] = useState("");
   const [gscLoading, setGscLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [notesDialog, setNotesDialog] = useState<Client | null>(null);
+  const [notes, setNotes] = useState<{ id: string; body: string; createdAt: string }[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [newNote, setNewNote] = useState("");
+  const [addingNote, setAddingNote] = useState(false);
 
   // Team dialog state
   const [teamDialog, setTeamDialog] = useState<Client | null>(null);

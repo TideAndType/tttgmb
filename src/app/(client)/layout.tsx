@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExitImpersonationButton } from "@/components/nav/exit-impersonation-button";
+import { GlobalSearch } from "@/components/search/global-search";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
@@ -39,6 +40,7 @@ export default async function ClientLayout({ children }: { children: React.React
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-auto min-w-0">
           {impersonationBanner}
+          <div className="px-4 lg:px-8 py-3 border-b border-border bg-background"><GlobalSearch /></div>
           <main className="flex-1 p-4 lg:p-8">{children}</main>
         </div>
       </div>
