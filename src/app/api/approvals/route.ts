@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendApprovalNeededEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -97,15 +98,12 @@ export async function POST(req: NextRequest) {
 
     try {
       const clientUser = await prisma.user.findUnique({ where: { id: userId } });
-      if (clientUser?.notifyApprovalNeeded) {
-        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/approvals`;
-        await sendApprovalNeededEmail(
-          clientUser.email,
-          clientUser.name,
-          title,
-          deliverable.type,
-          portalUrl
-        );
+      if (clientUser) {
+        createNotification(userId, "approval_needed", "New deliverable to review", title, "/approvals");
+        if (clientUser.notifyApprovalNeeded) {
+          const portalUrl = `${process.env.NEXTAUTH_URL || ""}/approvals`;
+          await sendApprovalNeededEmail(clientUser.email, clientUser.name, title, deliverable.type, portalUrl);
+        }
       }
     } catch (err) {
       console.error("Email notification failed:", err);

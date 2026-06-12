@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendApprovalRespondedEmail } from "@/lib/email";
+import { createNotificationForAdmins } from "@/lib/notifications";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -163,6 +164,7 @@ export async function PATCH(
     });
 
     await notifyApprovalResponse(user.id, deliverable.title, "approved");
+    createNotificationForAdmins("approval_responded", "Deliverable approved", `${user.name ?? "Client"} approved "${deliverable.title}"`, "/admin/approvals");
 
     return NextResponse.json({ deliverable: updated });
   }
@@ -188,6 +190,7 @@ export async function PATCH(
     });
 
     await notifyApprovalResponse(user.id, deliverable.title, "changes_requested");
+    createNotificationForAdmins("approval_responded", "Changes requested", `${user.name ?? "Client"} requested changes on "${deliverable.title}"`, "/admin/approvals");
 
     return NextResponse.json({ deliverable: updated });
   }

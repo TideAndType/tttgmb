@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createInvoice } from "@/lib/invoiless";
 import { sendInvoiceEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { getCompanyUserIds } from "@/lib/company";
 
 export async function GET() {
@@ -81,6 +82,8 @@ export async function POST(req: NextRequest) {
       lastSyncedAt: new Date(),
     },
   });
+
+  createNotification(userId, "invoice_sent", "New invoice issued", invoice.number ? `Invoice #${invoice.number}` : "A new invoice has been issued", "/invoices");
 
   try {
     const portalUrl = `${process.env.NEXTAUTH_URL || ""}/invoices`;

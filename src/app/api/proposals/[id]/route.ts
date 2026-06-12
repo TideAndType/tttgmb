@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendProposalSentEmail } from "@/lib/email";
+import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -45,12 +46,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
     try {
       const portalUrl = `${process.env.NEXTAUTH_URL || ""}/proposals`;
-      if (updated.user.notifyProposalSent) await sendProposalSentEmail(
-        updated.user.email,
-        updated.user.name,
-        updated.title,
-        portalUrl
-      );
+      createNotification(updated.userId, "proposal_sent", "New proposal to review", updated.title, "/proposals");
+      if (updated.user.notifyProposalSent) await sendProposalSentEmail(updated.user.email, updated.user.name, updated.title, portalUrl);
     } catch (err) {
       console.error("Email notification failed:", err);
     }

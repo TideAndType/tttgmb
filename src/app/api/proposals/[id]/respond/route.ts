@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendProposalRespondedEmail } from "@/lib/email";
+import { createNotificationForAdmins } from "@/lib/notifications";
 
 async function notifyProposalResponse(
   userId: string,
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { status: "ACCEPTED", respondedAt: new Date(), acceptedBy: name },
     });
     await notifyProposalResponse(user.id, proposal.title, "accepted");
+    createNotificationForAdmins("proposal_accepted", "Proposal accepted", `${user.name ?? "Client"} accepted "${proposal.title}"`, "/admin/proposals");
     return NextResponse.json(updated);
   }
 
@@ -58,6 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { status: "DECLINED", respondedAt: new Date() },
     });
     await notifyProposalResponse(user.id, proposal.title, "declined");
+    createNotificationForAdmins("proposal_declined", "Proposal declined", `${user.name ?? "Client"} declined "${proposal.title}"`, "/admin/proposals");
     return NextResponse.json(updated);
   }
 

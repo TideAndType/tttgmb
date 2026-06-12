@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendTaskCreatedEmail } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 import { cookies } from "next/headers";
 import { getCompanyUserIds } from "@/lib/company";
 
@@ -120,16 +121,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const clientUser = await prisma.user.findUnique({ where: { id: userId } });
-    if (clientUser?.notifyTaskCreated) {
-      const portalUrl = `${process.env.NEXTAUTH_URL || ""}/tasks`;
-      await sendTaskCreatedEmail(
-        clientUser.email,
-        clientUser.name,
-        title,
-        description || null,
-        dueDate ? new Date(dueDate) : null,
-        portalUrl
-      );
+    if (clientUser) {
+      createNotification(userId, "task_created", "New task assigned", title, "/tasks");
+      if (clientUser.notifyTaskCreated) {
+        const portalUrl = `${process.env.NEXTAUTH_URL || ""}/tasks`;
+        await sendTaskCreatedEmail(clientUser.email, clientUser.name, title, description || null, dueDate ? new Date(dueDate) : null, portalUrl);
+      }
     }
   } catch (err) {
     console.error("Email notification failed:", err);

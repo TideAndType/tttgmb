@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendTaskCompletedEmail } from "@/lib/email";
+import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 
 const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
@@ -76,7 +77,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     include: { ...assigneesInclude, links: true },
   });
 
-  // Send completion emails when status transitions to COMPLETED
+  // Send completion emails + in-app notifications when status → COMPLETED
   if (status === "COMPLETED" && task.status !== "COMPLETED") {
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const [owner, admins] = await Promise.all([
@@ -84,13 +85,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         where: { id: task.userId },
         select: { email: true, name: true, notifyTaskCompleted: true },
       }),
-      prisma.user.findMany({ where: { role: "ADMIN" }, select: { email: true, name: true } }),
+      prisma.user.findMany({ where: { role: "ADMIN" }, select: { id: true, email: true, name: true } }),
     ]);
     if (owner?.notifyTaskCompleted) {
       sendTaskCompletedEmail(owner.email, owner.name, task.title, `${baseUrl}/tasks`);
     }
+    createNotification(task.userId, "task_completed", "Task completed", task.title, "/tasks");
     for (const admin of admins) {
       sendTaskCompletedEmail(admin.email, admin.name, task.title, `${baseUrl}/admin/tasks`);
+      createNotification(admin.id, "task_completed", "Task marked complete", task.title, "/admin/tasks");
     }
   }
 
