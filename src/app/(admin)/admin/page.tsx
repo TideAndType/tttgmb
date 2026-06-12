@@ -99,6 +99,37 @@ export default function AdminPage() {
     setGscLoading(false);
   };
 
+  const openNotesDialog = async (client: Client) => {
+    setNotesDialog(client);
+    setNewNote("");
+    setNotesLoading(true);
+    const res = await fetch(`/api/admin/clients/${client.id}/notes`);
+    const data = await res.json();
+    setNotes(data);
+    setNotesLoading(false);
+  };
+
+  const handleAddNote = async () => {
+    if (!notesDialog || !newNote.trim()) return;
+    setAddingNote(true);
+    await fetch(`/api/admin/clients/${notesDialog.id}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ body: newNote }),
+    });
+    const res = await fetch(`/api/admin/clients/${notesDialog.id}/notes`);
+    const data = await res.json();
+    setNotes(data);
+    setNewNote("");
+    setAddingNote(false);
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!notesDialog) return;
+    await fetch(`/api/admin/clients/${notesDialog.id}/notes?noteId=${noteId}`, { method: "DELETE" });
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+  };
+
   const openTeamDialog = async (client: Client) => {
     setTeamDialog(client);
     setTeamError("");
@@ -242,6 +273,14 @@ export default function AdminPage() {
                         <Button
                           size="sm"
                           variant="outline"
+                          onClick={() => openNotesDialog(client)}
+                        >
+                          <StickyNote className="h-3 w-3 mr-1" />
+                          Notes
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
                           onClick={() => { setGscDialog(client); setGscUrl(client.gscProperty || ""); }}
                         >
                           <Globe className="h-3 w-3 mr-1" />
@@ -307,6 +346,62 @@ export default function AdminPage() {
               {gscLoading ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Notes Dialog */}
+      <Dialog open={!!notesDialog} onOpenChange={(open) => !open && setNotesDialog(null)}>
+        <DialogContent onClose={() => setNotesDialog(null)}>
+          <DialogHeader>
+            <DialogTitle>
+              Client Notes — {notesDialog?.companyName || notesDialog?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {notesLoading ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
+          ) : (
+            <div className="space-y-4">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {notes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-2">No notes yet. Add one below.</p>
+                ) : (
+                  notes.map((note) => (
+                    <div key={note.id} className="flex items-start justify-between gap-2 py-2 border-b border-border last:border-0">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm whitespace-pre-wrap">{note.body}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(note.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => handleDeleteNote(note.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="border-t border-border pt-4 space-y-3">
+                <Textarea
+                  placeholder="Add a note..."
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  rows={3}
+                />
+                <Button
+                  className="w-full"
+                  onClick={handleAddNote}
+                  disabled={addingNote || !newNote.trim()}
+                >
+                  {addingNote ? "Adding..." : "Add Note"}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
