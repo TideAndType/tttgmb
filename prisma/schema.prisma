@@ -405,3 +405,82 @@ model ClientFile {
   label        String?
   createdAt    DateTime @default(now())
 }
+
+enum ContentStatus {
+  IDEA
+  IN_PROGRESS
+  REVIEW
+  SCHEDULED
+  PUBLISHED
+}
+
+enum ContentType {
+  BLOG_POST
+  SOCIAL_INSTAGRAM
+  SOCIAL_FACEBOOK
+  SOCIAL_LINKEDIN
+  SOCIAL_TWITTER
+  EMAIL
+  VIDEO
+  PODCAST
+  AD
+  OTHER
+}
+
+model ContentItem {
+  id          String        @id @default(cuid())
+  userId      String
+  title       String
+  type        ContentType   @default(OTHER)
+  status      ContentStatus @default(IDEA)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  notes       String?       @db.Text
+  url         String?
+  tags        String[]      @default([])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  WON
+  LOST
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  SOCIAL
+  EMAIL
+  COLD_OUTREACH
+  OTHER
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  company     String?
+  source      LeadSource @default(OTHER)
+  status      LeadStatus @default(NEW)
+  value       Float?
+  notes       String?    @db.Text
+  tags        String[]   @default([])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  activities  LeadActivity[]
+}
+
+model LeadActivity {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String
+  note      String   @db.Text
+  createdAt DateTime @default(now())
+}

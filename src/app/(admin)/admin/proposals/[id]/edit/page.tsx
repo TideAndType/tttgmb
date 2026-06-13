@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, Type, Table, ScrollText, PenLine, Plus, X, Eye, Send,
   Check, Loader2, GripVertical, Copy, Trash2, Monitor, Smartphone,
-  Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch,
+  Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles,
 } from "lucide-react";
 import {
   DndContext,
@@ -28,6 +28,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { LayoutSection, Selection, makeLayoutSection, Block, Column, uid } from "./layout-types";
 import { LayoutSectionEditor } from "./layout-section";
 import { PropertiesBar } from "./properties-bar";
+import { AiAssistPanel } from "@/components/ai-assist-panel";
 
 type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number };
 type ServiceItem = { id: string; icon: string; name: string; description: string };
@@ -446,6 +447,7 @@ export default function ProposalEditPage() {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<"sections" | "brand">("sections");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -543,6 +545,7 @@ export default function ProposalEditPage() {
           {saveState === "saved" && <><Check className="h-3 w-3 text-green-500" /> Saved</>}
           {saveState === "unsaved" && "Unsaved changes..."}
         </span>
+        <Button variant="outline" size="sm" onClick={() => setAiPanelOpen(true)}><Sparkles className="h-4 w-4 mr-2" /> AI Assist</Button>
         <Button variant="outline" size="sm" onClick={() => window.open(`/admin/proposals/${id}/preview`, "_blank")}><Eye className="h-4 w-4 mr-2" /> Preview</Button>
         <Button size="sm" onClick={handleSend} disabled={sending || status !== "DRAFT"} className={status !== "DRAFT" ? "opacity-50" : ""}>
           {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
@@ -660,6 +663,17 @@ export default function ProposalEditPage() {
           )}
         </div>
       </div>
+      <AiAssistPanel
+        open={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
+        onInsert={(text) => {
+          const sid = `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const newSection = { id: sid, type: "text" as const, heading: "AI Generated Content", body: text };
+          setSections((prev) => [...prev, newSection]);
+          setAiPanelOpen(false);
+        }}
+        defaultAction="proposal_section"
+      />
     </div>
   );
 }

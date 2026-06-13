@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert } from "@/components/ui/alert";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { AiAssistPanel } from "@/components/ai-assist-panel";
 
 interface Client {
   id: string;
@@ -45,6 +46,7 @@ export default function NewTaskPage() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
+  const [aiPanelOpen, setAiPanelOpen] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/clients").then((r) => r.json()).then((data) => {
@@ -170,7 +172,16 @@ export default function NewTaskPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description (optional)</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="description">Description (optional)</Label>
+                <button
+                  type="button"
+                  onClick={() => setAiPanelOpen(true)}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Sparkles className="h-3 w-3" /> AI
+                </button>
+              </div>
               <textarea
                 id="description"
                 name="description"
@@ -285,6 +296,15 @@ export default function NewTaskPage() {
           </form>
         </CardContent>
       </Card>
+      <AiAssistPanel
+        open={aiPanelOpen}
+        onClose={() => setAiPanelOpen(false)}
+        onInsert={(text) => {
+          setForm((prev) => ({ ...prev, description: text }));
+          setAiPanelOpen(false);
+        }}
+        defaultAction="task_description"
+      />
     </div>
   );
 }

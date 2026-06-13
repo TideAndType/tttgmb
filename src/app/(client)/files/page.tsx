@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image, File } from "lucide-react";
+import { FileText, Image, File, Download } from "lucide-react";
 
 interface ClientFile {
   id: string;
@@ -74,21 +76,15 @@ export default function FilesPage() {
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {files.map((file) => (
-            <a
-              key={file.id}
-              href={`/api/uploads/${file.filename}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block"
-            >
-              <Card className="hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer h-full">
+            <div key={file.id}>
+              <Card className="hover:border-primary/50 hover:shadow-sm transition-all h-full">
                 <CardContent className="p-4 flex flex-col gap-2">
                   <FileIcon mimeType={file.mimeType} />
                   <p className="text-sm font-medium text-foreground truncate" title={file.originalName}>
                     {file.originalName}
                   </p>
                   {file.label && (
-                    <p className="text-xs text-primary font-medium">{file.label}</p>
+                    <Badge variant="secondary" className="text-xs w-fit">{file.label}</Badge>
                   )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-auto">
                     <span>{formatSize(file.size)}</span>
@@ -101,9 +97,20 @@ export default function FilesPage() {
                       })}
                     </span>
                   </div>
+                  <a
+                    href={`/api/uploads/${file.filename}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Button variant="outline" size="sm" className="w-full mt-1">
+                      <Download className="h-3.5 w-3.5 mr-1" />
+                      Download
+                    </Button>
+                  </a>
                 </CardContent>
               </Card>
-            </a>
+            </div>
           ))}
         </div>
       )}

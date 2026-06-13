@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ExitImpersonationButton } from "@/components/nav/exit-impersonation-button";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 
@@ -46,6 +47,7 @@ export default async function ClientLayout({ children }: { children: React.React
             <NotificationBell />
           </div>
           <main className="flex-1 p-4 lg:p-8">{children}</main>
+          <OnboardingWizard />
         </div>
       </div>
     </BrandProvider>

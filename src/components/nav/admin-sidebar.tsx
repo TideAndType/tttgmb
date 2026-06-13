@@ -24,6 +24,9 @@ import {
   AlertCircle,
   CalendarDays,
   GanttChart,
+  Target,
+  Folder,
+  Instagram,
 } from "lucide-react";
 
 const navItems = [
@@ -34,12 +37,15 @@ const navItems = [
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/timeline", label: "Timeline", icon: GanttChart },
   { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
+  { href: "/admin/leads", label: "Leads", icon: Target },
   { href: "/admin/proposals", label: "Proposals", icon: FileText },
   { href: "/admin/invoices", label: "Invoices", icon: Receipt },
   { href: "/admin/projects", label: "Projects", icon: FolderOpen },
   { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/admin/approvals", label: "Approvals", icon: CheckCircle },
   { href: "/admin/time", label: "Time", icon: Clock },
+  { href: "/admin/files", label: "Files", icon: Folder },
+  { href: "/admin/content", label: "Content", icon: Instagram },
 ];
 
 interface AppSettings {
