@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, RefreshCw, ExternalLink, Send, Trash2 } from "lucide-react";
+import { Plus, RefreshCw, ExternalLink, Send, Trash2, FileText } from "lucide-react";
 
 type Invoice = {
   id: string;
@@ -226,6 +226,14 @@ export default function AdminInvoicesPage() {
                           >
                             <Send className="h-3 w-3" />
                             {sendingId === inv.id ? "Sending…" : "Send"}
+                          </button>
+                          <button
+                            onClick={() => window.open(`/admin/invoices/${inv.id}/pdf`, "_blank")}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            title="Download PDF"
+                          >
+                            <FileText className="h-3 w-3" />
+                            PDF
                           </button>
                           <button
                             onClick={() => handleDelete(inv)}
