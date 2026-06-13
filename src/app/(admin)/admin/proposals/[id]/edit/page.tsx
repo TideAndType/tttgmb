@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import {
   FileText, Type, Table, ScrollText, PenLine, Plus, X, Eye, Send,
   Check, Loader2, GripVertical, Copy, Trash2, Monitor, Smartphone,
-  Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles,
+  Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles, Link2, Download,
 } from "lucide-react";
 import {
   DndContext,
@@ -447,6 +447,8 @@ export default function ProposalEditPage() {
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<"sections" | "brand">("sections");
@@ -519,6 +521,14 @@ export default function ProposalEditPage() {
     setStatus("SENT"); setSending(false); setSaveState("saved");
   }
   function handleTitleBlur() { setEditingTitle(false); scheduleSave(sections, title, brand); }
+  async function handleShare() {
+    const res = await fetch(`/api/proposals/${id}/share`, { method: "POST" });
+    const data = await res.json();
+    setShareUrl(data.url);
+    await navigator.clipboard.writeText(data.url).catch(() => {});
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 3000);
+  }
 
   const clientName = proposal?.user.companyName || proposal?.user.name || "Client";
   const proposalDate = proposal ? new Date(Date.now()).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "";
@@ -546,6 +556,10 @@ export default function ProposalEditPage() {
           {saveState === "unsaved" && "Unsaved changes..."}
         </span>
         <Button variant="outline" size="sm" onClick={() => setAiPanelOpen(true)}><Sparkles className="h-4 w-4 mr-2" /> AI Assist</Button>
+        <Button variant="outline" size="sm" onClick={handleShare} title="Generate a public share link (no login required)">
+          <Link2 className="h-4 w-4 mr-2" />{shareCopied ? "Copied!" : "Share Link"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => window.open(`/admin/proposals/${id}/pdf`, "_blank")}><Download className="h-4 w-4 mr-2" /> PDF</Button>
         <Button variant="outline" size="sm" onClick={() => window.open(`/admin/proposals/${id}/preview`, "_blank")}><Eye className="h-4 w-4 mr-2" /> Preview</Button>
         <Button size="sm" onClick={handleSend} disabled={sending || status !== "DRAFT"} className={status !== "DRAFT" ? "opacity-50" : ""}>
           {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}

@@ -17,6 +17,7 @@ type Invoice = {
   totalAmount: number | null;
   dueDate: string | null;
   createdAt: string;
+  stripePaymentId: string | null;
   user: { id: string; name: string; companyName: string | null; email: string };
 };
 
@@ -186,13 +187,20 @@ export default function AdminInvoicesPage() {
                       </td>
                       <td className="p-4 font-mono text-xs text-foreground">{inv.number || "—"}</td>
                       <td className="p-4">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                            STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-700 border-gray-200"
-                          }`}
-                        >
-                          {inv.status}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                              STATUS_COLORS[inv.status] ?? "bg-gray-100 text-gray-700 border-gray-200"
+                            }`}
+                          >
+                            {inv.status}
+                          </span>
+                          {inv.stripePaymentId && (
+                            <span className="inline-flex items-center rounded-full border border-green-200 bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                              Stripe
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-4 text-right font-medium">
                         {formatAmount(inv.totalAmount, inv.currency)}

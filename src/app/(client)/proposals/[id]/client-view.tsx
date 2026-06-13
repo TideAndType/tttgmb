@@ -339,6 +339,10 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
   const docStyle: React.CSSProperties = { fontFamily: brand.font && brand.font !== "Inter" ? brand.font : undefined };
   return (
     <div className="min-h-screen bg-gray-50">
+      <style>{`@media print { .no-print { display: none !important; } body { background: white !important; } }`}</style>
+      <div className="no-print fixed bottom-6 right-6 z-50">
+        <button onClick={() => window.print()} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-lg">&#11015; Download PDF</button>
+      </div>
       <div className="bg-white max-w-4xl mx-auto my-8 rounded-xl shadow-sm border border-gray-100 overflow-hidden" style={docStyle}>
         {brand.logoUrl && <div className="px-12 py-4 border-b border-gray-100 flex items-center"><img src={brand.logoUrl} alt="Company logo" className="h-8 object-contain" /></div>}
         <div className="px-12 py-2">

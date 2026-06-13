@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Receipt, AlertCircle } from "lucide-react";
+import { ExternalLink, Receipt, AlertCircle, CreditCard } from "lucide-react";
 
 interface Invoice {
   id: string;
@@ -48,6 +49,17 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unpaid" | "paid">("all");
+  const [paying, setPaying] = useState<string | null>(null);
+  const [paidNotice, setPaidNotice] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("paid") === "1") {
+      setPaidNotice(true);
+      const t = setTimeout(() => setPaidNotice(false), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetch("/api/invoices")
@@ -56,6 +68,17 @@ export default function InvoicesPage() {
       .catch(() => setInvoices([]))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handlePay(id: string) {
+    setPaying(id);
+    try {
+      const res = await fetch(`/api/invoices/${id}/pay`, { method: "POST" });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } finally {
+      setPaying(null);
+    }
+  }
 
   const visible = invoices.filter((inv) => inv.status !== "Draft").filter((inv) => {
     if (filter === "unpaid") return ["Unpaid", "Pending", "Partial"].includes(inv.status);
@@ -76,6 +99,13 @@ export default function InvoicesPage() {
         <h1 className="text-2xl font-bold text-foreground">Invoices</h1>
         <p className="text-muted-foreground mt-1">View and manage your invoices.</p>
       </div>
+
+      {paidNotice && (
+        <div className="mb-6 flex items-center gap-2 rounded-md bg-green-500/10 border border-green-500/20 px-4 py-3 text-sm text-green-400">
+          <CreditCard className="h-4 w-4 flex-shrink-0" />
+          Payment successful! Your invoice has been paid.
+        </div>
+      )}
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 mb-8">
@@ -124,6 +154,7 @@ export default function InvoicesPage() {
         <div className="space-y-3">
           {visible.map((inv) => {
             const overdue = isOverdue(inv.dueDate, inv.status);
+            const canPay = ["Unpaid", "Pending"].includes(inv.status) && (inv.totalAmount ?? 0) > 0;
             return (
               <Card key={inv.id} className="p-5 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4 min-w-0">
@@ -170,6 +201,16 @@ export default function InvoicesPage() {
                       <ExternalLink className="h-3.5 w-3.5" />
                       View Invoice
                     </a>
+                  )}
+                  {canPay && (
+                    <Button
+                      size="sm"
+                      onClick={() => handlePay(inv.id)}
+                      disabled={paying === inv.id}
+                    >
+                      <CreditCard className="h-3.5 w-3.5 mr-1.5" />
+                      {paying === inv.id ? "Redirecting…" : "Pay Now"}
+                    </Button>
                   )}
                 </div>
               </Card>

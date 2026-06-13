@@ -1,7 +1,19 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { redirect, notFound } from "next/navigation";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+
+function PrintButton({ backHref }: { backHref: string }) {
+  return (
+    <>
+      <style>{`@media print { .no-print { display: none !important; } body { background: white; } }`}</style>
+      <div className="no-print fixed bottom-6 right-6 z-50 flex gap-2">
+        <a href={backHref} className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200">&#8592; Back</a>
+        <button onClick={() => window.print()} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 shadow-lg">&#11015; Download PDF</button>
+      </div>
+    </>
+  );
+}
 
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
@@ -77,36 +89,12 @@ function TermsSection({ section }: { section: Section }) {
   );
 }
 
-function getEmbedUrl(url: string): string | null {
-  if (!url) return null;
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&loop=1&playlist=${ytMatch[1]}&controls=0&playsinline=1`;
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}?autoplay=1&muted=1&loop=1&background=1`;
-  return null;
-}
-
-function VideoBackground({ url }: { url: string }) {
-  const embed = getEmbedUrl(url);
-  if (!embed) return null;
-  return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden", zIndex: 0, pointerEvents: "none" }}>
-      <iframe src={embed} style={{ position: "absolute", top: "50%", left: "50%", width: "177.78vh", minWidth: "100%", height: "56.25vw", minHeight: "100%", transform: "translate(-50%,-50%)", border: 0 }} allow="autoplay; fullscreen" />
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} />
-    </div>
-  );
-}
-
 function HeroSection({ section }: { section: Section }) {
-  const hasVideo = !!section.bgVideo;
   return (
-    <div className="min-h-[320px] flex flex-col items-center justify-center text-center py-20 border-b border-gray-100" style={{ position: "relative", overflow: "hidden", ...(hasVideo ? {} : { backgroundColor: section.bgColor || "#2563eb" }) }}>
-      {hasVideo && <VideoBackground url={section.bgVideo} />}
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <h1 className="text-5xl font-bold text-white mb-4 leading-tight">{section.headline}</h1>
-        {section.subheadline && <p className="text-xl text-white/80 mb-10">{section.subheadline}</p>}
-        {section.ctaLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.ctaLabel}</span>}
-      </div>
+    <div className="min-h-[320px] flex flex-col items-center justify-center text-center py-20 border-b border-gray-100" style={{ backgroundColor: section.bgColor || "#2563eb" }}>
+      <h1 className="text-5xl font-bold text-white mb-4 leading-tight">{section.headline}</h1>
+      {section.subheadline && <p className="text-xl text-white/80 mb-10">{section.subheadline}</p>}
+      {section.ctaLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.ctaLabel}</span>}
     </div>
   );
 }
@@ -169,15 +157,11 @@ function FaqSection({ section }: { section: Section }) {
 }
 
 function CtaSection({ section }: { section: Section }) {
-  const hasVideo = !!section.bgVideo;
   return (
-    <div className="py-16 text-center border-b border-gray-100" style={{ position: "relative", overflow: "hidden", ...(hasVideo ? {} : { backgroundColor: section.bgColor || "#7c3aed" }) }}>
-      {hasVideo && <VideoBackground url={section.bgVideo} />}
-      <div style={{ position: "relative", zIndex: 1 }}>
-        <h2 className="text-3xl font-bold text-white mb-3">{section.heading}</h2>
-        {section.subtext && <p className="text-white/80 mb-8">{section.subtext}</p>}
-        {section.buttonLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.buttonLabel}</span>}
-      </div>
+    <div className="py-16 text-center border-b border-gray-100" style={{ backgroundColor: section.bgColor || "#7c3aed" }}>
+      <h2 className="text-3xl font-bold text-white mb-3">{section.heading}</h2>
+      {section.subtext && <p className="text-white/80 mb-8">{section.subtext}</p>}
+      {section.buttonLabel && <span className="inline-block bg-white text-gray-900 font-semibold px-8 py-3 rounded-lg shadow">{section.buttonLabel}</span>}
     </div>
   );
 }
@@ -215,33 +199,51 @@ function SignatureSection({ section, proposal }: { section: Section; proposal: a
       ) : proposal.status === "DECLINED" ? (
         <div className="border border-red-200 bg-red-50 rounded-lg p-6"><p className="text-red-800 font-semibold">This proposal was declined.</p></div>
       ) : (
-        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400"><p>Signature pending — client has not yet accepted.</p></div>
+        <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center text-gray-400"><p>Awaiting client signature.</p></div>
       )}
     </div>
   );
 }
 
-export default async function AdminProposalPreviewPage({ params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: params.id },
-    include: { user: { select: { name: true, companyName: true } } },
-  });
-  if (!proposal) notFound();
-  const sections = (proposal.sections as any[]) || [];
+type ProposalData = {
+  id: string; title: string; status: string; currency: string;
+  sections: Section[]; createdAt: string; acceptedBy: string | null;
+  respondedAt: string | null; brand?: Brand | null;
+  user: { name: string; companyName: string | null };
+};
+
+export default function ProposalPdfPage() {
+  const params = useParams<{ id: string }>();
+  const id = params.id;
+  const [proposal, setProposal] = useState<ProposalData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/proposals/${id}`)
+      .then((r) => r.json())
+      .then((data) => { setProposal(data); setLoading(false); });
+  }, [id]);
+
+  if (loading || !proposal) {
+    return <div className="flex items-center justify-center h-screen text-gray-400">Loading...</div>;
+  }
+
+  const sections = (proposal.sections as Section[]) || [];
   const brand = (proposal.brand as Brand | null) || {};
   const clientName = proposal.user.companyName || proposal.user.name;
   const date = new Date(proposal.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const docStyle = brand.font && brand.font !== "Inter" ? { fontFamily: brand.font } : {};
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-amber-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center gap-4">
-        <span>Preview mode — this is how your client will see this proposal</span>
-        <a href={`/admin/proposals/${proposal.id}/pdf`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 bg-white/20 hover:bg-white/30 text-white text-xs font-medium px-3 py-1 rounded-md transition-colors">&#11015; Download PDF</a>
-      </div>
+      <PrintButton backHref={`/admin/proposals/${id}/preview`} />
       <div className="bg-white max-w-4xl mx-auto my-8 rounded-xl shadow-sm border border-gray-100 overflow-hidden" style={docStyle}>
-        {brand.logoUrl && <div className="px-12 py-4 border-b border-gray-100 flex items-center"><img src={brand.logoUrl} alt="Company logo" className="h-8 object-contain" /></div>}
+        {brand.logoUrl && (
+          <div className="px-12 py-4 border-b border-gray-100 flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={brand.logoUrl} alt="Company logo" className="h-8 object-contain" />
+          </div>
+        )}
         <div className="px-12 py-2">
           {sections.map((section: Section) => {
             switch (section.type) {
