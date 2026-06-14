@@ -27,12 +27,14 @@ import {
   CalendarDays,
   GanttChart,
   Paperclip,
+  Eye,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/proposals", label: "Proposals", icon: FileText },
   { href: "/projects", label: "Projects", icon: FolderOpen },
+  { href: "/ai-visibility", label: "AI Visibility", icon: Eye },
   { href: "/seo", label: "SEO Overview", icon: Search },
   { href: "/keywords", label: "Keywords", icon: Key },
   { href: "/brand-book", label: "Brand Book", icon: BookOpen },

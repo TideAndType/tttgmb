@@ -89,6 +89,7 @@ model User {
   notifyApprovalNeeded  Boolean @default(true)
   notifyProposalSent    Boolean @default(true)
   notifyInvoiceSent     Boolean @default(true)
+  openLensApiKey  String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
   brandAssets     BrandAsset[]
