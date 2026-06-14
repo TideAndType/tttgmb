@@ -6,3 +6,4 @@ package-lock.json
 uploads/
 .next/
 next-env.d.ts
+.claude/worktrees/

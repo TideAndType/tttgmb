@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
+import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
 
 function formatCurrency(amount: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
@@ -264,8 +265,8 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {/* AI Visibility */}
-      <AiVisibilityWidget />
+      {/* Widget dashboard */}
+      <DashboardCanvas />
 
       {/* Row 2 — Two columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

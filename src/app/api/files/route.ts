@@ -48,6 +48,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const url = new URL(req.url);
+  const replaceFileId = url.searchParams.get("replaceFileId");
+
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
   const userId = formData.get("userId") as string | null;
@@ -63,6 +66,44 @@ export async function POST(req: Request) {
   const filename = randomUUID() + ext;
   const bytes = await file.arrayBuffer();
   await writeFile(path.join(UPLOADS_DIR, filename), Buffer.from(bytes));
+
+  // Determine if this is a replacement (new version)
+  let existingFile = null;
+  if (replaceFileId) {
+    existingFile = await prisma.clientFile.findUnique({ where: { id: replaceFileId } });
+  } else if (label) {
+    // Check for existing file with same userId + label
+    existingFile = await prisma.clientFile.findFirst({
+      where: { userId, label },
+    });
+  }
+
+  if (existingFile) {
+    // Save old data as a FileVersion record
+    await prisma.fileVersion.create({
+      data: {
+        fileId: existingFile.id,
+        version: existingFile.version,
+        filename: existingFile.filename,
+        originalName: existingFile.originalName,
+        size: existingFile.size,
+      },
+    });
+
+    // Update the existing ClientFile with new data
+    const updated = await prisma.clientFile.update({
+      where: { id: existingFile.id },
+      data: {
+        filename,
+        originalName: file.name,
+        size: file.size,
+        version: existingFile.version + 1,
+        label: label ?? existingFile.label,
+      },
+    });
+
+    return NextResponse.json(updated, { status: 200 });
+  }
 
   const record = await prisma.clientFile.create({
     data: {

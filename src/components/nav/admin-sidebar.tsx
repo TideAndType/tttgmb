@@ -27,6 +27,7 @@ import {
   Target,
   Folder,
   Instagram,
+  Video,
 } from "lucide-react";
 
 const navItems = [
@@ -44,6 +45,7 @@ const navItems = [
   { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
   { href: "/admin/approvals", label: "Approvals", icon: CheckCircle },
   { href: "/admin/time", label: "Time", icon: Clock },
+  { href: "/admin/meetings", label: "Meetings", icon: Video },
   { href: "/admin/files", label: "Files", icon: Folder },
   { href: "/admin/content", label: "Content", icon: Instagram },
 ];

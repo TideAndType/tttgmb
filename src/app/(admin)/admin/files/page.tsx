@@ -26,6 +26,7 @@ import {
   Search,
   Plus,
   X,
+  Clock,
 } from "lucide-react";
 
 interface AdminFile {
@@ -36,6 +37,7 @@ interface AdminFile {
   mimeType: string;
   size: number;
   label: string | null;
+  version: number;
   createdAt: string;
   user: {
     id: string;
@@ -48,6 +50,16 @@ interface ClientOption {
   id: string;
   name: string | null;
   companyName: string | null;
+}
+
+interface VersionEntry {
+  id: string;
+  version: number;
+  filename: string;
+  originalName: string;
+  size: number;
+  createdAt: string;
+  isCurrent: boolean;
 }
 
 type FileTypeFilter = "all" | "images" | "documents" | "other";
@@ -147,26 +159,112 @@ function SkeletonCard() {
   );
 }
 
+// --- Version History Modal ---
+interface VersionHistoryModalProps {
+  file: AdminFile | null;
+  onClose: () => void;
+}
+
+function VersionHistoryModal({ file, onClose }: VersionHistoryModalProps) {
+  const [versions, setVersions] = useState<VersionEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!file) return;
+    setLoading(true);
+    fetch(`/api/files/${file.id}/versions`)
+      .then((r) => r.json())
+      .then((data) => {
+        setVersions(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [file]);
+
+  return (
+    <Dialog open={!!file} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Version History — {file?.originalName}</DialogTitle>
+        </DialogHeader>
+        {loading ? (
+          <div className="space-y-2 py-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : versions.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">No version history available.</p>
+        ) : (
+          <div className="space-y-2 py-2 max-h-96 overflow-y-auto">
+            {versions.map((v) => (
+              <div
+                key={v.id}
+                className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-card"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold">
+                    v{v.version}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{v.originalName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatSize(v.size)} · {formatDate(v.createdAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {v.isCurrent && (
+                    <Badge variant="secondary" className="text-xs">Current</Badge>
+                  )}
+                  <a
+                    href={`/api/uploads/${v.filename}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button variant="outline" size="sm">
+                      <Download className="h-3.5 w-3.5" />
+                    </Button>
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// --- Upload Modal ---
 interface UploadModalProps {
   open: boolean;
   onClose: () => void;
   clients: ClientOption[];
+  files: AdminFile[];
   onUploaded: () => void;
 }
 
-function UploadModal({ open, onClose, clients, onUploaded }: UploadModalProps) {
+function UploadModal({ open, onClose, clients, files, onUploaded }: UploadModalProps) {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [label, setLabel] = useState("");
+  const [replaceFileId, setReplaceFileId] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Files available for the selected client
+  const clientFiles = selectedClientId
+    ? files.filter((f) => f.userId === selectedClientId)
+    : [];
 
   const reset = useCallback(() => {
     setSelectedFile(null);
     setSelectedClientId("");
     setLabel("");
+    setReplaceFileId("");
     setError("");
     setUploading(false);
     setDragOver(false);
@@ -202,8 +300,10 @@ function UploadModal({ open, onClose, clients, onUploaded }: UploadModalProps) {
     formData.append("userId", selectedClientId);
     if (label.trim()) formData.append("label", label.trim());
 
+    const qs = replaceFileId ? `?replaceFileId=${encodeURIComponent(replaceFileId)}` : "";
+
     try {
-      const res = await fetch("/api/files", { method: "POST", body: formData });
+      const res = await fetch(`/api/files${qs}`, { method: "POST", body: formData });
       if (!res.ok) {
         const data = await res.json();
         setError(data.error || "Upload failed.");
@@ -268,11 +368,12 @@ function UploadModal({ open, onClose, clients, onUploaded }: UploadModalProps) {
           {/* Client selector */}
           <div className="space-y-2">
             <Label htmlFor="upload-client">Client</Label>
-            <Select
+            <select
               id="upload-client"
               value={selectedClientId}
-              onChange={(e) => setSelectedClientId(e.target.value)}
+              onChange={(e) => { setSelectedClientId(e.target.value); setReplaceFileId(""); }}
               disabled={uploading}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">Select client...</option>
               {clients.map((c) => (
@@ -280,8 +381,29 @@ function UploadModal({ open, onClose, clients, onUploaded }: UploadModalProps) {
                   {c.companyName || c.name || c.id}
                 </option>
               ))}
-            </Select>
+            </select>
           </div>
+
+          {/* Replace existing file */}
+          {selectedClientId && clientFiles.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="upload-replace">Replace existing file (optional)</Label>
+              <select
+                id="upload-replace"
+                value={replaceFileId}
+                onChange={(e) => setReplaceFileId(e.target.value)}
+                disabled={uploading}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="">— Upload as new file —</option>
+                {clientFiles.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.originalName}{f.label ? ` (${f.label})` : ""} — v{f.version}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Label */}
           <div className="space-y-2">
@@ -304,7 +426,7 @@ function UploadModal({ open, onClose, clients, onUploaded }: UploadModalProps) {
               Cancel
             </Button>
             <Button type="submit" disabled={uploading || !selectedFile || !selectedClientId}>
-              {uploading ? "Uploading..." : "Upload"}
+              {uploading ? "Uploading..." : replaceFileId ? "Upload as New Version" : "Upload"}
             </Button>
           </div>
         </form>
@@ -321,6 +443,7 @@ export default function AdminFilesPage() {
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [historyFile, setHistoryFile] = useState<AdminFile | null>(null);
 
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState<string>("all");
@@ -518,11 +641,18 @@ export default function AdminFilesPage() {
                   <p className="text-xs text-muted-foreground truncate" title={getClientLabel(file.user)}>
                     {getClientLabel(file.user)}
                   </p>
-                  {file.label && (
-                    <Badge variant="secondary" className="mt-1 text-xs">
-                      {file.label}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-1 mt-1 flex-wrap">
+                    {file.label && (
+                      <Badge variant="secondary" className="text-xs">
+                        {file.label}
+                      </Badge>
+                    )}
+                    {file.version > 1 && (
+                      <Badge variant="outline" className="text-xs">
+                        v{file.version}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground space-y-0.5">
                   <p>{formatSize(file.size)}</p>
@@ -543,6 +673,14 @@ export default function AdminFilesPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    title="Version history"
+                    onClick={() => setHistoryFile(file)}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() => handleDelete(file.id)}
                   >
@@ -559,7 +697,13 @@ export default function AdminFilesPage() {
         open={uploadOpen}
         onClose={() => setUploadOpen(false)}
         clients={clients}
+        files={files}
         onUploaded={fetchFiles}
+      />
+
+      <VersionHistoryModal
+        file={historyFile}
+        onClose={() => setHistoryFile(null)}
       />
     </div>
   );

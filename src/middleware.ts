@@ -6,8 +6,13 @@ export default withAuth(
     const token = req.nextauth.token;
     const pathname = req.nextUrl.pathname;
 
-    // Admin routes - only for admins
-    if (pathname.startsWith("/admin") && token?.role !== "ADMIN") {
+    // Super admin routes
+    if (pathname.startsWith("/super-admin") && token?.role !== "SUPER_ADMIN") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // Admin routes - only for admins and super admins
+    if (pathname.startsWith("/admin") && token?.role !== "ADMIN" && token?.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
@@ -32,8 +37,8 @@ export default withAuth(
         pathname.startsWith("/files")) &&
       token?.role !== "CLIENT"
     ) {
-      // Allow admins through if they have the impersonation cookie set
-      if (token?.role === "ADMIN" && req.cookies.get("adminViewingAs")?.value) {
+      // Allow admins/super-admins through if they have the impersonation cookie set
+      if ((token?.role === "ADMIN" || token?.role === "SUPER_ADMIN") && req.cookies.get("adminViewingAs")?.value) {
         return NextResponse.next();
       }
       return NextResponse.redirect(new URL("/admin", req.url));
@@ -49,5 +54,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/gmb", "/gmb/:path*", "/tasks/:path*", "/calendar", "/calendar/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*", "/profile/:path*", "/timeline", "/timeline/:path*", "/messages", "/messages/:path*", "/files", "/files/:path*", "/api/files", "/api/files/:path*", "/api/team", "/api/calendar-events", "/api/search", "/api/notifications", "/api/notifications/:path*"],
+  matcher: ["/admin/:path*", "/super-admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/gmb", "/gmb/:path*", "/tasks/:path*", "/calendar", "/calendar/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*", "/profile/:path*", "/timeline", "/timeline/:path*", "/messages", "/messages/:path*", "/files", "/files/:path*", "/api/files", "/api/files/:path*", "/api/team", "/api/calendar-events", "/api/search", "/api/notifications", "/api/notifications/:path*"],
 };
