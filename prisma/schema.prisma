@@ -400,14 +400,28 @@ model ClientNote {
 }
 
 model ClientFile {
-  id           String   @id @default(cuid())
+  id           String        @id @default(cuid())
   userId       String
   filename     String
   originalName String
   mimeType     String
   size         Int
   label        String?
-  createdAt    DateTime @default(now())
+  version      Int           @default(1)
+  versions     FileVersion[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model FileVersion {
+  id           String     @id @default(cuid())
+  fileId       String
+  file         ClientFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  version      Int
+  filename     String
+  originalName String
+  size         Int
+  createdAt    DateTime   @default(now())
 }
 
 enum ContentStatus {
