@@ -18,6 +18,7 @@ import {
   Circle,
 } from "lucide-react";
 import Link from "next/link";
+import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 
 function formatCurrency(amount: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
@@ -262,6 +263,9 @@ export default async function DashboardPage() {
           );
         })}
       </div>
+
+      {/* AI Visibility */}
+      <AiVisibilityWidget />
 
       {/* Row 2 — Two columns */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
