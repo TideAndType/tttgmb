@@ -17,6 +17,7 @@ interface Client {
   id: string;
   name: string;
   email: string;
+  role: string;
   companyName: string | null;
   gscProperty: string | null;
   createdAt: string;
@@ -276,6 +277,7 @@ export default function AdminPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>GSC Property</TableHead>
+                  <TableHead>Role</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -292,6 +294,24 @@ export default function AdminPage() {
                       ) : (
                         <Badge variant="outline" className="text-xs">Not set</Badge>
                       )}
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        value={client.role}
+                        onChange={async (e) => {
+                          const role = e.target.value;
+                          await fetch(`/api/admin/clients/${client.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ role }),
+                          });
+                          setClients(prev => prev.map(c => c.id === client.id ? { ...c, role } : c));
+                        }}
+                        className="text-xs border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1 bg-white dark:bg-gray-900 focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="CLIENT">CLIENT</option>
+                        <option value="ADMIN">ADMIN</option>
+                      </select>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(client.createdAt).toLocaleDateString()}

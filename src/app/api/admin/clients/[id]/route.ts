@@ -26,12 +26,13 @@ export async function PATCH(
   }
 
   const body = await req.json();
-  const { gscProperty } = body;
+  const { gscProperty, role } = body;
 
-  const user = await prisma.user.update({
-    where: { id: params.id },
-    data: { gscProperty: gscProperty || null },
-  });
+  const data: Record<string, unknown> = {};
+  if (gscProperty !== undefined) data.gscProperty = gscProperty || null;
+  if (role !== undefined) data.role = role;
+
+  const user = await prisma.user.update({ where: { id: params.id }, data });
 
   return NextResponse.json({ success: true });
 }
