@@ -3,7 +3,7 @@ tsconfig.tsbuildinfo
 package-lock.json
 .env
 .env.local
-uploads/
+/uploads/
 .next/
 next-env.d.ts
 .claude/worktrees/
