@@ -22,7 +22,7 @@ export async function PATCH(
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json();
-  const { title, description, dueDate, columnId, position } = body;
+  const { title, description, dueDate, columnId, position, priority, label } = body;
 
   const card = await prisma.card.update({
     where: { id: params.cardId },
@@ -32,6 +32,8 @@ export async function PATCH(
       ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
       ...(columnId !== undefined && { columnId }),
       ...(position !== undefined && { position }),
+      ...(priority !== undefined && { priority: priority || null }),
+      ...(label !== undefined && { label: label || null }),
     },
   });
 
