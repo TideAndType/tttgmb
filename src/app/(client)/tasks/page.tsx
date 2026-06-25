@@ -12,6 +12,9 @@ interface Task {
   status: "PENDING" | "IN_PROGRESS" | "COMPLETED";
   priority: "LOW" | "MEDIUM" | "HIGH";
   dueDate?: string | null;
+  color?: string | null;
+  tags?: string[];
+  todos?: { id: string; text: string; done: boolean }[];
   createdAt: string;
   updatedAt: string;
   commentCount?: number;

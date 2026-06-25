@@ -11,6 +11,10 @@ const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
 };
 
+const todosInclude = {
+  todos: { orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }] },
+};
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -26,7 +30,7 @@ export async function GET() {
       // Impersonating — show only that client's tasks
       const tasks = await prisma.task.findMany({
         where: { userId: viewing.value },
-        include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude },
+        include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude, ...todosInclude },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       });
       return NextResponse.json({
@@ -41,6 +45,7 @@ export async function GET() {
         _count: { select: { comments: true } },
         links: true,
         ...assigneesInclude,
+        ...todosInclude,
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
@@ -59,7 +64,7 @@ export async function GET() {
         { assignees: { some: { userId: sessionUser.id } }, visibleToClient: true },
       ],
     },
-    include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude },
+    include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude, ...todosInclude },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });
 
@@ -80,7 +85,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, priority, dueDate, visibleToClient, assigneeIds } = body;
+  const { title, description, priority, dueDate, visibleToClient, assigneeIds, color, tags } = body;
   let { userId } = body;
 
   // If impersonating, use the impersonated client's userId
@@ -102,6 +107,8 @@ export async function POST(req: NextRequest) {
       priority: priority || "MEDIUM",
       dueDate: dueDate ? new Date(dueDate) : null,
       visibleToClient: visibleToClient !== false,
+      color: color || null,
+      tags: Array.isArray(tags) ? tags : [],
     },
   });
 

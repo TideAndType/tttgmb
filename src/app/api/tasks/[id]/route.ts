@@ -9,6 +9,10 @@ const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
 };
 
+const todosInclude = {
+  todos: { orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }] },
+};
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -22,6 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       links: true,
       _count: { select: { comments: true } },
       ...assigneesInclude,
+      ...todosInclude,
     },
   });
 
@@ -65,16 +70,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { status, visibleToClient, assigneeIds } = body;
+  const { status, visibleToClient, assigneeIds, color, tags } = body;
 
   const updateData: Record<string, unknown> = {};
   if (status !== undefined) updateData.status = status;
   if (visibleToClient !== undefined) updateData.visibleToClient = visibleToClient;
+  if (color !== undefined) updateData.color = color || null;
+  if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : [];
 
   const updated = await prisma.task.update({
     where: { id: params.id },
     data: updateData,
-    include: { ...assigneesInclude, links: true },
+    include: { ...assigneesInclude, ...todosInclude, links: true },
   });
 
   // Send completion emails + in-app notifications when status → COMPLETED
@@ -108,7 +115,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Return fresh data
     const fresh = await prisma.task.findUnique({
       where: { id: params.id },
-      include: { ...assigneesInclude, links: true },
+      include: { ...assigneesInclude, ...todosInclude, links: true },
     });
     return NextResponse.json({ task: fresh });
   }

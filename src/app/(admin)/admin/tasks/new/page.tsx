@@ -41,12 +41,19 @@ export default function NewTaskPage() {
     description: "",
     priority: "MEDIUM",
     dueDate: "",
+    color: "",
+    tagInput: "",
   });
+  const [tags, setTags] = useState<string[]>([]);
   const [visibleToClient, setVisibleToClient] = useState(true);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [selectedAssigneeIds, setSelectedAssigneeIds] = useState<string[]>([]);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+
+  const COLORS = [
+    "#6366f1","#8b5cf6","#ec4899","#f59e0b","#10b981","#3b82f6","#ef4444","#14b8a6","#f97316","#64748b",
+  ];
 
   useEffect(() => {
     fetch("/api/admin/clients").then((r) => r.json()).then((data) => {
@@ -94,9 +101,11 @@ export default function NewTaskPage() {
       title: form.title,
       priority: form.priority,
       visibleToClient,
+      tags,
     };
     if (form.description) body.description = form.description;
     if (form.dueDate) body.dueDate = form.dueDate;
+    if (form.color) body.color = form.color;
     if (selectedAssigneeIds.length > 0) body.assigneeIds = selectedAssigneeIds;
 
     const res = await fetch("/api/tasks", {
@@ -222,6 +231,49 @@ export default function NewTaskPage() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            {/* Color stripe */}
+            <div className="space-y-2">
+              <Label>Color stripe (optional)</Label>
+              <div className="flex gap-2 flex-wrap">
+                <button type="button" onClick={() => setForm({ ...form, color: "" })} className={`w-6 h-6 rounded-full border-2 bg-muted ${!form.color ? "border-foreground" : "border-transparent"}`} title="None" />
+                {COLORS.map((c) => (
+                  <button key={c} type="button" onClick={() => setForm({ ...form, color: form.color === c ? "" : c })} className={`w-6 h-6 rounded-full border-2 ${form.color === c ? "border-foreground" : "border-transparent hover:border-muted-foreground"}`} style={{ backgroundColor: c }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="space-y-2">
+              <Label>Tags (optional)</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={form.tagInput}
+                  onChange={(e) => setForm({ ...form, tagInput: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const tag = form.tagInput.trim();
+                      if (tag && !tags.includes(tag)) setTags([...tags, tag]);
+                      setForm({ ...form, tagInput: "" });
+                    }
+                  }}
+                  placeholder="Type and press Enter"
+                  className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground flex-1"
+                />
+              </div>
+              {tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag) => (
+                    <span key={tag} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+                      {tag}
+                      <button type="button" onClick={() => setTags(tags.filter((t) => t !== tag))} className="hover:text-red-500">×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Assignees multi-select — shown when a client with team members is selected */}
