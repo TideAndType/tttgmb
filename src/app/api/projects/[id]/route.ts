@@ -31,7 +31,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { visibility, memberIds, name, description, color, status, startDate, dueDate } = body;
+  const { visibility, memberIds, name, description, color, status, startDate, dueDate, notes } = body;
 
   const data: Record<string, any> = {};
   if (visibility !== undefined) data.visibility = visibility;
@@ -42,6 +42,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (status !== undefined) data.status = status;
   if (startDate !== undefined) data.startDate = startDate ? new Date(startDate) : null;
   if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate) : null;
+  if (notes !== undefined) data.notes = notes;
 
   const project = await prisma.project.update({
     where: { id: params.id },

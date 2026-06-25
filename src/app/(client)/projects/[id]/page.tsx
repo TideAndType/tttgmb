@@ -5,7 +5,8 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, LayoutGrid, ArrowRight, Clock } from "lucide-react";
+import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText } from "lucide-react";
+import { ProjectNotes } from "@/components/projects/project-notes";
 
 export default async function ProjectHomePage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -125,6 +126,25 @@ export default async function ProjectHomePage({ params }: { params: { id: string
                 Manage Board
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Project Notes */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Project Notes</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ProjectNotes
+              projectId={params.id}
+              initialNotes={project.notes ?? ""}
+              readOnly={user.role !== "ADMIN"}
+            />
           </CardContent>
         </Card>
       </div>
