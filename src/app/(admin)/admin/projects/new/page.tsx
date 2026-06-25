@@ -36,6 +36,9 @@ export default function NewProjectPage() {
     name: "",
     description: "",
     color: "#6366f1",
+    status: "active",
+    startDate: "",
+    dueDate: "",
   });
 
   useEffect(() => {
@@ -64,6 +67,9 @@ export default function NewProjectPage() {
         name: form.name,
         description: form.description || undefined,
         color: form.color,
+        status: form.status,
+        startDate: form.startDate || null,
+        dueDate: form.dueDate || null,
       }),
     });
 
@@ -143,6 +149,36 @@ export default function NewProjectPage() {
                 rows={3}
                 className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground resize-none"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="status">Status</Label>
+              <select
+                id="status"
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+                disabled={loading}
+                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground"
+              >
+                <option value="active">Active</option>
+                <option value="on_track">On Track</option>
+                <option value="at_risk">At Risk</option>
+                <option value="blocked">Blocked</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date (optional)</Label>
+                <Input id="startDate" name="startDate" type="date" value={form.startDate} onChange={handleChange} disabled={loading} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Due Date (optional)</Label>
+                <Input id="dueDate" name="dueDate" type="date" value={form.dueDate} onChange={handleChange} disabled={loading} />
+              </div>
             </div>
 
             <div className="space-y-2">

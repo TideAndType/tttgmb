@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, userId, color, visibility, memberIds } = body;
+  const { name, description, userId, color, visibility, memberIds, status, startDate, dueDate } = body;
 
   if (!name || !userId) {
     return NextResponse.json({ error: "name and userId are required" }, { status: 400 });
@@ -61,6 +61,9 @@ export async function POST(req: Request) {
       color: color || "#6366f1",
       visibility: visibility || "company",
       memberIds: memberIds || [],
+      status: status || "active",
+      startDate: startDate ? new Date(startDate) : null,
+      dueDate: dueDate ? new Date(dueDate) : null,
     },
   });
 

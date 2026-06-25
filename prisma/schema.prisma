@@ -266,6 +266,9 @@ model Project {
   color       String       @default("#6366f1")
   visibility  String       @default("company")
   memberIds   String[]     @default([])
+  status      String       @default("active")
+  startDate   DateTime?
+  dueDate     DateTime?
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   messages    Message[]
