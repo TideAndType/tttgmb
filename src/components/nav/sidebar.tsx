@@ -29,6 +29,7 @@ import {
   Paperclip,
   Eye,
   Video,
+  Activity,
 } from "lucide-react";
 
 const navItems = [
@@ -49,6 +50,7 @@ const navItems = [
   { href: "/time", label: "Time Tracking", icon: Clock },
   { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/files", label: "Files", icon: Paperclip },
+  { href: "/activity", label: "Activity", icon: Activity },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
