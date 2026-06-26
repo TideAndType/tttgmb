@@ -29,6 +29,7 @@ import { LayoutSection, Selection, makeLayoutSection, Block, Column, uid } from 
 import { LayoutSectionEditor } from "./layout-section";
 import { PropertiesBar } from "./properties-bar";
 import { AiAssistPanel } from "@/components/ai-assist-panel";
+import { SectionAiPanel } from "@/components/proposals/section-ai-panel";
 
 type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number };
 type ServiceItem = { id: string; icon: string; name: string; description: string };
@@ -145,12 +146,13 @@ function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplic
   );
 }
 
-function WysiwygCover({ section, clientName, date, onChange }: {
-  section: Extract<Section, { type: "cover" }>; clientName: string; date: string; onChange: (s: Section) => void;
+function WysiwygCover({ section, clientName, date, onChange, onAiClick }: {
+  section: Extract<Section, { type: "cover" }>; clientName: string; date: string; onChange: (s: Section) => void; onAiClick?: () => void;
 }) {
   return (
-    <div className="min-h-[360px] flex flex-col items-center justify-center text-center py-16 border-b border-gray-100">
+    <div className="min-h-[360px] flex flex-col items-center justify-center text-center py-16 border-b border-gray-100 relative">
       <style>{`.wysiwyg-editable[data-placeholder]:empty:before{content:attr(data-placeholder);color:#d1d5db;pointer-events:none}`}</style>
+      {onAiClick && <button onClick={onAiClick} className="absolute top-4 right-4 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 transition-colors opacity-0 group-hover/canvas:opacity-100" title="Generate with Claude"><Sparkles className="h-3 w-3" /> AI</button>}
       <Editable sectionId={section.id} value={section.title} onChange={(v) => onChange({ ...section, title: v })} tag="h1" placeholder="Proposal Title" singleLine className="wysiwyg-editable text-4xl lg:text-5xl font-bold text-gray-900 mb-3 leading-tight min-w-[200px] focus:ring-2 focus:ring-blue-200 focus:rounded px-2 -mx-2" />
       <Editable sectionId={section.id} value={section.subtitle} onChange={(v) => onChange({ ...section, subtitle: v })} tag="p" placeholder="Subtitle or tagline..." singleLine className="wysiwyg-editable text-xl text-gray-400 mb-8 min-w-[160px] focus:ring-2 focus:ring-blue-200 focus:rounded px-2 -mx-2" />
       <div className="text-gray-400 text-sm space-y-1 pointer-events-none">
@@ -161,10 +163,13 @@ function WysiwygCover({ section, clientName, date, onChange }: {
   );
 }
 
-function WysiwygText({ section, onChange }: { section: Extract<Section, { type: "text" }>; onChange: (s: Section) => void }) {
+function WysiwygText({ section, onChange, onAiClick }: { section: Extract<Section, { type: "text" }>; onChange: (s: Section) => void; onAiClick?: () => void }) {
   return (
     <div className="py-10 border-b border-gray-100">
-      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Section heading" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-4 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Section heading" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1 flex-1" />
+        {onAiClick && <button onClick={onAiClick} className="shrink-0 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 transition-colors opacity-0 group-hover/canvas:opacity-100" title="Generate with Claude"><Sparkles className="h-3 w-3" /> AI</button>}
+      </div>
       <Editable sectionId={section.id} value={section.body} onChange={(v) => onChange({ ...section, body: v })} tag="p" placeholder="Write your content here..." className="wysiwyg-editable text-gray-600 leading-relaxed whitespace-pre-wrap min-h-[80px] focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
     </div>
   );
@@ -210,10 +215,13 @@ function WysiwygPricing({ section, currency, onChange }: { section: Extract<Sect
   );
 }
 
-function WysiwygTerms({ section, onChange }: { section: Extract<Section, { type: "terms" }>; onChange: (s: Section) => void }) {
+function WysiwygTerms({ section, onChange, onAiClick }: { section: Extract<Section, { type: "terms" }>; onChange: (s: Section) => void; onAiClick?: () => void }) {
   return (
     <div className="py-10 border-b border-gray-100">
-      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Terms & Conditions" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-4 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
+      <div className="flex items-start justify-between gap-2 mb-4">
+        <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Terms & Conditions" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1 flex-1" />
+        {onAiClick && <button onClick={onAiClick} className="shrink-0 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 transition-colors opacity-0 group-hover/canvas:opacity-100" title="Generate with Claude"><Sparkles className="h-3 w-3" /> AI</button>}
+      </div>
       <Editable sectionId={section.id} value={section.body} onChange={(v) => onChange({ ...section, body: v })} tag="div" placeholder="Write your terms here..." className="wysiwyg-editable text-xs text-gray-500 leading-relaxed whitespace-pre-wrap min-h-[120px] focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
     </div>
   );
@@ -281,13 +289,16 @@ function WysiwygHero({ section, onChange }: { section: Extract<Section, { type: 
   );
 }
 
-function WysiwygServices({ section, onChange }: { section: Extract<Section, { type: "services" }>; onChange: (s: Section) => void }) {
+function WysiwygServices({ section, onChange, onAiClick }: { section: Extract<Section, { type: "services" }>; onChange: (s: Section) => void; onAiClick?: () => void }) {
   function updateItem(itemId: string, field: keyof ServiceItem, value: string) {
     onChange({ ...section, items: section.items.map((it) => (it.id === itemId ? { ...it, [field]: value } : it)) });
   }
   return (
     <div className="py-10 border-b border-gray-100">
-      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Our Services" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-8 text-center focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
+      <div className="flex items-start justify-between gap-2 mb-8">
+        <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Our Services" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 text-center focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1 flex-1" />
+        {onAiClick && <button onClick={onAiClick} className="shrink-0 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 transition-colors opacity-0 group-hover/canvas:opacity-100" title="Generate with Claude"><Sparkles className="h-3 w-3" /> AI</button>}
+      </div>
       <div className="grid grid-cols-2 gap-4">
         {section.items.map((item) => (
           <div key={item.id} className="border border-gray-100 rounded-xl p-5 bg-gray-50 group/item relative">
@@ -329,13 +340,16 @@ function WysiwygTestimonials({ section, onChange }: { section: Extract<Section, 
   );
 }
 
-function WysiwygFaq({ section, onChange }: { section: Extract<Section, { type: "faq" }>; onChange: (s: Section) => void }) {
+function WysiwygFaq({ section, onChange, onAiClick }: { section: Extract<Section, { type: "faq" }>; onChange: (s: Section) => void; onAiClick?: () => void }) {
   function updateItem(itemId: string, field: keyof FaqItem, value: string) {
     onChange({ ...section, items: section.items.map((it) => (it.id === itemId ? { ...it, [field]: value } : it)) });
   }
   return (
     <div className="py-10 border-b border-gray-100">
-      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Frequently Asked Questions" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-8 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
+      <div className="flex items-start justify-between gap-2 mb-8">
+        <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Frequently Asked Questions" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1 flex-1" />
+        {onAiClick && <button onClick={onAiClick} className="shrink-0 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 transition-colors opacity-0 group-hover/canvas:opacity-100" title="Generate with Claude"><Sparkles className="h-3 w-3" /> AI</button>}
+      </div>
       <div className="space-y-4">
         {section.items.map((item) => (
           <div key={item.id} className="border border-gray-200 rounded-lg p-4 group/item relative">
@@ -376,13 +390,16 @@ function WysiwygCta({ section, onChange }: { section: Extract<Section, { type: "
   );
 }
 
-function WysiwygTimeline({ section, onChange }: { section: Extract<Section, { type: "timeline" }>; onChange: (s: Section) => void }) {
+function WysiwygTimeline({ section, onChange, onAiClick }: { section: Extract<Section, { type: "timeline" }>; onChange: (s: Section) => void; onAiClick?: () => void }) {
   function updateStep(stepId: string, field: keyof TimelineStep, value: string) {
     onChange({ ...section, steps: section.steps.map((s) => (s.id === stepId ? { ...s, [field]: value } : s)) });
   }
   return (
     <div className="py-10 border-b border-gray-100">
-      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Our Process" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-8 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
+      <div className="flex items-start justify-between gap-2 mb-8">
+        <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Our Process" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1 flex-1" />
+        {onAiClick && <button onClick={onAiClick} className="shrink-0 flex items-center gap-1 text-xs text-purple-600 hover:text-purple-800 border border-purple-200 hover:border-purple-400 rounded-md px-2 py-1 bg-purple-50 hover:bg-purple-100 transition-colors opacity-0 group-hover/canvas:opacity-100" title="Generate with Claude"><Sparkles className="h-3 w-3" /> AI</button>}
+      </div>
       <div className="space-y-6">
         {section.steps.map((step, idx) => (
           <div key={step.id} className="flex gap-4 group/step relative">
@@ -450,6 +467,7 @@ export default function ProposalEditPage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
   const [aiPanelOpen, setAiPanelOpen] = useState(false);
+  const [aiTarget, setAiTarget] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<"sections" | "brand">("sections");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -650,17 +668,17 @@ export default function ProposalEditPage() {
                   {sections.map((section) => (
                     <div key={section.id} ref={(el) => { sectionRefs.current[section.id] = el; }} onClick={() => { setSelectedId(section.id); if (section.type !== "layout") setLayoutSelection(null); }} className={`relative group/canvas transition-all rounded-sm ${selectedId === section.id ? "ring-2 ring-blue-200 ring-offset-4" : ""}`}>
                       <SectionHoverToolbar onDuplicate={() => duplicateSection(section.id)} onDelete={() => deleteSection(section.id)} />
-                      {section.type === "cover" && <WysiwygCover section={section} clientName={clientName} date={proposalDate} onChange={updateSection} />}
-                      {section.type === "text" && <WysiwygText section={section} onChange={updateSection} />}
+                      {section.type === "cover" && <WysiwygCover section={section} clientName={clientName} date={proposalDate} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
+                      {section.type === "text" && <WysiwygText section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "pricing" && <WysiwygPricing section={section} currency={currency} onChange={updateSection} />}
-                      {section.type === "terms" && <WysiwygTerms section={section} onChange={updateSection} />}
+                      {section.type === "terms" && <WysiwygTerms section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "signature" && <WysiwygSignature section={section} onChange={updateSection} />}
                       {section.type === "hero" && <WysiwygHero section={section} onChange={updateSection} />}
-                      {section.type === "services" && <WysiwygServices section={section} onChange={updateSection} />}
+                      {section.type === "services" && <WysiwygServices section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "testimonials" && <WysiwygTestimonials section={section} onChange={updateSection} />}
-                      {section.type === "faq" && <WysiwygFaq section={section} onChange={updateSection} />}
+                      {section.type === "faq" && <WysiwygFaq section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "cta" && <WysiwygCta section={section} onChange={updateSection} />}
-                      {section.type === "timeline" && <WysiwygTimeline section={section} onChange={updateSection} />}
+                      {section.type === "timeline" && <WysiwygTimeline section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "layout" && (
                         <LayoutSectionEditor
                           section={section as LayoutSection}
@@ -688,6 +706,15 @@ export default function ProposalEditPage() {
         }}
         defaultAction="proposal_section"
       />
+      {aiTarget && (
+        <SectionAiPanel
+          section={aiTarget}
+          proposalTitle={title}
+          clientName={clientName}
+          onClose={() => setAiTarget(null)}
+          onApply={(updated) => { updateSection(updated); setAiTarget(null); }}
+        />
+      )}
     </div>
   );
 }
