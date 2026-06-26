@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2, Users, ChevronDown, ChevronUp, Tag } from "lucide-react";
+import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2, Users, ChevronDown, ChevronUp, Tag, Download } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TaskTodoList } from "@/components/tasks/task-todo-list";
@@ -232,9 +232,14 @@ export default function AdminTasksPage() {
           <h1 className="text-3xl font-bold text-foreground">Tasks</h1>
           <p className="text-muted-foreground mt-1">Manage tasks across all clients</p>
         </div>
-        <Link href="/admin/tasks/new">
-          <Button className="gap-2"><Plus className="h-4 w-4" />New Task</Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <a href="/api/tasks/export">
+            <Button variant="outline" className="gap-2"><Download className="h-4 w-4" />Export CSV</Button>
+          </a>
+          <Link href="/admin/tasks/new">
+            <Button className="gap-2"><Plus className="h-4 w-4" />New Task</Button>
+          </Link>
+        </div>
       </div>
 
       {error && <Alert variant="destructive" className="mb-6">{error}</Alert>}

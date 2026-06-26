@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, RefreshCw, ExternalLink, Send, Trash2, FileText } from "lucide-react";
+import { Plus, RefreshCw, ExternalLink, Send, Trash2, FileText, Download } from "lucide-react";
 
 type Invoice = {
   id: string;
@@ -126,6 +126,12 @@ export default function AdminInvoicesPage() {
             <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
             {syncing ? "Syncing…" : "Sync from Invoiless"}
           </Button>
+          <a href="/api/invoices/export">
+            <Button variant="outline">
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </a>
           <Link href="/admin/invoices/new">
             <Button>
               <Plus className="h-4 w-4 mr-2" />
