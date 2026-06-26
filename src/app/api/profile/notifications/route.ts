@@ -16,6 +16,7 @@ export async function GET() {
       notifyApprovalNeeded: true,
       notifyProposalSent: true,
       notifyInvoiceSent: true,
+      notifyTaskDueReminder: true,
     },
   });
 
@@ -29,7 +30,7 @@ export async function PATCH(req: NextRequest) {
   const userId = (session.user as any).id as string;
   const body = await req.json();
 
-  const allowed = ["notifyTaskCreated", "notifyTaskCompleted", "notifyApprovalNeeded", "notifyProposalSent", "notifyInvoiceSent"];
+  const allowed = ["notifyTaskCreated", "notifyTaskCompleted", "notifyApprovalNeeded", "notifyProposalSent", "notifyInvoiceSent", "notifyTaskDueReminder"];
   const data: Record<string, boolean> = {};
   for (const key of allowed) {
     if (typeof body[key] === "boolean") data[key] = body[key];

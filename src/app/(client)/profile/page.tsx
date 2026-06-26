@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const [notifyApprovalNeeded, setNotifyApprovalNeeded] = useState(true);
   const [notifyProposalSent, setNotifyProposalSent] = useState(true);
   const [notifyInvoiceSent, setNotifyInvoiceSent] = useState(true);
+  const [notifyTaskDueReminder, setNotifyTaskDueReminder] = useState(true);
   const [notifStatus, setNotifStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [notifLoading, setNotifLoading] = useState(false);
 
@@ -85,6 +86,7 @@ export default function ProfilePage() {
         setNotifyApprovalNeeded(d.notifyApprovalNeeded ?? true);
         setNotifyProposalSent(d.notifyProposalSent ?? true);
         setNotifyInvoiceSent(d.notifyInvoiceSent ?? true);
+        setNotifyTaskDueReminder(d.notifyTaskDueReminder ?? true);
       })
       .catch(() => {});
   }, []);
@@ -97,7 +99,7 @@ export default function ProfilePage() {
       const res = await fetch("/api/profile/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notifyTaskCreated, notifyTaskCompleted, notifyApprovalNeeded, notifyProposalSent, notifyInvoiceSent }),
+        body: JSON.stringify({ notifyTaskCreated, notifyTaskCompleted, notifyApprovalNeeded, notifyProposalSent, notifyInvoiceSent, notifyTaskDueReminder }),
       });
       if (!res.ok) {
         setNotifStatus({ type: "error", message: "Failed to save preferences." });
@@ -292,6 +294,7 @@ export default function ProfilePage() {
               { id: "notifyApprovalNeeded", label: "New deliverable needs approval", value: notifyApprovalNeeded, setter: setNotifyApprovalNeeded },
               { id: "notifyProposalSent", label: "New proposal sent to you", value: notifyProposalSent, setter: setNotifyProposalSent },
               { id: "notifyInvoiceSent", label: "New invoice issued", value: notifyInvoiceSent, setter: setNotifyInvoiceSent },
+              { id: "notifyTaskDueReminder", label: "Task due-date reminders", value: notifyTaskDueReminder, setter: setNotifyTaskDueReminder },
             ].map(({ id, label, value, setter }) => (
               <label key={id} className="flex items-center gap-3 cursor-pointer">
                 <input
