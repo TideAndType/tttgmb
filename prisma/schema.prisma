@@ -119,6 +119,8 @@ model Proposal {
   totalAmount  Float?
   sentAt       DateTime?
   viewedAt     DateTime?
+  lastViewedAt DateTime?
+  viewCount    Int            @default(0)
   respondedAt  DateTime?
   acceptedBy   String?
   notes        String?

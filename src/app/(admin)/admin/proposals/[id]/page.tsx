@@ -130,10 +130,12 @@ function TimelineItem({
   label,
   date,
   active,
+  note,
 }: {
   label: string;
   date: string | null;
   active: boolean;
+  note?: string | null;
 }) {
   return (
     <div className={`flex items-start gap-3 ${active ? "opacity-100" : "opacity-40"}`}>
@@ -155,6 +157,7 @@ function TimelineItem({
             })}
           </p>
         )}
+        {note && <p className="text-xs text-muted-foreground">{note}</p>}
       </div>
     </div>
   );
@@ -241,6 +244,15 @@ export default async function AdminProposalViewPage({
               label="Viewed"
               date={proposal.viewedAt?.toISOString() ?? null}
               active={!!proposal.viewedAt}
+              note={
+                proposal.viewedAt
+                  ? `${proposal.viewCount} view${proposal.viewCount === 1 ? "" : "s"}${
+                      proposal.lastViewedAt && proposal.viewCount > 1
+                        ? ` · last ${new Date(proposal.lastViewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                        : ""
+                    }`
+                  : null
+              }
             />
             <TimelineItem
               label={proposal.status === "DECLINED" ? "Declined" : "Accepted"}

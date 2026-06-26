@@ -141,6 +141,18 @@ export default async function PublicProposalPage({ params }: { params: { token: 
   });
   if (!proposal) notFound();
 
+  // Record the public view (first view + repeat views + count)
+  const now = new Date();
+  await prisma.proposal.update({
+    where: { id: proposal.id },
+    data: {
+      ...(proposal.status === "SENT" ? { status: "VIEWED", viewedAt: now } : {}),
+      ...(proposal.viewedAt ? {} : { viewedAt: now }),
+      lastViewedAt: now,
+      viewCount: { increment: 1 },
+    },
+  }).catch(() => {});
+
   const sections = (proposal.sections as any[]) || [];
   const brand = (proposal.brand as Brand | null) || {};
   const clientName = proposal.user.companyName || proposal.user.name;

@@ -15,13 +15,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (proposal.status === "SENT") {
-    const updated = await prisma.proposal.update({
-      where: { id: params.id },
-      data: { status: "VIEWED", viewedAt: new Date() },
-    });
-    return NextResponse.json(updated);
-  }
-
-  return NextResponse.json(proposal);
+  const now = new Date();
+  const updated = await prisma.proposal.update({
+    where: { id: params.id },
+    data: {
+      // First view flips SENT -> VIEWED and stamps viewedAt
+      ...(proposal.status === "SENT" ? { status: "VIEWED", viewedAt: now } : {}),
+      ...(proposal.viewedAt ? {} : { viewedAt: now }),
+      lastViewedAt: now,
+      viewCount: { increment: 1 },
+    },
+  });
+  return NextResponse.json(updated);
 }

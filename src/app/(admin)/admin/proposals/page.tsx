@@ -98,9 +98,17 @@ export default async function AdminProposalsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {proposal.viewedAt ? (
-                      <span className="flex items-center gap-1 text-green-600 text-xs" title={new Date(proposal.viewedAt).toLocaleString()}>
+                      <span
+                        className="flex items-center gap-1 text-green-600 text-xs"
+                        title={`First viewed ${new Date(proposal.viewedAt).toLocaleString()}${proposal.lastViewedAt ? ` · Last viewed ${new Date(proposal.lastViewedAt).toLocaleString()}` : ""}`}
+                      >
                         <Eye className="h-3 w-3" />
-                        {new Date(proposal.viewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {new Date(proposal.lastViewedAt ?? proposal.viewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {proposal.viewCount > 1 && (
+                          <span className="ml-1 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                            {proposal.viewCount}×
+                          </span>
+                        )}
                       </span>
                     ) : proposal.sentAt ? (
                       <span className="text-xs text-muted-foreground">Not yet</span>
