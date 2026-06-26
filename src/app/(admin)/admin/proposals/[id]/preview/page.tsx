@@ -211,6 +211,11 @@ function SignatureSection({ section, proposal }: { section: Section; proposal: a
       {accepted ? (
         <div className="border border-green-200 bg-green-50 rounded-lg p-6">
           <p className="text-green-800 font-semibold">Accepted by <span className="italic">{proposal.acceptedBy}</span> on {new Date(proposal.respondedAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+          {proposal.signatureData && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={proposal.signatureData} alt="Client signature" className="mt-3 h-20 object-contain bg-white rounded border border-green-200 px-2" />
+          )}
+          {proposal.acceptedByIp && <p className="text-green-700/70 text-xs mt-2">Signed from IP {proposal.acceptedByIp}</p>}
         </div>
       ) : proposal.status === "DECLINED" ? (
         <div className="border border-red-200 bg-red-50 rounded-lg p-6"><p className="text-red-800 font-semibold">This proposal was declined.</p></div>

@@ -2,16 +2,34 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle } from "lucide-react";
+import { SignaturePad } from "@/components/proposals/signature-pad";
 
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
 type ProposalData = {
   id: string; title: string; status: string; currency: string; validUntil: string | null;
   sections: Section[]; totalAmount: number | null; sentAt: string | null;
-  acceptedBy: string | null; respondedAt: string | null; createdAt: string;
+  acceptedBy: string | null; signatureData: string | null; respondedAt: string | null; createdAt: string;
   user: { id: string; name: string; companyName: string | null };
   brand?: Brand | null;
 };
+
+function AcceptedSignature({ proposal }: { proposal: ProposalData }) {
+  return (
+    <div className="mt-4 flex flex-col items-center gap-1">
+      {proposal.signatureData && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={proposal.signatureData} alt="Signature" className="h-20 object-contain" />
+      )}
+      <p className="font-medium text-gray-700 border-t border-gray-300 pt-1 px-6">{proposal.acceptedBy}</p>
+      {proposal.respondedAt && (
+        <p className="text-green-600 text-xs">
+          Signed on {new Date(proposal.respondedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+        </p>
+      )}
+    </div>
+  );
+}
 
 function formatCurrency(amount: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
@@ -213,14 +231,15 @@ function TimelineSection({ section }: { section: Section }) {
 }
 
 function SignatureSection({ section, proposal, onAccept, onDecline }: {
-  section: Section; proposal: ProposalData; onAccept: (name: string) => Promise<void>; onDecline: () => Promise<void>;
+  section: Section; proposal: ProposalData; onAccept: (name: string, signature: string | null) => Promise<void>; onDecline: () => Promise<void>;
 }) {
   const [showAcceptForm, setShowAcceptForm] = useState(false);
   const [signName, setSignName] = useState("");
+  const [signature, setSignature] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   const canRespond = proposal.status === "SENT" || proposal.status === "VIEWED";
-  async function handleAccept() { if (!signName.trim()) return; setAccepting(true); await onAccept(signName.trim()); setAccepting(false); }
+  async function handleAccept() { if (!signName.trim()) return; setAccepting(true); await onAccept(signName.trim(), signature); setAccepting(false); }
   async function handleDecline() { if (!confirm("Are you sure you want to decline this proposal?")) return; setDeclining(true); await onDecline(); setDeclining(false); }
   if (proposal.status === "ACCEPTED") {
     return (
@@ -229,7 +248,7 @@ function SignatureSection({ section, proposal, onAccept, onDecline }: {
         <div className="border border-green-200 bg-green-50 rounded-xl p-8 text-center">
           <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-green-800 mb-1">Proposal accepted. Thank you, {proposal.acceptedBy}!</h3>
-          <p className="text-green-600 text-sm">Accepted on {new Date(proposal.respondedAt!).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
+          <AcceptedSignature proposal={proposal} />
         </div>
       </div>
     );
@@ -257,8 +276,13 @@ function SignatureSection({ section, proposal, onAccept, onDecline }: {
           <h3 className="font-semibold text-gray-900">Sign to Accept</h3>
           <div>
             <label className="block text-sm text-gray-600 mb-2">Type your full name to sign</label>
-            <input type="text" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your full name" value={signName} onChange={(e) => setSignName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAccept()} autoFocus />
+            <input type="text" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your full name" value={signName} onChange={(e) => setSignName(e.target.value)} autoFocus />
           </div>
+          <div>
+            <label className="block text-sm text-gray-600 mb-2">Draw your signature</label>
+            <SignaturePad onChange={setSignature} />
+          </div>
+          <p className="text-xs text-gray-400">By signing, you agree to the terms of this proposal. Your name, signature, date, and IP address are recorded.</p>
           <div className="flex gap-3">
             <button onClick={handleAccept} disabled={!signName.trim() || accepting} className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors">{accepting ? "Signing..." : "Accept & Sign"}</button>
             <button onClick={() => setShowAcceptForm(false)} className="px-4 py-2.5 text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
@@ -269,9 +293,10 @@ function SignatureSection({ section, proposal, onAccept, onDecline }: {
   );
 }
 
-function BottomAcceptUI({ proposal, onAccept, onDecline }: { proposal: ProposalData; onAccept: (name: string) => Promise<void>; onDecline: () => Promise<void> }) {
+function BottomAcceptUI({ proposal, onAccept, onDecline }: { proposal: ProposalData; onAccept: (name: string, signature: string | null) => Promise<void>; onDecline: () => Promise<void> }) {
   const [showForm, setShowForm] = useState(false);
   const [signName, setSignName] = useState("");
+  const [signature, setSignature] = useState<string | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [declining, setDeclining] = useState(false);
   if (proposal.status === "ACCEPTED") {
@@ -280,6 +305,7 @@ function BottomAcceptUI({ proposal, onAccept, onDecline }: { proposal: ProposalD
         <div className="max-w-4xl mx-auto text-center">
           <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-3" />
           <h3 className="text-lg font-semibold text-green-800">Proposal accepted. Thank you, {proposal.acceptedBy}!</h3>
+          <AcceptedSignature proposal={proposal} />
         </div>
       </div>
     );
@@ -287,7 +313,7 @@ function BottomAcceptUI({ proposal, onAccept, onDecline }: { proposal: ProposalD
   if (proposal.status === "DECLINED") return <div className="border-t-2 border-red-200 bg-red-50 py-8 px-12"><p className="text-center text-red-700 font-semibold">This proposal was declined.</p></div>;
   const canRespond = proposal.status === "SENT" || proposal.status === "VIEWED";
   if (!canRespond) return null;
-  async function handleAccept() { if (!signName.trim()) return; setAccepting(true); await onAccept(signName.trim()); setAccepting(false); }
+  async function handleAccept() { if (!signName.trim()) return; setAccepting(true); await onAccept(signName.trim(), signature); setAccepting(false); }
   async function handleDecline() { if (!confirm("Are you sure you want to decline this proposal?")) return; setDeclining(true); await onDecline(); setDeclining(false); }
   return (
     <div className="border-t border-gray-200 bg-gray-50 py-10 px-12">
@@ -304,8 +330,13 @@ function BottomAcceptUI({ proposal, onAccept, onDecline }: { proposal: ProposalD
             <h3 className="font-semibold text-gray-900">Sign to Accept</h3>
             <div>
               <label className="block text-sm text-gray-600 mb-2">Type your full name to sign</label>
-              <input type="text" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your full name" value={signName} onChange={(e) => setSignName(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAccept()} autoFocus />
+              <input type="text" className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Your full name" value={signName} onChange={(e) => setSignName(e.target.value)} autoFocus />
             </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-2">Draw your signature</label>
+              <SignaturePad onChange={setSignature} />
+            </div>
+            <p className="text-xs text-gray-400">By signing, you agree to the terms of this proposal. Your name, signature, date, and IP address are recorded.</p>
             <div className="flex gap-3">
               <button onClick={handleAccept} disabled={!signName.trim() || accepting} className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors">{accepting ? "Signing..." : "Accept & Sign"}</button>
               <button onClick={() => setShowForm(false)} className="px-4 py-2.5 text-gray-500 hover:text-gray-700">Cancel</button>
@@ -324,9 +355,9 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
       fetch(`/api/proposals/${proposal.id}/view`, { method: "POST" }).then((r) => { if (r.ok) setProposal((p) => ({ ...p, status: "VIEWED" })); });
     }
   }, []); // eslint-disable-line
-  async function handleAccept(name: string) {
-    const res = await fetch(`/api/proposals/${proposal.id}/respond`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "accept", name }) });
-    if (res.ok) { const updated = await res.json(); setProposal((p) => ({ ...p, status: "ACCEPTED", acceptedBy: updated.acceptedBy, respondedAt: updated.respondedAt })); }
+  async function handleAccept(name: string, signature: string | null) {
+    const res = await fetch(`/api/proposals/${proposal.id}/respond`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "accept", name, signature }) });
+    if (res.ok) { const updated = await res.json(); setProposal((p) => ({ ...p, status: "ACCEPTED", acceptedBy: updated.acceptedBy, signatureData: updated.signatureData, respondedAt: updated.respondedAt })); }
   }
   async function handleDecline() {
     const res = await fetch(`/api/proposals/${proposal.id}/respond`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "decline" }) });

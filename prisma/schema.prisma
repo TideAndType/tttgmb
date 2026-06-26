@@ -124,6 +124,8 @@ model Proposal {
   viewCount    Int            @default(0)
   respondedAt  DateTime?
   acceptedBy   String?
+  signatureData String?       @db.Text
+  acceptedByIp String?
   notes        String?
   brand        Json?
   shareToken   String?        @unique

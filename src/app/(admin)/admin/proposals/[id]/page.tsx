@@ -112,6 +112,13 @@ function SignatureSection({ section, proposal }: { section: Section; proposal: a
               day: "numeric",
             })}
           </p>
+          {proposal.signatureData && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={proposal.signatureData} alt="Client signature" className="mt-3 h-20 object-contain bg-white rounded border border-green-200 px-2" />
+          )}
+          {proposal.acceptedByIp && (
+            <p className="text-green-700/70 text-xs mt-2">Signed from IP {proposal.acceptedByIp}</p>
+          )}
         </div>
       ) : proposal.status === "DECLINED" ? (
         <div className="border border-red-200 bg-red-50 rounded-lg p-4">

@@ -41,13 +41,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const body = await req.json();
-  const { action, name } = body;
+  const { action, name, signature } = body;
 
   if (action === "accept") {
     if (!name) return NextResponse.json({ error: "Name is required" }, { status: 400 });
+    // Validate the signature image if provided (must be a PNG data URL, capped in size).
+    let signatureData: string | null = null;
+    if (typeof signature === "string" && signature.startsWith("data:image/png;base64,")) {
+      if (signature.length > 1_000_000) {
+        return NextResponse.json({ error: "Signature image too large" }, { status: 400 });
+      }
+      signatureData = signature;
+    }
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ||
+      req.headers.get("x-real-ip") ||
+      null;
     const updated = await prisma.proposal.update({
       where: { id: params.id },
-      data: { status: "ACCEPTED", respondedAt: new Date(), acceptedBy: name },
+      data: { status: "ACCEPTED", respondedAt: new Date(), acceptedBy: name, signatureData, acceptedByIp: ip },
     });
     await notifyProposalResponse(user.id, proposal.title, "accepted");
     createNotificationForAdmins("proposal_accepted", "Proposal accepted", `${user.name ?? "Client"} accepted "${proposal.title}"`, "/admin/proposals");
