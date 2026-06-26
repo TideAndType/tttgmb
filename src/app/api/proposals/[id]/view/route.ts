@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotificationForAdmins } from "@/lib/notifications";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -16,15 +17,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const now = new Date();
+  const firstView = proposal.status === "SENT";
   const updated = await prisma.proposal.update({
     where: { id: params.id },
     data: {
       // First view flips SENT -> VIEWED and stamps viewedAt
-      ...(proposal.status === "SENT" ? { status: "VIEWED", viewedAt: now } : {}),
+      ...(firstView ? { status: "VIEWED", viewedAt: now } : {}),
       ...(proposal.viewedAt ? {} : { viewedAt: now }),
       lastViewedAt: now,
       viewCount: { increment: 1 },
     },
   });
+
+  // Notify admins the first time the client opens the proposal
+  if (firstView) {
+    createNotificationForAdmins("proposal_viewed", "Proposal viewed", `${user.name ?? "Client"} viewed "${proposal.title}"`, "/admin/proposals");
+  }
+
   return NextResponse.json(updated);
 }

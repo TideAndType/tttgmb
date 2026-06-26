@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -56,5 +57,12 @@ export async function POST(req: Request) {
   const msg = await prisma.directMessage.create({
     data: { fromId: user.id, toId, body },
   });
+
+  // Notify the recipient of the new direct message
+  const author = user.name || (user.role === "ADMIN" ? "Admin" : "Client");
+  const link = user.role === "CLIENT" ? "/admin/messages" : "/messages";
+  const preview = body.length > 80 ? `${body.slice(0, 80)}…` : body;
+  createNotification(toId, "dm_new", `New message from ${author}`, preview, link);
+
   return NextResponse.json(msg, { status: 201 });
 }

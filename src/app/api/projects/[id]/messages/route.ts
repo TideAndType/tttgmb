@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 
 async function getProjectAndCheck(projectId: string, userId: string, role: string) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
@@ -68,6 +69,17 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     where: { id: message.id },
     include: { links: true },
   });
+
+  // Notify the other party of the new message board post
+  const link = `/projects/${params.id}/messages/${message.id}`;
+  const author = user.name || (user.role === "ADMIN" ? "Admin" : "Client");
+  if (user.role === "ADMIN") {
+    if (project.userId !== user.id) {
+      createNotification(project.userId, "message_new", "New message", `${author} posted "${title}"`, link);
+    }
+  } else {
+    createNotificationForAdmins("message_new", "New message", `${author} posted "${title}"`, link);
+  }
 
   return NextResponse.json(messageWithLinks, { status: 201 });
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { createNotificationForAdmins } from "@/lib/notifications";
 
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
@@ -143,15 +144,19 @@ export default async function PublicProposalPage({ params }: { params: { token: 
 
   // Record the public view (first view + repeat views + count)
   const now = new Date();
+  const firstView = proposal.status === "SENT";
   await prisma.proposal.update({
     where: { id: proposal.id },
     data: {
-      ...(proposal.status === "SENT" ? { status: "VIEWED", viewedAt: now } : {}),
+      ...(firstView ? { status: "VIEWED", viewedAt: now } : {}),
       ...(proposal.viewedAt ? {} : { viewedAt: now }),
       lastViewedAt: now,
       viewCount: { increment: 1 },
     },
   }).catch(() => {});
+  if (firstView) {
+    await createNotificationForAdmins("proposal_viewed", "Proposal viewed", `"${proposal.title}" was opened via share link`, "/admin/proposals");
+  }
 
   const sections = (proposal.sections as any[]) || [];
   const brand = (proposal.brand as Brand | null) || {};

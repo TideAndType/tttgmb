@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 
 export async function GET(
   req: Request,
@@ -54,6 +55,19 @@ export async function POST(
       body: commentBody,
     },
   });
+
+  // Notify the other party of the new reply
+  const message = await prisma.message.findUnique({ where: { id: params.messageId }, select: { title: true } });
+  const link = `/projects/${params.id}/messages/${params.messageId}`;
+  const author = user.name || (user.role === "ADMIN" ? "Admin" : "Client");
+  const desc = `${author} replied${message?.title ? ` on "${message.title}"` : ""}`;
+  if (user.role === "ADMIN") {
+    if (project.userId !== user.id) {
+      createNotification(project.userId, "comment_new", "New reply", desc, link);
+    }
+  } else {
+    createNotificationForAdmins("comment_new", "New reply", desc, link);
+  }
 
   return NextResponse.json(comment, { status: 201 });
 }
