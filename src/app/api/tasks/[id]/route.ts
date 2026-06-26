@@ -9,6 +9,48 @@ const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
 };
 
+function advanceDate(from: Date, recurrence: string): Date {
+  const next = new Date(from);
+  if (recurrence === "daily") next.setDate(next.getDate() + 1);
+  else if (recurrence === "weekly") next.setDate(next.getDate() + 7);
+  else if (recurrence === "monthly") next.setMonth(next.getMonth() + 1);
+  return next;
+}
+
+// When a recurring task is completed, create its next occurrence.
+async function spawnNextOccurrence(task: {
+  id: string; userId: string; title: string; description: string | null;
+  priority: string; dueDate: Date | null; visibleToClient: boolean;
+  color: string | null; tags: string[]; recurrence: string | null;
+}): Promise<void> {
+  if (!task.recurrence) return;
+  // Advance from the existing due date, or from now if the task had none.
+  const baseDate = task.dueDate ?? new Date();
+  const nextDue = advanceDate(baseDate, task.recurrence);
+
+  const next = await prisma.task.create({
+    data: {
+      userId: task.userId,
+      title: task.title,
+      description: task.description,
+      priority: task.priority as any,
+      dueDate: nextDue,
+      visibleToClient: task.visibleToClient,
+      color: task.color,
+      tags: task.tags,
+      recurrence: task.recurrence,
+    },
+  });
+
+  // Copy assignees from the completed task to the new occurrence.
+  const assignees = await prisma.taskAssignee.findMany({ where: { taskId: task.id }, select: { userId: true } });
+  const ids = new Set<string>([task.userId, ...assignees.map((a) => a.userId)]);
+  await prisma.taskAssignee.createMany({
+    data: Array.from(ids).map((uid) => ({ taskId: next.id, userId: uid })),
+    skipDuplicates: true,
+  });
+}
+
 const todosInclude = {
   todos: { orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }] },
 };
@@ -86,6 +128,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   // Send completion emails + in-app notifications when status → COMPLETED
   if (status === "COMPLETED" && task.status !== "COMPLETED") {
+    // Recurring tasks spawn their next occurrence on completion.
+    if (task.recurrence) {
+      await spawnNextOccurrence(task);
+    }
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const [owner, admins] = await Promise.all([
       prisma.user.findUnique({

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2, Users, ChevronDown, ChevronUp, Tag, Download } from "lucide-react";
+import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, Link2, Users, ChevronDown, ChevronUp, Tag, Download, Repeat } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TaskTodoList } from "@/components/tasks/task-todo-list";
@@ -23,6 +23,7 @@ interface Task {
   priority: "LOW" | "MEDIUM" | "HIGH";
   dueDate?: string | null;
   visibleToClient: boolean;
+  recurrence?: string | null;
   color?: string | null;
   tags?: string[];
   todos?: Todo[];
@@ -335,6 +336,12 @@ export default function AdminTasksPage() {
                           {isOverdue && <AlertCircle className="h-3 w-3" />}
                           <CalendarDays className="h-3 w-3" />
                           Due {dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        </span>
+                      )}
+                      {task.recurrence && (
+                        <span className="flex items-center gap-1 text-xs mb-3 text-muted-foreground capitalize">
+                          <Repeat className="h-3 w-3" />
+                          Repeats {task.recurrence}
                         </span>
                       )}
 

@@ -43,6 +43,7 @@ export default function NewTaskPage() {
     dueDate: "",
     color: "",
     tagInput: "",
+    recurrence: "",
   });
   const [tags, setTags] = useState<string[]>([]);
   const [visibleToClient, setVisibleToClient] = useState(true);
@@ -106,6 +107,7 @@ export default function NewTaskPage() {
     if (form.description) body.description = form.description;
     if (form.dueDate) body.dueDate = form.dueDate;
     if (form.color) body.color = form.color;
+    if (form.recurrence) body.recurrence = form.recurrence;
     if (selectedAssigneeIds.length > 0) body.assigneeIds = selectedAssigneeIds;
 
     const res = await fetch("/api/tasks", {
@@ -231,6 +233,30 @@ export default function NewTaskPage() {
                   disabled={loading}
                 />
               </div>
+            </div>
+
+            {/* Recurrence */}
+            <div className="space-y-2">
+              <Label htmlFor="recurrence">Repeat (optional)</Label>
+              <select
+                id="recurrence"
+                name="recurrence"
+                value={form.recurrence}
+                onChange={handleChange}
+                disabled={loading}
+                className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground"
+              >
+                <option value="">Does not repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+              {form.recurrence && (
+                <p className="text-xs text-muted-foreground">
+                  When this task is completed, the next occurrence is created automatically
+                  {form.dueDate ? "" : " (set a due date to schedule it)"}.
+                </p>
+              )}
             </div>
 
             {/* Color stripe */}

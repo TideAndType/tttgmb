@@ -168,6 +168,7 @@ model Task {
   priority    TaskPriority  @default(MEDIUM)
   dueDate         DateTime?
   reminderSentAt  DateTime?
+  recurrence      String?
   visibleToClient Boolean       @default(true)
   color           String?
   tags            String[]

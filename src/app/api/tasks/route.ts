@@ -85,8 +85,11 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, priority, dueDate, visibleToClient, assigneeIds, color, tags } = body;
+  const { title, description, priority, dueDate, visibleToClient, assigneeIds, color, tags, recurrence } = body;
   let { userId } = body;
+
+  const validRecurrence = ["daily", "weekly", "monthly"];
+  const normalizedRecurrence = validRecurrence.includes(recurrence) ? recurrence : null;
 
   // If impersonating, use the impersonated client's userId
   const cookieStore = cookies();
@@ -109,6 +112,7 @@ export async function POST(req: NextRequest) {
       visibleToClient: visibleToClient !== false,
       color: color || null,
       tags: Array.isArray(tags) ? tags : [],
+      recurrence: normalizedRecurrence,
     },
   });
 
