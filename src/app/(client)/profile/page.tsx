@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { TwoFactorSettings } from "@/components/profile/two-factor-settings";
 import { Button } from "@/components/ui/button";
 import { Trash2, UserPlus, Mail } from "lucide-react";
 
@@ -279,6 +280,9 @@ export default function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Two-Factor Authentication */}
+      <TwoFactorSettings />
 
       {/* Notification Preferences */}
       <Card>

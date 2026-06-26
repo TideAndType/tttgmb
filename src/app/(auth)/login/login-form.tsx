@@ -19,6 +19,8 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [totp, setTotp] = useState("");
+  const [needs2fa, setNeeds2fa] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,10 +32,23 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
     const result = await signIn("credentials", {
       email,
       password,
+      totp,
       redirect: false,
     });
 
     if (result?.error) {
+      if (result.error === "2FA_REQUIRED") {
+        setNeeds2fa(true);
+        setError("");
+        setLoading(false);
+        return;
+      }
+      if (result.error === "INVALID_2FA") {
+        setNeeds2fa(true);
+        setError("Invalid authentication code. Please try again.");
+        setLoading(false);
+        return;
+      }
       setError("Invalid email or password. Please try again.");
       setLoading(false);
       return;
@@ -106,6 +121,24 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
                   disabled={loading}
                 />
               </div>
+              {needs2fa && (
+                <div className="space-y-2">
+                  <Label htmlFor="totp">Authentication code</Label>
+                  <Input
+                    id="totp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    placeholder="123456"
+                    value={totp}
+                    onChange={(e) => setTotp(e.target.value)}
+                    required
+                    autoFocus
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={loading}
