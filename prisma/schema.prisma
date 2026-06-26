@@ -319,6 +319,15 @@ model Comment {
   updatedAt  DateTime @updatedAt
 }
 
+model ProjectTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  // { columns: [{ name, position, cards: [{ title, description, priority, label, position }] }] }
+  structure   Json     @default("{}")
+  createdAt   DateTime @default(now())
+}
+
 model CardColumn {
   id        String   @id @default(cuid())
   projectId String

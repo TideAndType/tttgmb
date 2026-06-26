@@ -17,6 +17,12 @@ interface Client {
   companyName?: string | null;
 }
 
+interface Template {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 const PRESET_COLORS = [
   { value: "#6366f1", label: "Indigo" },
   { value: "#0ea5e9", label: "Sky" },
@@ -29,6 +35,7 @@ const PRESET_COLORS = [
 export default function NewProjectPage() {
   const router = useRouter();
   const [clients, setClients] = useState<Client[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -39,12 +46,16 @@ export default function NewProjectPage() {
     status: "active",
     startDate: "",
     dueDate: "",
+    templateId: "",
   });
 
   useEffect(() => {
     fetch("/api/admin/clients")
       .then((r) => r.json())
       .then((data) => setClients(Array.isArray(data) ? data : []));
+    fetch("/api/project-templates")
+      .then((r) => r.json())
+      .then((data) => setTemplates(Array.isArray(data) ? data : []));
   }, []);
 
   const handleChange = (
@@ -70,6 +81,7 @@ export default function NewProjectPage() {
         status: form.status,
         startDate: form.startDate || null,
         dueDate: form.dueDate || null,
+        templateId: form.templateId || undefined,
       }),
     });
 
@@ -150,6 +162,26 @@ export default function NewProjectPage() {
                 className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground resize-none"
               />
             </div>
+
+            {templates.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="templateId">Start from a template (optional)</Label>
+                <select
+                  id="templateId"
+                  name="templateId"
+                  value={form.templateId}
+                  onChange={handleChange}
+                  disabled={loading}
+                  className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground"
+                >
+                  <option value="">— Blank project —</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">Pre-fills the board with columns and cards from the template.</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>

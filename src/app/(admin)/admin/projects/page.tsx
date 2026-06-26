@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Project {
@@ -25,6 +25,7 @@ interface Project {
 }
 
 interface Member { id: string; name: string; email: string; }
+interface Template { id: string; name: string; description: string | null; }
 
 interface VisibilityState {
   project: Project;
@@ -66,8 +67,11 @@ export default function AdminProjectsPage() {
   const [expandedDates, setExpandedDates] = useState<string | null>(null);
   const [savingDates, setSavingDates] = useState<string | null>(null);
   const [dateEdits, setDateEdits] = useState<Record<string, { startDate: string; dueDate: string }>>({});
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState<string | null>(null);
 
-  useEffect(() => { fetchProjects(); }, []);
+  useEffect(() => { fetchProjects(); fetchTemplates(); }, []);
 
   const fetchProjects = () => {
     setLoading(true);
@@ -75,6 +79,31 @@ export default function AdminProjectsPage() {
       .then((r) => r.json())
       .then((data) => setProjects(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false));
+  };
+
+  const fetchTemplates = () => {
+    fetch("/api/project-templates")
+      .then((r) => r.json())
+      .then((data) => setTemplates(Array.isArray(data) ? data : []))
+      .catch(() => {});
+  };
+
+  const handleSaveAsTemplate = async (project: Project) => {
+    const name = window.prompt(`Save "${project.name}" as a reusable template. Template name:`, project.name);
+    if (!name) return;
+    setSavingTemplate(project.id);
+    const res = await fetch("/api/project-templates", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, fromProjectId: project.id }),
+    });
+    setSavingTemplate(null);
+    if (res.ok) { fetchTemplates(); setShowTemplates(true); }
+  };
+
+  const handleDeleteTemplate = async (id: string) => {
+    if (!confirm("Delete this template?")) return;
+    const res = await fetch(`/api/project-templates/${id}`, { method: "DELETE" });
+    if (res.ok) setTemplates((prev) => prev.filter((t) => t.id !== id));
   };
 
   const handleDelete = async (id: string) => {
@@ -155,6 +184,31 @@ export default function AdminProjectsPage() {
         </Link>
       </div>
 
+      {templates.length > 0 && (
+        <div className="mb-6 rounded-lg border border-border bg-muted/30 p-3">
+          <button onClick={() => setShowTemplates((v) => !v)} className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <LayoutTemplate className="h-4 w-4 text-muted-foreground" />
+            Templates ({templates.length})
+            {showTemplates ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+          {showTemplates && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {templates.map((t) => (
+                <span key={t.id} className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1 text-sm">
+                  {t.name}
+                  <button onClick={() => handleDeleteTemplate(t.id)} className="text-muted-foreground hover:text-destructive" title="Delete template">
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <Link href="/admin/projects/new" className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 text-sm text-muted-foreground hover:text-foreground hover:border-primary/50">
+                <Plus className="h-3 w-3" /> Use a template
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
       {clients.length > 1 && (
         <div className="mb-6 flex gap-2 flex-wrap">
           <button onClick={() => setFilterClient("all")} className={cn("px-3 py-1.5 rounded-full text-sm font-medium border transition-colors", filterClient === "all" ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:border-primary/50")}>
@@ -224,6 +278,9 @@ export default function AdminProjectsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => handleSaveAsTemplate(project)} disabled={savingTemplate === project.id} title="Save as template">
+                      <LayoutTemplate className="h-4 w-4" />
+                    </Button>
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => openVisDialog(project)} title="Visibility settings">
                       <Settings2 className="h-4 w-4" />
                     </Button>

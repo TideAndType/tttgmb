@@ -47,7 +47,7 @@ export async function POST(req: Request) {
   if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { name, description, userId, color, visibility, memberIds, status, startDate, dueDate } = body;
+  const { name, description, userId, color, visibility, memberIds, status, startDate, dueDate, templateId } = body;
 
   if (!name || !userId) {
     return NextResponse.json({ error: "name and userId are required" }, { status: 400 });
@@ -66,6 +66,33 @@ export async function POST(req: Request) {
       dueDate: dueDate ? new Date(dueDate) : null,
     },
   });
+
+  // If a template was chosen, clone its columns and cards into the new project.
+  if (templateId) {
+    const template = await prisma.projectTemplate.findUnique({ where: { id: templateId } });
+    const structure = template?.structure as { columns?: any[] } | null;
+    if (structure?.columns?.length) {
+      for (let colIdx = 0; colIdx < structure.columns.length; colIdx++) {
+        const col = structure.columns[colIdx];
+        const column = await prisma.cardColumn.create({
+          data: { projectId: project.id, name: col.name || "Column", position: col.position ?? colIdx },
+        });
+        if (Array.isArray(col.cards) && col.cards.length) {
+          await prisma.card.createMany({
+            data: col.cards.map((c: any, cardIdx: number) => ({
+              columnId: column.id,
+              projectId: project.id,
+              title: c.title || "Untitled",
+              description: c.description ?? null,
+              priority: c.priority ?? null,
+              label: c.label ?? null,
+              position: c.position ?? cardIdx,
+            })),
+          });
+        }
+      }
+    }
+  }
 
   return NextResponse.json(project, { status: 201 });
 }
