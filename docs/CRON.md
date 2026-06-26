@@ -45,3 +45,25 @@ curl http://localhost:3000/api/cron/reminders
 ```
 
 The response reports `{ "scanned": N, "reminded": M }`.
+
+## Weekly activity digest
+
+`GET /api/cron/digest` emails each opted-in client (preference "Weekly activity
+summary") a summary of the past 7 days for their company: new tasks, messages,
+pending approvals, invoices, accepted proposals, and hours logged. Quiet weeks
+(no activity) are skipped — no email is sent. Same `CRON_SECRET` bearer auth.
+
+Recommended schedule — Monday 8:00am:
+
+```cron
+0 8 * * 1 APP_URL=https://your-portal-domain.com CRON_SECRET=your-secret /path/to/app/scripts/send-reminders.sh
+```
+
+The helper script targets the reminders endpoint; for the digest, point the cron
+at `/api/cron/digest` instead:
+
+```cron
+0 8 * * 1 curl -fsS -H "Authorization: Bearer your-secret" https://your-portal-domain.com/api/cron/digest
+```
+
+Response: `{ "recipients": N, "sent": M }`.

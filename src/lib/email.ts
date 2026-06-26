@@ -168,6 +168,26 @@ export async function sendTaskCompletedEmail(
   }
 }
 
+export async function sendWeeklyDigestEmail(
+  to: string,
+  clientName: string,
+  lines: string[],
+  portalUrl: string
+): Promise<void> {
+  try {
+    const list = lines.map((l) => `<li style="margin-bottom:6px;">${l}</li>`).join("");
+    const html = buildHtml(
+      "Your weekly summary",
+      `<p>Hi ${clientName},</p><p>Here's what happened on your account over the past week:</p><ul style="padding-left:20px;margin:16px 0;">${list}</ul>`,
+      "Open Portal",
+      portalUrl
+    );
+    await sendMail(to, "Your weekly summary", html);
+  } catch (err) {
+    console.error("[Email] sendWeeklyDigestEmail failed:", err);
+  }
+}
+
 export async function sendProposalRespondedEmail(
   to: string,
   adminName: string,

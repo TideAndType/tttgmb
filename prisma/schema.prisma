@@ -91,6 +91,7 @@ model User {
   notifyProposalSent    Boolean @default(true)
   notifyInvoiceSent     Boolean @default(true)
   notifyTaskDueReminder Boolean @default(true)
+  notifyWeeklyDigest    Boolean @default(true)
   totpSecret       String?
   totpEnabled      Boolean @default(false)
   openLensApiKey   String?

@@ -51,6 +51,7 @@ export default function ProfilePage() {
   const [notifyProposalSent, setNotifyProposalSent] = useState(true);
   const [notifyInvoiceSent, setNotifyInvoiceSent] = useState(true);
   const [notifyTaskDueReminder, setNotifyTaskDueReminder] = useState(true);
+  const [notifyWeeklyDigest, setNotifyWeeklyDigest] = useState(true);
   const [notifStatus, setNotifStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [notifLoading, setNotifLoading] = useState(false);
 
@@ -88,6 +89,7 @@ export default function ProfilePage() {
         setNotifyProposalSent(d.notifyProposalSent ?? true);
         setNotifyInvoiceSent(d.notifyInvoiceSent ?? true);
         setNotifyTaskDueReminder(d.notifyTaskDueReminder ?? true);
+        setNotifyWeeklyDigest(d.notifyWeeklyDigest ?? true);
       })
       .catch(() => {});
   }, []);
@@ -100,7 +102,7 @@ export default function ProfilePage() {
       const res = await fetch("/api/profile/notifications", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notifyTaskCreated, notifyTaskCompleted, notifyApprovalNeeded, notifyProposalSent, notifyInvoiceSent, notifyTaskDueReminder }),
+        body: JSON.stringify({ notifyTaskCreated, notifyTaskCompleted, notifyApprovalNeeded, notifyProposalSent, notifyInvoiceSent, notifyTaskDueReminder, notifyWeeklyDigest }),
       });
       if (!res.ok) {
         setNotifStatus({ type: "error", message: "Failed to save preferences." });
@@ -299,6 +301,7 @@ export default function ProfilePage() {
               { id: "notifyProposalSent", label: "New proposal sent to you", value: notifyProposalSent, setter: setNotifyProposalSent },
               { id: "notifyInvoiceSent", label: "New invoice issued", value: notifyInvoiceSent, setter: setNotifyInvoiceSent },
               { id: "notifyTaskDueReminder", label: "Task due-date reminders", value: notifyTaskDueReminder, setter: setNotifyTaskDueReminder },
+              { id: "notifyWeeklyDigest", label: "Weekly activity summary", value: notifyWeeklyDigest, setter: setNotifyWeeklyDigest },
             ].map(({ id, label, value, setter }) => (
               <label key={id} className="flex items-center gap-3 cursor-pointer">
                 <input
