@@ -605,10 +605,20 @@ export default function AdminFilesPage() {
           <h1 className="text-3xl font-bold text-foreground">Files</h1>
           <p className="text-muted-foreground mt-1">Manage files shared with clients</p>
         </div>
-        <Button onClick={() => setUploadOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Upload File
-        </Button>
+        <div className="flex items-center gap-3">
+          {files.length > 0 && (
+            <a href={`/api/files/download-all${clientFilter !== "all" ? `?userId=${clientFilter}` : ""}`}>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Download {clientFilter !== "all" ? "Client" : "All"} (ZIP)
+              </Button>
+            </a>
+          )}
+          <Button onClick={() => setUploadOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Upload File
+          </Button>
+        </div>
       </div>
 
       {/* Stats row */}

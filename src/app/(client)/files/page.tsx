@@ -169,9 +169,18 @@ export default function FilesPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Files</h1>
-        <p className="text-muted-foreground mt-1">Documents and files shared with you</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Files</h1>
+          <p className="text-muted-foreground mt-1">Documents and files shared with you</p>
+        </div>
+        {files.length > 0 && (
+          <a href="/api/files/download-all">
+            <Button variant="outline" className="gap-2">
+              <Download className="h-4 w-4" /> Download All (ZIP)
+            </Button>
+          </a>
+        )}
       </div>
 
       {loading ? (
