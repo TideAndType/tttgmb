@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate } from "lucide-react";
+import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Project {
@@ -22,6 +22,8 @@ interface Project {
   userId: string;
   user: { name: string; companyName: string | null };
   _count: { messages: number; cards: number };
+  ratingAvg: number | null;
+  ratingCount: number;
 }
 
 interface Member { id: string; name: string; email: string; }
@@ -267,6 +269,11 @@ export default function AdminProjectsPage() {
                       <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{project._count.messages} messages</span>
                         <span className="flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" />{project._count.cards} cards</span>
+                        {project.ratingAvg != null && (
+                          <span className="flex items-center gap-1 text-amber-600 font-medium" title={`${project.ratingCount} rating${project.ratingCount !== 1 ? "s" : ""}`}>
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{project.ratingAvg.toFixed(1)}
+                          </span>
+                        )}
                         {project.startDate && <span className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />Start: {formatDate(project.startDate)}</span>}
                         {project.dueDate && (
                           <span className={cn("flex items-center gap-1", isOverdue ? "text-red-600 font-medium" : "")}>

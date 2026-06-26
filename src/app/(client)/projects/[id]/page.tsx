@@ -5,8 +5,9 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText } from "lucide-react";
+import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText, Star } from "lucide-react";
 import { ProjectNotes } from "@/components/projects/project-notes";
+import { SatisfactionRating } from "@/components/projects/satisfaction-rating";
 
 export default async function ProjectHomePage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -26,11 +27,14 @@ export default async function ProjectHomePage({ params }: { params: { id: string
         orderBy: { position: "asc" },
         include: { _count: { select: { cards: true } } },
       },
+      ratings: { orderBy: { createdAt: "desc" } },
     },
   });
 
   if (!project) notFound();
   if (user.role !== "ADMIN" && project.userId !== user.id) redirect("/projects");
+
+  const myRating = project.ratings.find((r) => r.userId === user.id) ?? null;
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -129,6 +133,57 @@ export default async function ProjectHomePage({ params }: { params: { id: string
           </CardContent>
         </Card>
       </div>
+
+      {/* Ratings overview — admins see all client feedback */}
+      {user.role === "ADMIN" && project.ratings.length > 0 && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+                <CardTitle className="text-lg">
+                  Client Satisfaction · {(project.ratings.reduce((s, r) => s + r.score, 0) / project.ratings.length).toFixed(1)}/5
+                  <span className="text-sm font-normal text-muted-foreground ml-1">({project.ratings.length})</span>
+                </CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {project.ratings.map((r) => (
+                <div key={r.id} className="border-b border-border last:border-0 pb-2 last:pb-0">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((n) => (
+                      <Star key={n} className={`h-4 w-4 ${n <= r.score ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`} />
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-2">{new Date(r.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  {r.comment && <p className="text-sm text-muted-foreground mt-1 italic">&ldquo;{r.comment}&rdquo;</p>}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Satisfaction rating — shown to clients once the project is completed */}
+      {user.role !== "ADMIN" && project.status === "completed" && (
+        <div className="mt-6">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-400" />
+                <CardTitle className="text-lg">Your Feedback</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SatisfactionRating
+                projectId={params.id}
+                initialScore={myRating?.score ?? null}
+                initialComment={myRating?.comment ?? null}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Project Notes */}
       <div className="mt-6">

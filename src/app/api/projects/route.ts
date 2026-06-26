@@ -15,10 +15,17 @@ export async function GET() {
       include: {
         user: { select: { name: true, companyName: true } },
         _count: { select: { messages: true, cards: true } },
+        ratings: { select: { score: true } },
       },
       orderBy: { createdAt: "desc" },
     });
-    return NextResponse.json(projects);
+    // Collapse ratings into an average + count for the admin list.
+    const result = projects.map(({ ratings, ...p }) => ({
+      ...p,
+      ratingAvg: ratings.length ? ratings.reduce((s, r) => s + r.score, 0) / ratings.length : null,
+      ratingCount: ratings.length,
+    }));
+    return NextResponse.json(result);
   }
 
   const companyUserIds = await getCompanyUserIds(user.id);
