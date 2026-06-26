@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText, Image, File, Download, Clock } from "lucide-react";
+import { FileText, Image, File, Download, Clock, Folder as FolderIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ interface ClientFile {
   mimeType: string;
   size: number;
   label: string | null;
+  folder: string | null;
   version: number;
   createdAt: string;
 }
@@ -141,6 +142,21 @@ export default function FilesPage() {
   const [loading, setLoading] = useState(true);
   const [versionFile, setVersionFile] = useState<ClientFile | null>(null);
 
+  // Group files by folder; uncategorized last
+  const UNCATEGORIZED = "Uncategorized";
+  const grouped = new Map<string, ClientFile[]>();
+  for (const f of files) {
+    const key = f.folder || UNCATEGORIZED;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(f);
+  }
+  const groupedEntries = Array.from(grouped.entries()).sort((a, b) => {
+    if (a[0] === UNCATEGORIZED) return 1;
+    if (b[0] === UNCATEGORIZED) return -1;
+    return a[0].localeCompare(b[0]);
+  });
+  const hasFolders = files.some((f) => f.folder);
+
   useEffect(() => {
     fetch("/api/files")
       .then((r) => r.json())
@@ -176,8 +192,18 @@ export default function FilesPage() {
           <p>No files yet. Your team will share files here.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {files.map((file) => (
+        <div className="space-y-8">
+          {groupedEntries.map(([folderName, folderFiles]) => (
+            <div key={folderName}>
+              {hasFolders && (
+                <div className="flex items-center gap-2 mb-3">
+                  <FolderIcon className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold text-foreground">{folderName}</h2>
+                  <span className="text-xs text-muted-foreground">({folderFiles.length})</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {folderFiles.map((file) => (
             <div key={file.id}>
               <Card className="hover:border-primary/50 hover:shadow-sm transition-all h-full">
                 <CardContent className="p-4 flex flex-col gap-2">
@@ -230,6 +256,9 @@ export default function FilesPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          ))}
+              </div>
             </div>
           ))}
         </div>

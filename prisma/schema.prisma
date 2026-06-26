@@ -431,6 +431,7 @@ model ClientFile {
   mimeType     String
   size         Int
   label        String?
+  folder       String?
   version      Int           @default(1)
   versions     FileVersion[]
   createdAt    DateTime      @default(now())

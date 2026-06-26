@@ -27,6 +27,7 @@ import {
   Plus,
   X,
   Clock,
+  Folder as FolderIcon,
 } from "lucide-react";
 
 interface AdminFile {
@@ -37,6 +38,7 @@ interface AdminFile {
   mimeType: string;
   size: number;
   label: string | null;
+  folder: string | null;
   version: number;
   createdAt: string;
   user: {
@@ -250,6 +252,7 @@ function UploadModal({ open, onClose, clients, files, onUploaded }: UploadModalP
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [label, setLabel] = useState("");
+  const [folder, setFolder] = useState("");
   const [replaceFileId, setReplaceFileId] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -260,10 +263,16 @@ function UploadModal({ open, onClose, clients, files, onUploaded }: UploadModalP
     ? files.filter((f) => f.userId === selectedClientId)
     : [];
 
+  // Existing folder names for autocomplete suggestions
+  const folderSuggestions = Array.from(
+    new Set(files.map((f) => f.folder).filter((x): x is string => !!x))
+  ).sort();
+
   const reset = useCallback(() => {
     setSelectedFile(null);
     setSelectedClientId("");
     setLabel("");
+    setFolder("");
     setReplaceFileId("");
     setError("");
     setUploading(false);
@@ -299,6 +308,7 @@ function UploadModal({ open, onClose, clients, files, onUploaded }: UploadModalP
     formData.append("file", selectedFile);
     formData.append("userId", selectedClientId);
     if (label.trim()) formData.append("label", label.trim());
+    if (folder.trim()) formData.append("folder", folder.trim());
 
     const qs = replaceFileId ? `?replaceFileId=${encodeURIComponent(replaceFileId)}` : "";
 
@@ -417,6 +427,24 @@ function UploadModal({ open, onClose, clients, files, onUploaded }: UploadModalP
             />
           </div>
 
+          {/* Folder */}
+          <div className="space-y-2">
+            <Label htmlFor="upload-folder">Folder (optional)</Label>
+            <Input
+              id="upload-folder"
+              list="folder-suggestions"
+              placeholder="e.g. Contracts, Briefs, Brand Assets"
+              value={folder}
+              onChange={(e) => setFolder(e.target.value)}
+              disabled={uploading}
+            />
+            <datalist id="folder-suggestions">
+              {folderSuggestions.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          </div>
+
           {error && (
             <p className="text-sm text-destructive">{error}</p>
           )}
@@ -448,6 +476,7 @@ export default function AdminFilesPage() {
   const [search, setSearch] = useState("");
   const [clientFilter, setClientFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<FileTypeFilter>("all");
+  const [folderFilter, setFolderFilter] = useState<string>("all");
 
   // Auth guard
   useEffect(() => {
@@ -484,6 +513,27 @@ export default function AdminFilesPage() {
     fetchFiles();
   }, [fetchFiles]);
 
+  const handleMove = async (file: AdminFile) => {
+    const next = window.prompt(
+      `Move "${file.label || file.originalName}" to which folder?\n(Leave blank for Uncategorized)`,
+      file.folder || ""
+    );
+    if (next === null) return; // cancelled
+    try {
+      const res = await fetch(`/api/files/${file.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folder: next }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setFiles((prev) => prev.map((f) => (f.id === file.id ? { ...f, folder: updated.folder } : f)));
+      }
+    } catch {
+      // silent
+    }
+  };
+
   const handleDelete = async (fileId: string) => {
     if (!confirm("Delete this file? This cannot be undone.")) return;
     try {
@@ -508,16 +558,39 @@ export default function AdminFilesPage() {
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
   }).length;
 
+  // All folder names across files (for the filter dropdown)
+  const allFolders = Array.from(
+    new Set(files.map((f) => f.folder).filter((x): x is string => !!x))
+  ).sort();
+
   // Filtered
   const filtered = files.filter((f) => {
     const q = search.toLowerCase();
     const nameMatch =
       f.originalName.toLowerCase().includes(q) ||
       (f.label?.toLowerCase().includes(q) ?? false) ||
+      (f.folder?.toLowerCase().includes(q) ?? false) ||
       getClientLabel(f.user).toLowerCase().includes(q);
     const clientMatch = clientFilter === "all" || f.userId === clientFilter;
     const typeMatch = matchesTypeFilter(f.mimeType, typeFilter);
-    return nameMatch && clientMatch && typeMatch;
+    const folderMatch =
+      folderFilter === "all" ||
+      (folderFilter === "__none__" ? !f.folder : f.folder === folderFilter);
+    return nameMatch && clientMatch && typeMatch && folderMatch;
+  });
+
+  // Group filtered files by folder. Uncategorized files go last.
+  const UNCATEGORIZED = "Uncategorized";
+  const grouped = new Map<string, AdminFile[]>();
+  for (const f of filtered) {
+    const key = f.folder || UNCATEGORIZED;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key)!.push(f);
+  }
+  const groupedEntries = Array.from(grouped.entries()).sort((a, b) => {
+    if (a[0] === UNCATEGORIZED) return 1;
+    if (b[0] === UNCATEGORIZED) return -1;
+    return a[0].localeCompare(b[0]);
   });
 
   if (status === "loading") return null;
@@ -595,11 +668,24 @@ export default function AdminFilesPage() {
           <option value="documents">Documents</option>
           <option value="other">Other</option>
         </Select>
-        {(search || clientFilter !== "all" || typeFilter !== "all") && (
+        {allFolders.length > 0 && (
+          <Select
+            className="w-[180px]"
+            value={folderFilter}
+            onChange={(e) => setFolderFilter(e.target.value)}
+          >
+            <option value="all">All Folders</option>
+            {allFolders.map((f) => (
+              <option key={f} value={f}>{f}</option>
+            ))}
+            <option value="__none__">Uncategorized</option>
+          </Select>
+        )}
+        {(search || clientFilter !== "all" || typeFilter !== "all" || folderFilter !== "all") && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setSearch(""); setClientFilter("all"); setTypeFilter("all"); }}
+            onClick={() => { setSearch(""); setClientFilter("all"); setTypeFilter("all"); setFolderFilter("all"); }}
           >
             <X className="h-4 w-4 mr-1" />
             Clear
@@ -626,8 +712,16 @@ export default function AdminFilesPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filtered.map((file) => (
+        <div className="space-y-8">
+          {groupedEntries.map(([folderName, folderFiles]) => (
+            <div key={folderName}>
+              <div className="flex items-center gap-2 mb-3">
+                <FolderIcon className="h-4 w-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold text-foreground">{folderName}</h2>
+                <span className="text-xs text-muted-foreground">({folderFiles.length})</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {folderFiles.map((file) => (
             <Card key={file.id} className="flex flex-col">
               <CardContent className="p-4 flex flex-col gap-3 flex-1">
                 <FileIcon mimeType={file.mimeType} filename={file.filename} />
@@ -673,6 +767,14 @@ export default function AdminFilesPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    title="Move to folder"
+                    onClick={() => handleMove(file)}
+                  >
+                    <FolderIcon className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     title="Version history"
                     onClick={() => setHistoryFile(file)}
                   >
@@ -689,6 +791,9 @@ export default function AdminFilesPage() {
                 </div>
               </CardContent>
             </Card>
+          ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

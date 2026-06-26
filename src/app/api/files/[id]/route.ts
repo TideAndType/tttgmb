@@ -6,6 +6,36 @@ import path from "path";
 
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
+export async function PATCH(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const user = session.user as any;
+  if (user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const data: Record<string, any> = {};
+  if (body.label !== undefined) data.label = body.label?.trim() || null;
+  if (body.folder !== undefined) data.folder = body.folder?.trim() || null;
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
+
+  try {
+    const updated = await prisma.clientFile.update({ where: { id: params.id }, data });
+    return NextResponse.json(updated);
+  } catch {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } }

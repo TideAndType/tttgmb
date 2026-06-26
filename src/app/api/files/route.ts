@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { createNotification } from "@/lib/notifications";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -55,6 +56,7 @@ export async function POST(req: Request) {
   const file = formData.get("file") as File | null;
   const userId = formData.get("userId") as string | null;
   const label = (formData.get("label") as string | null) || undefined;
+  const folder = ((formData.get("folder") as string | null) || "").trim() || undefined;
 
   if (!file || !userId) {
     return NextResponse.json({ error: "Missing file or userId" }, { status: 400 });
@@ -99,8 +101,11 @@ export async function POST(req: Request) {
         size: file.size,
         version: existingFile.version + 1,
         label: label ?? existingFile.label,
+        folder: folder ?? existingFile.folder,
       },
     });
+
+    createNotification(userId, "file_updated", "File updated", `A new version of "${updated.label || updated.originalName}" was uploaded`, "/files");
 
     return NextResponse.json(updated, { status: 200 });
   }
@@ -113,8 +118,11 @@ export async function POST(req: Request) {
       mimeType: file.type,
       size: file.size,
       label: label ?? null,
+      folder: folder ?? null,
     },
   });
+
+  createNotification(userId, "file_shared", "New file shared", `"${record.label || record.originalName}" is now available`, "/files");
 
   return NextResponse.json(record, { status: 201 });
 }
