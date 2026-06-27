@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendTaskCompletedEmail } from "@/lib/email";
 import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
+import { dispatchWebhook } from "@/lib/webhooks";
 
 const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
@@ -144,6 +145,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       sendTaskCompletedEmail(owner.email, owner.name, task.title, `${baseUrl}/tasks`);
     }
     createNotification(task.userId, "task_completed", "Task completed", task.title, "/tasks");
+    dispatchWebhook("task.completed", { id: task.id, title: task.title, clientId: task.userId });
     for (const admin of admins) {
       sendTaskCompletedEmail(admin.email, admin.name, task.title, `${baseUrl}/admin/tasks`);
       createNotification(admin.id, "task_completed", "Task marked complete", task.title, "/admin/tasks");

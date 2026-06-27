@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createNotificationForAdmins } from "@/lib/notifications";
+import { dispatchWebhook } from "@/lib/webhooks";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // Notify admins the first time the client opens the proposal
   if (firstView) {
     createNotificationForAdmins("proposal_viewed", "Proposal viewed", `${user.name ?? "Client"} viewed "${proposal.title}"`, "/admin/proposals");
+    dispatchWebhook("proposal.viewed", { id: proposal.id, title: proposal.title, clientId: user.id, clientName: user.name });
   }
 
   return NextResponse.json(updated);

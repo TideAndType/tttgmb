@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getCompanyUserIds } from "@/lib/company";
 import { createNotificationForAdmins } from "@/lib/notifications";
+import { dispatchWebhook } from "@/lib/webhooks";
 
 // Returns the current user's rating for this project (or null).
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
@@ -54,6 +55,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     `${user.name ?? "A client"} rated "${project.name}" ${score}/5`,
     "/admin/projects"
   );
+  dispatchWebhook("csat.received", { projectId: params.id, projectName: project.name, clientId: user.id, score, comment });
 
   return NextResponse.json({ rating });
 }

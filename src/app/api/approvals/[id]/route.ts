@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendApprovalRespondedEmail } from "@/lib/email";
 import { createNotificationForAdmins } from "@/lib/notifications";
+import { dispatchWebhook } from "@/lib/webhooks";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
@@ -165,6 +166,7 @@ export async function PATCH(
 
     await notifyApprovalResponse(user.id, deliverable.title, "approved");
     createNotificationForAdmins("approval_responded", "Deliverable approved", `${user.name ?? "Client"} approved "${deliverable.title}"`, "/admin/approvals");
+    dispatchWebhook("approval.responded", { id: deliverable.id, title: deliverable.title, clientId: user.id, response: "approved" });
 
     return NextResponse.json({ deliverable: updated });
   }
@@ -191,6 +193,7 @@ export async function PATCH(
 
     await notifyApprovalResponse(user.id, deliverable.title, "changes_requested");
     createNotificationForAdmins("approval_responded", "Changes requested", `${user.name ?? "Client"} requested changes on "${deliverable.title}"`, "/admin/approvals");
+    dispatchWebhook("approval.responded", { id: deliverable.id, title: deliverable.title, clientId: user.id, response: "changes_requested" });
 
     return NextResponse.json({ deliverable: updated });
   }

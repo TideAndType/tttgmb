@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendProposalRespondedEmail } from "@/lib/email";
 import { createNotificationForAdmins } from "@/lib/notifications";
+import { dispatchWebhook } from "@/lib/webhooks";
 
 async function notifyProposalResponse(
   userId: string,
@@ -63,6 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
     await notifyProposalResponse(user.id, proposal.title, "accepted");
     createNotificationForAdmins("proposal_accepted", "Proposal accepted", `${user.name ?? "Client"} accepted "${proposal.title}"`, "/admin/proposals");
+    dispatchWebhook("proposal.accepted", { id: proposal.id, title: proposal.title, clientId: user.id, clientName: user.name, acceptedBy: name });
     return NextResponse.json(updated);
   }
 
@@ -73,6 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
     await notifyProposalResponse(user.id, proposal.title, "declined");
     createNotificationForAdmins("proposal_declined", "Proposal declined", `${user.name ?? "Client"} declined "${proposal.title}"`, "/admin/proposals");
+    dispatchWebhook("proposal.declined", { id: proposal.id, title: proposal.title, clientId: user.id, clientName: user.name });
     return NextResponse.json(updated);
   }
 

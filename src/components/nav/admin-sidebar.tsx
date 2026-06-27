@@ -28,6 +28,7 @@ import {
   Folder,
   Instagram,
   Video,
+  Webhook,
 } from "lucide-react";
 
 const navItems = [
@@ -48,6 +49,7 @@ const navItems = [
   { href: "/admin/meetings", label: "Meetings", icon: Video },
   { href: "/admin/files", label: "Files", icon: Folder },
   { href: "/admin/content", label: "Content", icon: Instagram },
+  { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
 ];
 
 interface AppSettings {
