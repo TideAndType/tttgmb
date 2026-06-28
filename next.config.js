@@ -7,6 +7,10 @@ const nextConfig = {
     cpus: 1,
     workerThreads: false,
   },
+  // Skip lint + type-check during `next build` to cut build memory on low-RAM
+  // hosts. Types are still verified separately via `tsc --noEmit`.
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   images: {
     domains: ["lh3.googleusercontent.com"],
   },
