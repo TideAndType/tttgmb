@@ -60,7 +60,7 @@ export default function NewInvoicePage() {
   useEffect(() => {
     fetch("/api/admin/clients")
       .then((r) => r.json())
-      .then(setClients)
+      .then((data) => setClients(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
