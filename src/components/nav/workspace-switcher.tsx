@@ -130,9 +130,9 @@ export function WorkspaceSwitcher({ agencyName, logoFilename }: WorkspaceSwitche
             <Check className="h-4 w-4 text-primary" />
           </button>
 
-          {/* Sub Accounts (clients) */}
+          {/* Client Accounts */}
           <div className="px-3 pt-2 pb-1 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Sub Accounts</span>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Client Accounts</span>
             <span className="text-[10px] text-muted-foreground">{clients.length}</span>
           </div>
           {clients.length > 6 && (
@@ -174,7 +174,7 @@ export function WorkspaceSwitcher({ agencyName, logoFilename }: WorkspaceSwitche
           {/* Actions */}
           <div className="border-t border-border">
             <button onClick={() => { setOpen(false); router.push("/admin/clients/new"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent">
-              <Plus className="h-4 w-4 text-muted-foreground" /> Create Sub Account
+              <Plus className="h-4 w-4 text-muted-foreground" /> Create Client Account
             </button>
             <button onClick={() => { setOpen(false); router.push("/admin/settings"); }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-accent">
               <Settings className="h-4 w-4 text-muted-foreground" /> Agency Settings
