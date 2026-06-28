@@ -32,28 +32,58 @@ import {
   Video,
   Activity,
   ClipboardList,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/proposals", label: "Proposals", icon: FileText },
-  { href: "/projects", label: "Projects", icon: FolderOpen },
-  { href: "/ai-visibility", label: "AI Visibility", icon: Eye },
-  { href: "/seo", label: "SEO Overview", icon: Search },
-  { href: "/keywords", label: "Keywords", icon: Key },
-  { href: "/brand-book", label: "Brand Book", icon: BookOpen },
-  { href: "/reports", label: "Reports", icon: BarChart2 },
-  { href: "/gmb", label: "My Business", icon: MapPin },
-  { href: "/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/meetings", label: "Meetings", icon: Video },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/timeline", label: "Timeline", icon: GanttChart },
-  { href: "/approvals", label: "Approvals", icon: CheckCircle },
-  { href: "/time", label: "Time Tracking", icon: Clock },
-  { href: "/invoices", label: "Invoices", icon: Receipt },
-  { href: "/files", label: "Files", icon: Paperclip },
-  { href: "/forms", label: "Forms", icon: ClipboardList },
-  { href: "/activity", label: "Activity", icon: Activity },
+const navGroups: {
+  title: string;
+  items: { href: string; label: string; icon: React.ElementType }[];
+}[] = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/activity", label: "Activity", icon: Activity },
+    ],
+  },
+  {
+    title: "Work",
+    items: [
+      { href: "/projects", label: "Projects", icon: FolderOpen },
+      { href: "/tasks", label: "Tasks", icon: CheckSquare },
+      { href: "/approvals", label: "Approvals", icon: CheckCircle },
+      { href: "/time", label: "Time Tracking", icon: Clock },
+      { href: "/calendar", label: "Calendar", icon: CalendarDays },
+      { href: "/timeline", label: "Timeline", icon: GanttChart },
+      { href: "/meetings", label: "Meetings", icon: Video },
+    ],
+  },
+  {
+    title: "Performance",
+    items: [
+      { href: "/ai-visibility", label: "AI Visibility", icon: Eye },
+      { href: "/seo", label: "SEO Overview", icon: Search },
+      { href: "/keywords", label: "Keywords", icon: Key },
+      { href: "/reports", label: "Reports", icon: BarChart2 },
+      { href: "/gmb", label: "My Business", icon: MapPin },
+    ],
+  },
+  {
+    title: "Billing",
+    items: [
+      { href: "/proposals", label: "Proposals", icon: FileText },
+      { href: "/invoices", label: "Invoices", icon: Receipt },
+    ],
+  },
+  {
+    title: "Resources",
+    items: [
+      { href: "/brand-book", label: "Brand Book", icon: BookOpen },
+      { href: "/files", label: "Files", icon: Paperclip },
+      { href: "/forms", label: "Forms", icon: ClipboardList },
+    ],
+  },
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
@@ -61,6 +91,27 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { data: session } = useSession();
   const user = session?.user as any;
   const { logoUrl } = useBrand();
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("clientNavCollapsed");
+      if (saved) setCollapsed(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleGroup = (title: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [title]: !prev[title] };
+      try { localStorage.setItem("clientNavCollapsed", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  const canSee = (href: string) => {
+    const key = permissionForPath(href);
+    return !key || hasPermission(user?.permissions, key);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -79,28 +130,46 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-sm text-muted-foreground truncate mt-0.5">{user?.name}</p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.filter((item) => {
-          const key = permissionForPath(item.href);
-          return !key || hasPermission(user?.permissions, key);
-        }).map((item) => {
-          const Icon = item.icon;
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+      <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
+        {navGroups.map((group) => {
+          const visible = group.items.filter((item) => canSee(item.href));
+          if (visible.length === 0) return null; // hide groups the client has no access to
+          const hasActive = visible.some((item) => pathname === item.href || pathname.startsWith(item.href + "/"));
+          const isOpen = hasActive || !collapsed[group.title];
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            <div key={group.title}>
+              <button
+                onClick={() => toggleGroup(group.title)}
+                className="w-full flex items-center justify-between px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70 hover:text-foreground transition-colors"
+              >
+                {group.title}
+                {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </button>
+              {isOpen && (
+                <div className="mt-1 space-y-0.5">
+                  {visible.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              {item.label}
-            </Link>
+            </div>
           );
         })}
       </nav>
