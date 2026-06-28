@@ -62,9 +62,15 @@ export default function AdminPage() {
   const [teamError, setTeamError] = useState("");
 
   const fetchClients = async () => {
-    const res = await fetch("/api/admin/clients");
-    const data = await res.json();
-    setClients(data);
+    try {
+      const res = await fetch("/api/admin/clients");
+      const data = await res.json();
+      setClients(Array.isArray(data) ? data : []);
+      if (!res.ok) setError((data && data.error) || "Failed to load clients.");
+    } catch {
+      setClients([]);
+      setError("Failed to load clients.");
+    }
     setLoading(false);
   };
 
