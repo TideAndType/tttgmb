@@ -335,6 +335,29 @@ model SatisfactionRating {
   @@unique([projectId, userId])
 }
 
+model IntakeForm {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  // [{ id, label, type: "text"|"textarea"|"select", required, options: [] }]
+  fields      Json             @default("[]")
+  active      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  responses   IntakeResponse[]
+}
+
+model IntakeResponse {
+  id          String     @id @default(cuid())
+  formId      String
+  form        IntakeForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  userId      String
+  // { [fieldId]: value }
+  answers     Json       @default("{}")
+  submittedAt DateTime   @default(now())
+
+  @@unique([formId, userId])
+}
+
 model Webhook {
   id        String   @id @default(cuid())
   url       String

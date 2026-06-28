@@ -30,6 +30,7 @@ import {
   Eye,
   Video,
   Activity,
+  ClipboardList,
 } from "lucide-react";
 
 const navItems = [
@@ -50,6 +51,7 @@ const navItems = [
   { href: "/time", label: "Time Tracking", icon: Clock },
   { href: "/invoices", label: "Invoices", icon: Receipt },
   { href: "/files", label: "Files", icon: Paperclip },
+  { href: "/forms", label: "Forms", icon: ClipboardList },
   { href: "/activity", label: "Activity", icon: Activity },
 ];
 

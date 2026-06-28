@@ -29,6 +29,7 @@ import {
   Instagram,
   Video,
   Webhook,
+  ClipboardList,
 } from "lucide-react";
 
 const navItems = [
@@ -49,6 +50,7 @@ const navItems = [
   { href: "/admin/meetings", label: "Meetings", icon: Video },
   { href: "/admin/files", label: "Files", icon: Folder },
   { href: "/admin/content", label: "Content", icon: Instagram },
+  { href: "/admin/forms", label: "Intake Forms", icon: ClipboardList },
   { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
 ];
 
