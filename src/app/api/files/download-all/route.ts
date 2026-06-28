@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
-import { ZipArchive } from "archiver";
+import archiver from "archiver";
 import { createReadStream, existsSync } from "fs";
 import path from "path";
 import { Readable } from "stream";
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     for (const o of owners) nameById.set(o.id, o.companyName || o.name || "Unknown client");
   }
 
-  const archive = new ZipArchive({ zlib: { level: 9 } });
+  const archive = archiver("zip", { zlib: { level: 9 } });
 
   // Track used paths to disambiguate duplicate names within the same folder.
   const usedPaths = new Set<string>();

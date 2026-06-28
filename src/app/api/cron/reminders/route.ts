@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { sendTaskDueReminderEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {

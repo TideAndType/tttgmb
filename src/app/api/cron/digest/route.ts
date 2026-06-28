@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { sendWeeklyDigestEmail } from "@/lib/email";
 import { getCompanyUserIds } from "@/lib/company";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
