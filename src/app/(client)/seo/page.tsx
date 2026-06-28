@@ -68,11 +68,15 @@ export default function SeoPage() {
     setLoading(false);
   };
 
+  const [sitesError, setSitesError] = useState("");
   const loadSites = async () => {
+    setSitesError("");
     const res = await fetch("/api/gsc/properties");
+    const d = await res.json().catch(() => ({}));
     if (res.ok) {
-      const d = await res.json();
       setSites(Array.isArray(d.sites) ? d.sites : []);
+    } else {
+      setSitesError(d.error || "Couldn't read Search Console sites.");
     }
   };
 
@@ -129,8 +133,10 @@ export default function SeoPage() {
           <CardContent className="py-10">
             <h3 className="text-lg font-semibold mb-1">Select a Search Console property</h3>
             <p className="text-muted-foreground text-sm mb-5">Connected ✓ — now choose which verified site to pull data from.</p>
-            {sites.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No verified Search Console sites found on this Google account. Verify the site in Search Console first, then reload.</p>
+            {sitesError ? (
+              <Alert variant="destructive" className="text-sm">{sitesError}</Alert>
+            ) : sites.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No Search Console properties found on the Google account you connected. Make sure you authorized with the Google account that has access to the site in Search Console — and that the Search Console site is verified.</p>
             ) : (
               <div className="space-y-2 max-w-md">
                 {sites.map((s) => (

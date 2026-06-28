@@ -30,12 +30,13 @@ export async function GET() {
   try {
     const searchconsole = google.searchconsole({ version: "v1", auth: oauth2Client });
     const res = await searchconsole.sites.list();
-    const sites = (res.data.siteEntry || [])
-      .map((s) => ({ siteUrl: s.siteUrl, permissionLevel: s.permissionLevel }))
-      .filter((s) => s.permissionLevel !== "siteUnverifiedUser");
+    // Return all sites (don't hide by permission level) so the user can pick any.
+    const sites = (res.data.siteEntry || []).map((s) => ({ siteUrl: s.siteUrl, permissionLevel: s.permissionLevel }));
     return NextResponse.json({ sites });
-  } catch (error) {
-    console.error("GSC sites error:", error);
-    return NextResponse.json({ error: "Failed to fetch GSC sites" }, { status: 500 });
+  } catch (error: any) {
+    // Surface Google's real error so the UI can show why no sites came back.
+    const detail = error?.response?.data?.error?.message || error?.errors?.[0]?.message || error?.message || "Unknown error";
+    console.error("GSC sites error:", detail);
+    return NextResponse.json({ error: `Google: ${detail}` }, { status: 502 });
   }
 }
