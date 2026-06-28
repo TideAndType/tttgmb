@@ -20,7 +20,7 @@ export async function PATCH(
   });
   if (!todo || todo.taskId !== params.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  if (user.role !== "ADMIN") {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
     const isAssignee = todo.task.assignees.some((a) => a.userId === user.id);
     if (todo.task.userId !== user.id && !isAssignee) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -44,7 +44,7 @@ export async function DELETE(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await prisma.taskTodo.delete({ where: { id: params.todoId } });
   return NextResponse.json({ success: true });

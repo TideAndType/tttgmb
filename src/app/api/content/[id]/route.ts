@@ -9,7 +9,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as { role: string };
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { title, type, status, scheduledAt, notes, url, tags } = body;
@@ -33,7 +33,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as { role: string };
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await prisma.contentItem.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });

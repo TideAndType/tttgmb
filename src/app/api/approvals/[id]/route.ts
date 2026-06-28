@@ -54,7 +54,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (user.role !== "ADMIN" && deliverable.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && deliverable.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -79,7 +79,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (user.role !== "ADMIN" && deliverable.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && deliverable.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -87,7 +87,7 @@ export async function PATCH(
 
   if (contentType.includes("multipart/form-data")) {
     // Admin resubmit via form data
-    if (user.role !== "ADMIN") {
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -213,7 +213,7 @@ export async function DELETE(
   }
 
   const user = session.user as any;
-  if (user.role !== "ADMIN") {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

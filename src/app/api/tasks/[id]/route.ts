@@ -80,7 +80,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 
   // Clients can only view their own tasks or tasks they are assigned to
-  if (sessionUser.role !== "ADMIN") {
+  if (sessionUser.role !== "ADMIN" && sessionUser.role !== "SUPER_ADMIN") {
     const isAssignee = task.assignees.some((a) => a.userId === sessionUser.id);
     if (task.userId !== sessionUser.id && !isAssignee) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   // Clients can update status if they are the owner or an assignee
-  if (sessionUser.role !== "ADMIN") {
+  if (sessionUser.role !== "ADMIN" && sessionUser.role !== "SUPER_ADMIN") {
     const isAssignee = task.assignees.some((a) => a.userId === sessionUser.id);
     if (task.userId !== sessionUser.id && !isAssignee) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -180,7 +180,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   const sessionUser = session.user as any;
-  if (sessionUser.role !== "ADMIN") {
+  if (sessionUser.role !== "ADMIN" && sessionUser.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -11,7 +11,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as { role: string };
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const proposal = await prisma.proposal.findUnique({ where: { id: params.id } });
   if (!proposal) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -28,7 +28,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as { role: string };
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await prisma.proposal.update({ where: { id: params.id }, data: { shareToken: null } });
   return NextResponse.json({ ok: true });

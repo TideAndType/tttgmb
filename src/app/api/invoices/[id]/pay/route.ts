@@ -20,7 +20,7 @@ export async function POST(
   if (!invoice) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Verify ownership — admin can access any, client must own it
-  if (user.role !== "ADMIN" && invoice.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && invoice.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

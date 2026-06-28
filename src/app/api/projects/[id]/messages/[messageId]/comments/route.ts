@@ -16,7 +16,7 @@ export async function GET(
   const user = session.user as any;
   const project = await prisma.project.findUnique({ where: { id: params.id } });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (user.role !== "ADMIN" && project.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && project.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -38,7 +38,7 @@ export async function POST(
   const user = session.user as any;
   const project = await prisma.project.findUnique({ where: { id: params.id } });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (user.role !== "ADMIN" && project.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && project.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

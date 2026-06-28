@@ -18,7 +18,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   });
 
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (user.role !== "ADMIN" && project.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && project.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -30,7 +30,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
   const { visibility, memberIds, name, description, color, status, startDate, dueDate, notes } = body;
@@ -59,7 +59,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await prisma.project.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });

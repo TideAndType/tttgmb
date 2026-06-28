@@ -9,7 +9,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
-  if (user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
     await prisma.projectTemplate.delete({ where: { id: params.id } });

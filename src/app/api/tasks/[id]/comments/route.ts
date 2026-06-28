@@ -21,7 +21,7 @@ export async function GET(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  if (sessionUser.role !== "ADMIN" && task.userId !== sessionUser.id) {
+  if (sessionUser.role !== "ADMIN" && sessionUser.role !== "SUPER_ADMIN" && task.userId !== sessionUser.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -49,7 +49,7 @@ export async function POST(
     return NextResponse.json({ error: "Task not found" }, { status: 404 });
   }
 
-  if (sessionUser.role !== "ADMIN" && task.userId !== sessionUser.id) {
+  if (sessionUser.role !== "ADMIN" && sessionUser.role !== "SUPER_ADMIN" && task.userId !== sessionUser.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

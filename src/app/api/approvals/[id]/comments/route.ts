@@ -23,7 +23,7 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (user.role !== "ADMIN" && deliverable.userId !== user.id) {
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && deliverable.userId !== user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
