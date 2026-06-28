@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 async function getProjectAndCheck(projectId: string, userId: string, role: string) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) return null;

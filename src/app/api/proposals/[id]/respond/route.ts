@@ -6,6 +6,8 @@ import { sendProposalRespondedEmail } from "@/lib/email";
 import { createNotificationForAdmins } from "@/lib/notifications";
 import { dispatchWebhook } from "@/lib/webhooks";
 
+export const dynamic = "force-dynamic";
+
 async function notifyProposalResponse(
   userId: string,
   proposalTitle: string,

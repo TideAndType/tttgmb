@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import path from "path";
 
+export const dynamic = "force-dynamic";
+
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
 export async function PATCH(

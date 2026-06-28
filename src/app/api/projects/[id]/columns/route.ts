@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 async function checkAccess(projectId: string, userId: string, role: string) {
   const project = await prisma.project.findUnique({ where: { id: projectId } });
   if (!project) return null;

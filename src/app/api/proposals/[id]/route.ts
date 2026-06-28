@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { sendProposalSentEmail } from "@/lib/email";
 import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

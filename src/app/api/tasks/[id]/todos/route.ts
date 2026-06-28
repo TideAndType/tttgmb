@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 async function getTaskAndCheckAccess(taskId: string, userId: string, role: string) {
   const task = await prisma.task.findUnique({
     where: { id: taskId },

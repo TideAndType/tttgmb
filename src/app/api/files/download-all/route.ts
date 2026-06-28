@@ -8,6 +8,8 @@ import { createReadStream, existsSync } from "fs";
 import path from "path";
 import { Readable } from "stream";
 
+export const dynamic = "force-dynamic";
+
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
 function sanitize(name: string): string {

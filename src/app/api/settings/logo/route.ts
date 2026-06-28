@@ -6,6 +6,8 @@ import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
+export const dynamic = "force-dynamic";
+
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
 const DEFAULTS = {

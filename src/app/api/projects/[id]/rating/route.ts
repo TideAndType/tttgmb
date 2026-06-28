@@ -6,6 +6,8 @@ import { getCompanyUserIds } from "@/lib/company";
 import { createNotificationForAdmins } from "@/lib/notifications";
 import { dispatchWebhook } from "@/lib/webhooks";
 
+export const dynamic = "force-dynamic";
+
 // Returns the current user's rating for this project (or null).
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);

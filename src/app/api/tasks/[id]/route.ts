@@ -6,6 +6,8 @@ import { sendTaskCompletedEmail } from "@/lib/email";
 import { createNotification, createNotificationForAdmins } from "@/lib/notifications";
 import { dispatchWebhook } from "@/lib/webhooks";
 
+export const dynamic = "force-dynamic";
+
 const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
 };

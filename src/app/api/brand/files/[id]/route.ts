@@ -6,6 +6,8 @@ import { unlink } from "fs/promises";
 import path from "path";
 import { getCompanyUserIds } from "@/lib/company";
 
+export const dynamic = "force-dynamic";
+
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
 export async function DELETE(

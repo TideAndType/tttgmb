@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Anthropic from "@anthropic-ai/sdk";
 
+export const dynamic = "force-dynamic";
+
 type Action = "proposal_section" | "task_description" | "client_update" | "rewrite" | "section_content";
 type Tone = "professional" | "friendly" | "concise";
 
