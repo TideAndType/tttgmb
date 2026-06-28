@@ -32,28 +32,58 @@ import {
   Webhook,
   ClipboardList,
   UserCog,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { href: "/admin/activity", label: "Activity", icon: Activity },
-  { href: "/admin/messages", label: "Messages", icon: MessageCircle },
-  { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
-  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/admin/timeline", label: "Timeline", icon: GanttChart },
-  { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
-  { href: "/admin/leads", label: "Leads", icon: Target },
-  { href: "/admin/proposals", label: "Proposals", icon: FileText },
-  { href: "/admin/invoices", label: "Invoices", icon: Receipt },
-  { href: "/admin/projects", label: "Projects", icon: FolderOpen },
-  { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
-  { href: "/admin/approvals", label: "Approvals", icon: CheckCircle },
-  { href: "/admin/time", label: "Time", icon: Clock },
-  { href: "/admin/meetings", label: "Meetings", icon: Video },
-  { href: "/admin/files", label: "Files", icon: Folder },
-  { href: "/admin/content", label: "Content", icon: Instagram },
-  { href: "/admin/forms", label: "Intake Forms", icon: ClipboardList },
-  { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
+const navGroups: {
+  title: string;
+  items: { href: string; label: string; icon: React.ElementType; exact?: boolean }[];
+}[] = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/activity", label: "Activity", icon: Activity },
+      { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
+    ],
+  },
+  {
+    title: "Clients",
+    items: [
+      { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
+      { href: "/admin/leads", label: "Leads", icon: Target },
+      { href: "/admin/messages", label: "Messages", icon: MessageCircle },
+      { href: "/admin/meetings", label: "Meetings", icon: Video },
+    ],
+  },
+  {
+    title: "Work",
+    items: [
+      { href: "/admin/projects", label: "Projects", icon: FolderOpen },
+      { href: "/admin/tasks", label: "Tasks", icon: CheckSquare },
+      { href: "/admin/approvals", label: "Approvals", icon: CheckCircle },
+      { href: "/admin/time", label: "Time", icon: Clock },
+      { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
+      { href: "/admin/timeline", label: "Timeline", icon: GanttChart },
+    ],
+  },
+  {
+    title: "Sales",
+    items: [
+      { href: "/admin/proposals", label: "Proposals", icon: FileText },
+      { href: "/admin/invoices", label: "Invoices", icon: Receipt },
+    ],
+  },
+  {
+    title: "Content & Tools",
+    items: [
+      { href: "/admin/files", label: "Files", icon: Folder },
+      { href: "/admin/content", label: "Content", icon: Instagram },
+      { href: "/admin/forms", label: "Intake Forms", icon: ClipboardList },
+      { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
+    ],
+  },
 ];
 
 interface AppSettings {
@@ -68,6 +98,23 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     appName: "Client Portal",
     logoFilename: null,
   });
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // Restore which groups the user collapsed.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("adminNavCollapsed");
+      if (saved) setCollapsed(JSON.parse(saved));
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleGroup = (title: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [title]: !prev[title] };
+      try { localStorage.setItem("adminNavCollapsed", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetch("/api/settings")
@@ -88,25 +135,48 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <p className="text-xs text-muted-foreground mt-2 px-1">{session?.user?.name}</p>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+      <nav className="flex-1 p-3 space-y-3 overflow-y-auto">
+        {navGroups.map((group) => {
+          // A group is shown expanded unless the user collapsed it — but always
+          // expand the group that contains the current page.
+          const hasActive = group.items.some((item) =>
+            item.exact ? pathname === item.href : pathname.startsWith(item.href)
+          );
+          const isOpen = hasActive || !collapsed[group.title];
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            <div key={group.title}>
+              <button
+                onClick={() => toggleGroup(group.title)}
+                className="w-full flex items-center justify-between px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70 hover:text-foreground transition-colors"
+              >
+                {group.title}
+                {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </button>
+              {isOpen && (
+                <div className="mt-1 space-y-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              {item.label}
-            </Link>
+            </div>
           );
         })}
       </nav>
