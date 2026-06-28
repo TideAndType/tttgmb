@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { PERMISSIONS, permissionForPath, hasPermission } from "@/lib/permissions";
 
 export default withAuth(
   function middleware(req) {
@@ -44,6 +45,20 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin", req.url));
     }
 
+    // Per-feature privileges for client team members. Empty permissions = full access.
+    if (token?.role === "CLIENT") {
+      const perms = (token.permissions as string[] | undefined) ?? [];
+      if (perms.length > 0) {
+        const required = permissionForPath(pathname);
+        if (required && !hasPermission(perms, required)) {
+          // Redirect to the first section they CAN access (or /profile, which is ungated).
+          const firstAllowed = PERMISSIONS.find((p) => perms.includes(p.key));
+          const target = firstAllowed ? firstAllowed.paths[0] : "/profile";
+          return NextResponse.redirect(new URL(target, req.url));
+        }
+      }
+    }
+
     return NextResponse.next();
   },
   {
@@ -54,5 +69,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/admin/:path*", "/super-admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/gmb", "/gmb/:path*", "/tasks/:path*", "/calendar", "/calendar/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*", "/profile/:path*", "/timeline", "/timeline/:path*", "/messages", "/messages/:path*", "/files", "/files/:path*", "/api/files", "/api/files/:path*", "/api/team", "/api/calendar-events", "/api/search", "/api/notifications", "/api/notifications/:path*"],
+  matcher: ["/admin/:path*", "/super-admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/gmb", "/gmb/:path*", "/ai-visibility", "/ai-visibility/:path*", "/tasks/:path*", "/calendar", "/calendar/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*", "/profile/:path*", "/timeline", "/timeline/:path*", "/messages", "/messages/:path*", "/meetings", "/meetings/:path*", "/files", "/files/:path*", "/forms", "/forms/:path*", "/activity", "/activity/:path*", "/api/files", "/api/files/:path*", "/api/team", "/api/calendar-events", "/api/search", "/api/notifications", "/api/notifications/:path*"],
 };

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { ALL_PERMISSION_KEYS } from "@/lib/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export async function GET() {
 
   const members = await prisma.user.findMany({
     where: { companyId: me.companyId },
-    select: { id: true, name: true, email: true, createdAt: true },
+    select: { id: true, name: true, email: true, createdAt: true, permissions: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -37,11 +38,16 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = (session.user as any).id as string;
-  const { firstName, lastName, email } = await req.json();
+  const { firstName, lastName, email, permissions } = await req.json();
 
   if (!firstName || !lastName || !email) {
     return NextResponse.json({ error: "First name, last name, and email are required" }, { status: 400 });
   }
+
+  // Validate requested permission keys against the canonical list.
+  const cleanPermissions = Array.isArray(permissions)
+    ? permissions.filter((p: unknown): p is string => typeof p === "string" && ALL_PERMISSION_KEYS.includes(p))
+    : [];
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
@@ -75,6 +81,7 @@ export async function POST(req: NextRequest) {
       password: tempPassword,
       role: "CLIENT",
       companyId,
+      permissions: cleanPermissions,
     },
   });
 

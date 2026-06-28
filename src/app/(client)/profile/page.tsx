@@ -5,13 +5,15 @@ import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TwoFactorSettings } from "@/components/profile/two-factor-settings";
 import { Button } from "@/components/ui/button";
-import { Trash2, UserPlus, Mail } from "lucide-react";
+import { Trash2, UserPlus, Mail, ShieldCheck } from "lucide-react";
+import { PERMISSIONS, ALL_PERMISSION_KEYS } from "@/lib/permissions";
 
 interface Member {
   id: string;
   name: string;
   email: string;
   createdAt: string;
+  permissions?: string[];
 }
 
 function StatusBanner({ status }: { status: { type: "success" | "error"; message: string } | null }) {
@@ -61,6 +63,10 @@ export default function ProfilePage() {
   const [inviteFirstName, setInviteFirstName] = useState("");
   const [inviteLastName, setInviteLastName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
+  const [invitePerms, setInvitePerms] = useState<string[]>(ALL_PERMISSION_KEYS);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [editPerms, setEditPerms] = useState<string[]>([]);
+  const [savingPerms, setSavingPerms] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteStatus, setInviteStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -179,7 +185,7 @@ export default function ProfilePage() {
       const res = await fetch("/api/team", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName: inviteFirstName, lastName: inviteLastName, email: inviteEmail }),
+        body: JSON.stringify({ firstName: inviteFirstName, lastName: inviteLastName, email: inviteEmail, permissions: invitePerms }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -189,6 +195,8 @@ export default function ProfilePage() {
         setInviteFirstName("");
         setInviteLastName("");
         setInviteEmail("");
+        setInvitePerms(ALL_PERMISSION_KEYS);
+        fetchMembers();
         fetchMembers();
       }
     } catch {
@@ -214,6 +222,33 @@ export default function ProfilePage() {
     }
     setRemovingId(null);
   };
+
+  const startEditPerms = (m: Member) => {
+    setEditingMemberId(m.id);
+    // No permissions set = full access → show all checked.
+    setEditPerms(m.permissions && m.permissions.length > 0 ? m.permissions : ALL_PERMISSION_KEYS);
+  };
+
+  const saveMemberPerms = async (memberId: string) => {
+    setSavingPerms(true);
+    try {
+      const res = await fetch(`/api/team/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permissions: editPerms }),
+      });
+      if (res.ok) {
+        setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, permissions: editPerms } : m));
+        setEditingMemberId(null);
+      }
+    } catch {
+      // silently fail
+    }
+    setSavingPerms(false);
+  };
+
+  const togglePerm = (list: string[], key: string) =>
+    list.includes(key) ? list.filter((k) => k !== key) : [...list, key];
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -336,22 +371,61 @@ export default function ProfilePage() {
           ) : (
             <ul className="divide-y divide-border">
               {members.map((m) => (
-                <li key={m.id} className="flex items-center justify-between py-2.5 gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
-                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                      <Mail className="h-3 w-3" />{m.email}
-                    </p>
+                <li key={m.id} className="py-2.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
+                      <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                        <Mail className="h-3 w-3" />{m.email}
+                        {m.permissions && m.permissions.length > 0 && (
+                          <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{m.permissions.length} of {ALL_PERMISSION_KEYS.length} sections</span>
+                        )}
+                      </p>
+                    </div>
+                    {m.id !== user?.id && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => editingMemberId === m.id ? setEditingMemberId(null) : startEditPerms(m)}
+                          className="text-muted-foreground hover:text-primary transition-colors p-1 rounded"
+                          title="Edit access"
+                        >
+                          <ShieldCheck className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemove(m.id)}
+                          disabled={removingId === m.id}
+                          className="text-muted-foreground hover:text-red-500 transition-colors p-1 rounded"
+                          title="Remove from team"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                  {m.id !== user?.id && (
-                    <button
-                      onClick={() => handleRemove(m.id)}
-                      disabled={removingId === m.id}
-                      className="text-muted-foreground hover:text-red-500 transition-colors flex-shrink-0 p-1 rounded"
-                      title="Remove from team"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  {editingMemberId === m.id && (
+                    <div className="mt-3 rounded-md border border-border bg-muted/30 p-3">
+                      <p className="text-xs font-medium text-foreground mb-2">Which sections can {m.name.split(" ")[0]} access?</p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {PERMISSIONS.map((p) => (
+                          <label key={p.key} className="flex items-center gap-2 text-xs cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={editPerms.includes(p.key)}
+                              onChange={() => setEditPerms((prev) => togglePerm(prev, p.key))}
+                              className="accent-primary"
+                            />
+                            {p.label}
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 mt-3">
+                        <Button size="sm" className="h-7 text-xs" onClick={() => saveMemberPerms(m.id)} disabled={savingPerms}>
+                          {savingPerms ? "Saving…" : "Save access"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingMemberId(null)}>Cancel</Button>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-2">All checked = full access. Changes apply next time they sign in.</p>
+                    </div>
                   )}
                 </li>
               ))}
@@ -381,6 +455,23 @@ export default function ProfilePage() {
                 <label className="text-xs font-medium text-foreground" htmlFor="inviteEmail">Email Address</label>
                 <input id="inviteEmail" type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} required placeholder="jane@company.com"
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Section access</label>
+                <div className="grid grid-cols-2 gap-1.5 rounded-md border border-border p-3">
+                  {PERMISSIONS.map((p) => (
+                    <label key={p.key} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={invitePerms.includes(p.key)}
+                        onChange={() => setInvitePerms((prev) => prev.includes(p.key) ? prev.filter((k) => k !== p.key) : [...prev, p.key])}
+                        className="accent-primary"
+                      />
+                      {p.label}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">All checked = full access. Uncheck to restrict what this person can see.</p>
               </div>
               <StatusBanner status={inviteStatus} />
               <Button type="submit" disabled={inviteLoading} className="gap-2">

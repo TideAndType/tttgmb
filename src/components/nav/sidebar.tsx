@@ -8,6 +8,7 @@ import { useBrand } from "@/components/providers/brand-provider";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/nav/theme-toggle";
+import { permissionForPath, hasPermission } from "@/lib/permissions";
 import {
   LayoutDashboard,
   Search,
@@ -79,7 +80,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.filter((item) => {
+          const key = permissionForPath(item.href);
+          return !key || hasPermission(user?.permissions, key);
+        }).map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (

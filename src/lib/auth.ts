@@ -59,6 +59,7 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           companyName: user.companyName,
+          permissions: user.permissions ?? [],
         };
       },
     }),
@@ -69,6 +70,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.role = (user as any).role;
         token.companyName = (user as any).companyName;
+        token.permissions = (user as any).permissions ?? [];
       }
       return token;
     },
@@ -77,6 +79,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id as string;
         (session.user as any).role = token.role;
         (session.user as any).companyName = token.companyName;
+        (session.user as any).permissions = token.permissions ?? [];
       }
       return session;
     },

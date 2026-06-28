@@ -72,6 +72,7 @@ model User {
   password        String?
   name            String
   role            Role         @default(CLIENT)
+  permissions     String[]     @default([])
   companyName     String?
   companyId       String?
   company         Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
