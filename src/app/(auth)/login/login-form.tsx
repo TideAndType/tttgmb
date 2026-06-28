@@ -57,7 +57,8 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
     const response = await fetch("/api/auth/session");
     const session = await response.json();
 
-    if (session?.user?.role === "ADMIN") {
+    const role = session?.user?.role;
+    if (role === "ADMIN" || role === "SUPER_ADMIN") {
       router.push("/admin");
     } else {
       router.push("/dashboard");
