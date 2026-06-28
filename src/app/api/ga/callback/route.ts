@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get("state"); // userId
 
   if (!code || !state) {
-    return NextResponse.redirect(new URL("/reports?error=invalid_callback", req.url));
+    return NextResponse.redirect(new URL("/reports?error=invalid_callback", process.env.NEXTAUTH_URL || req.url));
   }
 
   const oauth2Client = new google.auth.OAuth2(
@@ -30,9 +30,9 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    return NextResponse.redirect(new URL("/reports?ga_connected=true", req.url));
+    return NextResponse.redirect(new URL("/reports?ga_connected=true", process.env.NEXTAUTH_URL || req.url));
   } catch (error) {
     console.error("GA callback error:", error);
-    return NextResponse.redirect(new URL("/reports?error=oauth_failed", req.url));
+    return NextResponse.redirect(new URL("/reports?error=oauth_failed", process.env.NEXTAUTH_URL || req.url));
   }
 }

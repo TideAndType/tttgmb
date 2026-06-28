@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const code = searchParams.get("code");
   const state = searchParams.get("state");
 
-  if (!code || !state) return NextResponse.redirect(new URL("/gmb?error=invalid_callback", req.url));
+  if (!code || !state) return NextResponse.redirect(new URL("/gmb?error=invalid_callback", process.env.NEXTAUTH_URL || req.url));
 
   const oauth2Client = new google.auth.OAuth2(
     process.env.GA_CLIENT_ID,
@@ -23,9 +23,9 @@ export async function GET(req: NextRequest) {
       where: { id: state },
       data: { gmbAccessToken: tokens.access_token, gmbRefreshToken: tokens.refresh_token },
     });
-    return NextResponse.redirect(new URL("/gmb?gmb_connected=true", req.url));
+    return NextResponse.redirect(new URL("/gmb?gmb_connected=true", process.env.NEXTAUTH_URL || req.url));
   } catch (err) {
     console.error("GMB callback error:", err);
-    return NextResponse.redirect(new URL("/gmb?error=oauth_failed", req.url));
+    return NextResponse.redirect(new URL("/gmb?error=oauth_failed", process.env.NEXTAUTH_URL || req.url));
   }
 }
