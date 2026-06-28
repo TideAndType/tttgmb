@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
 
+export const dynamic = "force-dynamic";
+
 function formatDateParts(d: Date) {
   return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
 }

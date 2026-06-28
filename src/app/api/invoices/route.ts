@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
 import { generateInvoice, advanceInvoiceDate } from "@/lib/generate-invoice";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

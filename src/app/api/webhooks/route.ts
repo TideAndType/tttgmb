@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { WEBHOOK_EVENTS } from "@/lib/webhooks";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session || (session.user as any).role !== "ADMIN") {

@@ -7,6 +7,8 @@ import { createNotification } from "@/lib/notifications";
 import { cookies } from "next/headers";
 import { getCompanyUserIds } from "@/lib/company";
 
+export const dynamic = "force-dynamic";
+
 const assigneesInclude = {
   assignees: { include: { user: { select: { id: true, name: true } } } },
 };

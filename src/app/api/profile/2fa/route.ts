@@ -6,6 +6,8 @@ import { generateSecret, generateURI, verifySync } from "otplib";
 import bcrypt from "bcryptjs";
 import QRCode from "qrcode";
 
+export const dynamic = "force-dynamic";
+
 // Returns whether 2FA is currently enabled for the signed-in user.
 export async function GET() {
   const session = await getServerSession(authOptions);

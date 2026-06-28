@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { sendPasswordResetEmail } from "@/lib/email";
 
+export const dynamic = "force-dynamic";
+
 // GET — list team members in the same company
 export async function GET() {
   const session = await getServerSession(authOptions);

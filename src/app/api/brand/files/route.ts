@@ -7,6 +7,8 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { getCompanyUserIds } from "@/lib/company";
 
+export const dynamic = "force-dynamic";
+
 const UPLOADS_DIR = process.cwd() + "/uploads";
 
 export async function GET() {

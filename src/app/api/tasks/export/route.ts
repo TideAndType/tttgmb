@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { toCsv, csvHeaders } from "@/lib/csv";
 
+export const dynamic = "force-dynamic";
+
 function fmtDate(d: Date | null): string {
   return d ? new Date(d).toISOString().slice(0, 10) : "";
 }

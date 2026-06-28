@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
 
+export const dynamic = "force-dynamic";
+
 async function getAccessToken(user: any): Promise<string> {
   const oauth2Client = new google.auth.OAuth2(
     process.env.GA_CLIENT_ID,
