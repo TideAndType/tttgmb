@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
 
@@ -23,7 +24,9 @@ async function getAccessToken(user: any): Promise<string> {
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const userId = (session.user as any).id;
+  const __u = session.user as any;
+  const __viewing = cookies().get("adminViewingAs")?.value;
+  const userId = (__viewing && (__u.role === "ADMIN" || __u.role === "SUPER_ADMIN")) ? __viewing : __u.id;
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user?.gmbAccessToken || !user?.gmbRefreshToken) return NextResponse.json({ error: "GMB not connected" }, { status: 400 });

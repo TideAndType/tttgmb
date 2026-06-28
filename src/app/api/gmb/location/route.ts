@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,9 @@ export async function PUT(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { locationId } = await req.json();
   if (!locationId) return NextResponse.json({ error: "locationId required" }, { status: 400 });
-  const userId = (session.user as any).id;
+  const __u = session.user as any;
+  const __viewing = cookies().get("adminViewingAs")?.value;
+  const userId = (__viewing && (__u.role === "ADMIN" || __u.role === "SUPER_ADMIN")) ? __viewing : __u.id;
   await prisma.user.update({ where: { id: userId }, data: { gmbLocationId: locationId } });
   return NextResponse.json({ success: true });
 }
