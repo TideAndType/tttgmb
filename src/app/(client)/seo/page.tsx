@@ -29,6 +29,9 @@ export default function SeoPage() {
   const [data, setData] = useState<SeoData | null>(null);
   const [loading, setLoading] = useState(true);
   const [gscConnected, setGscConnected] = useState(false);
+  const [propertySet, setPropertySet] = useState(false);
+  const [sites, setSites] = useState<{ siteUrl: string }[]>([]);
+  const [savingSite, setSavingSite] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -37,31 +40,51 @@ export default function SeoPage() {
 
   const fetchData = async () => {
     setLoading(true);
+    setError("");
     try {
       const res = await fetch("/api/gsc/data");
-      if (res.status === 401) {
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+        setGscConnected(true);
+        setPropertySet(true);
+        setLoading(false);
+        return;
+      }
+      // Distinguish "not connected" from "connected but no property selected".
+      const d = await res.json().catch(() => ({}));
+      const msg = (d && d.error) || "";
+      if (res.status === 400 && /property/i.test(msg)) {
+        setGscConnected(true);
+        setPropertySet(false);
+        await loadSites();
+      } else {
         setGscConnected(false);
-        setLoading(false);
-        return;
+        setPropertySet(false);
       }
-      if (res.status === 400) {
-        setGscConnected(false);
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        const d = await res.json();
-        setError(d.error || "Failed to load data");
-        setLoading(false);
-        return;
-      }
-      const json = await res.json();
-      setData(json);
-      setGscConnected(true);
     } catch (e) {
       setError("Failed to load GSC data");
     }
     setLoading(false);
+  };
+
+  const loadSites = async () => {
+    const res = await fetch("/api/gsc/properties");
+    if (res.ok) {
+      const d = await res.json();
+      setSites(Array.isArray(d.sites) ? d.sites : []);
+    }
+  };
+
+  const pickSite = async (siteUrl: string) => {
+    setSavingSite(true);
+    const res = await fetch("/api/gsc/property", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ siteUrl }),
+    });
+    setSavingSite(false);
+    if (res.ok) fetchData();
   };
 
   const handleConnect = async () => {
@@ -101,7 +124,30 @@ export default function SeoPage() {
 
       {error && <Alert variant="destructive" className="mb-6">{error}</Alert>}
 
-      {!gscConnected ? (
+      {gscConnected && !propertySet ? (
+        <Card>
+          <CardContent className="py-10">
+            <h3 className="text-lg font-semibold mb-1">Select a Search Console property</h3>
+            <p className="text-muted-foreground text-sm mb-5">Connected ✓ — now choose which verified site to pull data from.</p>
+            {sites.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No verified Search Console sites found on this Google account. Verify the site in Search Console first, then reload.</p>
+            ) : (
+              <div className="space-y-2 max-w-md">
+                {sites.map((s) => (
+                  <button
+                    key={s.siteUrl}
+                    onClick={() => pickSite(s.siteUrl)}
+                    disabled={savingSite}
+                    className="w-full text-left px-4 py-3 rounded-lg border border-border hover:border-primary hover:bg-accent transition-colors text-sm font-medium disabled:opacity-50"
+                  >
+                    {s.siteUrl}
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : !gscConnected ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <div className="p-4 bg-primary/10 rounded-full mb-4">
