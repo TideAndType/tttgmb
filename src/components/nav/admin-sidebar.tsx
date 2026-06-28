@@ -31,6 +31,7 @@ import {
   Video,
   Webhook,
   ClipboardList,
+  UserCog,
 } from "lucide-react";
 
 const navItems = [
@@ -111,6 +112,19 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="p-4 border-t border-border space-y-1">
+        <Link
+          href="/admin/account"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            pathname.startsWith("/admin/account")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <UserCog className="h-4 w-4" />
+          My Account
+        </Link>
         <Link
           href="/admin/settings"
           onClick={onNavigate}
