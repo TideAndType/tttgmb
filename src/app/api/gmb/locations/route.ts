@@ -32,11 +32,17 @@ export async function GET() {
       `https://mybusinessbusinessinformation.googleapis.com/v1/${user.gmbAccountId}/locations?readMask=name,title,storefrontAddress,websiteUri,phoneNumbers`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
-    if (!res.ok) return NextResponse.json({ error: "Failed to fetch locations" }, { status: 500 });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const detail = body?.error?.message || `HTTP ${res.status}`;
+      console.error("GMB locations error:", detail);
+      return NextResponse.json({ error: `Google: ${detail}` }, { status: 502 });
+    }
     const data = await res.json();
     return NextResponse.json({ locations: data.locations || [] });
-  } catch (err) {
-    console.error("GMB locations error:", err);
-    return NextResponse.json({ error: "Failed to fetch locations" }, { status: 500 });
+  } catch (err: any) {
+    const detail = err?.response?.data?.error?.message || err?.message || "Unknown error";
+    console.error("GMB locations error:", detail);
+    return NextResponse.json({ error: `Google: ${detail}` }, { status: 502 });
   }
 }

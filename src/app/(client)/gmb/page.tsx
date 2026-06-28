@@ -133,18 +133,24 @@ export default function GmbPage() {
   };
 
   const loadAccounts = async () => {
+    setError("");
     const res = await fetch("/api/gmb/accounts");
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
       setAccounts(data.accounts || []);
+    } else if (data.error && data.error !== "GMB not connected") {
+      setError(data.error);
     }
   };
 
   const loadLocations = async () => {
+    setError("");
     const res = await fetch("/api/gmb/locations");
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
-      const data = await res.json();
       setLocations(data.locations || []);
+    } else if (data.error) {
+      setError(data.error);
     }
   };
 
@@ -235,6 +241,13 @@ export default function GmbPage() {
             <CardTitle className="text-base">Select a Business Account</CardTitle>
           </CardHeader>
           <CardContent>
+            {!error && accounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No Business Profile accounts found on the Google account you connected. Make sure you authorized with the
+                Google account that manages this business in Google Business Profile, and that the Business Profile API is
+                enabled.
+              </p>
+            ) : null}
             <div className="flex gap-3 flex-wrap items-center">
               <select
                 className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-w-[260px]"
@@ -270,6 +283,12 @@ export default function GmbPage() {
             <CardTitle className="text-base">Select a Location</CardTitle>
           </CardHeader>
           <CardContent>
+            {!error && locations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No locations found under this Business Profile account. Confirm the account actually has a verified
+                business location.
+              </p>
+            ) : null}
             <div className="flex gap-3 flex-wrap items-center">
               <select
                 className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground min-w-[260px]"

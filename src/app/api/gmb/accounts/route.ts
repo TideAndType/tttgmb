@@ -36,11 +36,17 @@ export async function GET() {
     const res = await fetch("https://mybusinessaccountmanagement.googleapis.com/v1/accounts", {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) return NextResponse.json({ error: "Failed to fetch accounts" }, { status: 500 });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const detail = body?.error?.message || `HTTP ${res.status}`;
+      console.error("GMB accounts error:", detail);
+      return NextResponse.json({ error: `Google: ${detail}` }, { status: 502 });
+    }
     const data = await res.json();
     return NextResponse.json({ accounts: data.accounts || [] });
-  } catch (err) {
-    console.error("GMB accounts error:", err);
-    return NextResponse.json({ error: "Failed to fetch accounts" }, { status: 500 });
+  } catch (err: any) {
+    const detail = err?.response?.data?.error?.message || err?.message || "Unknown error";
+    console.error("GMB accounts error:", detail);
+    return NextResponse.json({ error: `Google: ${detail}` }, { status: 502 });
   }
 }
