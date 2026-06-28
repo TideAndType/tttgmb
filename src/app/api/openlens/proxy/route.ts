@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,11 @@ export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const __u = session.user as any;
+  const __v = cookies().get("adminViewingAs")?.value;
+  const effId = (__v && (__u.role === "ADMIN" || __u.role === "SUPER_ADMIN")) ? __v : __u.id;
   const user = await prisma.user.findUnique({
-    where: { id: (session.user as any).id },
+    where: { id: effId },
     select: { openLensApiKey: true },
   });
   if (!user?.openLensApiKey) return NextResponse.json({ error: "No OpenLens API key configured" }, { status: 400 });
