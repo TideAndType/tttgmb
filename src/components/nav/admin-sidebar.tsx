@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/nav/theme-toggle";
+import { WorkspaceSwitcher } from "@/components/nav/workspace-switcher";
 import {
   Users,
   UserPlus,
@@ -81,19 +82,9 @@ function AdminSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-border">
-        {appSettings.logoFilename && (
-          <div className="mb-3">
-            <img
-              src={`/api/uploads/${appSettings.logoFilename}`}
-              alt="App logo"
-              style={{ maxHeight: "48px", width: "auto", objectFit: "contain" }}
-            />
-          </div>
-        )}
-        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Admin Panel</p>
-        <h2 className="font-semibold text-foreground">{appSettings.appName}</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">{session?.user?.name}</p>
+      <div className="p-4 border-b border-border">
+        <WorkspaceSwitcher agencyName={appSettings.appName} logoFilename={appSettings.logoFilename} />
+        <p className="text-xs text-muted-foreground mt-2 px-1">{session?.user?.name}</p>
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">

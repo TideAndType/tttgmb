@@ -17,7 +17,7 @@ export default async function ClientLayout({ children }: { children: React.React
 
   let impersonationBanner: React.ReactNode = null;
 
-  if (viewing?.value && sessionUser?.role === "ADMIN") {
+  if (viewing?.value && (sessionUser?.role === "ADMIN" || sessionUser?.role === "SUPER_ADMIN")) {
     const clientUser = await prisma.user.findUnique({
       where: { id: viewing.value },
       select: { name: true, companyName: true },
