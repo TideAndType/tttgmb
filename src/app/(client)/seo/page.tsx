@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ConnectionBadge } from "@/components/integrations/connection-badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +95,7 @@ export default function SeoPage() {
           </Button>
         )}
         {gscConnected && (
-          <Badge variant="default">GSC Connected</Badge>
+          <ConnectionBadge service="gsc" label="Google Search Console" onDisconnected={fetchData} />
         )}
       </div>
 

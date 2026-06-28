@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ConnectionBadge } from "@/components/integrations/connection-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -299,7 +300,7 @@ export default function GmbPage() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-8">
-        <Badge variant="default">GMB Connected</Badge>
+        <ConnectionBadge service="gmb" label="Google Business Profile" onDisconnected={() => { setGmbConnected(false); setAccountSet(false); setLocationSet(false); }} />
       </div>
 
       {/* 4 stat cards */}

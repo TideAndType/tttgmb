@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ConnectionBadge } from "@/components/integrations/connection-badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -233,7 +234,7 @@ export default function ReportsPage() {
           <Badge variant="outline" className="text-yellow-600 border-yellow-300">GA4 — select property</Badge>
         )}
         {gaConnected && gaPropertySet && (
-          <Badge variant="default">GA4 Connected</Badge>
+          <ConnectionBadge service="ga" label="Google Analytics" onDisconnected={() => setGaConnected(false)} />
         )}
         {!gscConnected && (
           <Button onClick={handleConnectGsc} variant="outline" className="gap-2">
@@ -242,7 +243,7 @@ export default function ReportsPage() {
           </Button>
         )}
         {gscConnected && (
-          <Badge variant="default">GSC Connected</Badge>
+          <ConnectionBadge service="gsc" label="Google Search Console" onDisconnected={() => setGscConnected(false)} />
         )}
         {!gmbConnected && (
           <Button onClick={handleConnectGmb} variant="outline" className="gap-2">
@@ -251,7 +252,7 @@ export default function ReportsPage() {
           </Button>
         )}
         {gmbConnected && (
-          <Badge variant="default">GMB Connected</Badge>
+          <ConnectionBadge service="gmb" label="Google Business Profile" onDisconnected={() => setGmbConnected(false)} />
         )}
       </div>
 
