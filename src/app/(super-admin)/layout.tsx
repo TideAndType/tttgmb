@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, BarChart2, Shield } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Shield, UserCog } from "lucide-react";
 
 export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions);
@@ -23,6 +23,7 @@ export default async function SuperAdminLayout({ children }: { children: React.R
             { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
             { href: "/super-admin/users", label: "Users", icon: Users },
             { href: "/super-admin/analytics", label: "Analytics", icon: BarChart2 },
+            { href: "/super-admin/account", label: "My Account", icon: UserCog },
           ].map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
               <Icon className="w-4 h-4" /> {label}
