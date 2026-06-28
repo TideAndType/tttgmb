@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,17 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as any;
-  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+  const viewing = cookies().get("adminViewingAs")?.value;
+  const impersonating = !!(viewing && (user.role === "ADMIN" || user.role === "SUPER_ADMIN"));
+
+  // Admins/super-admins use the admin activity feed — unless they're viewing a
+  // client (impersonating), in which case show that client's activity.
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN") && !impersonating) {
     return NextResponse.json({ error: "Use /api/admin/activity" }, { status: 403 });
   }
 
-  const companyUserIds = await getCompanyUserIds(user.id);
+  const effectiveUserId = impersonating ? viewing! : user.id;
+  const companyUserIds = await getCompanyUserIds(effectiveUserId);
   const ownerFilter = { userId: { in: companyUserIds } };
 
   const [tasks, proposals, invoices, deliverables, approvalComments, timeEntries, projects] =
