@@ -23,14 +23,16 @@ export default async function SuperAdminLayout({ children }: { children: React.R
             { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
             { href: "/super-admin/users", label: "Users", icon: Users },
             { href: "/super-admin/analytics", label: "Analytics", icon: BarChart2 },
-            { href: "/super-admin/account", label: "My Account", icon: UserCog },
           ].map(({ href, label, icon: Icon }) => (
             <Link key={href} href={href} className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
               <Icon className="w-4 h-4" /> {label}
             </Link>
           ))}
         </nav>
-        <div className="px-3 py-4 border-t border-gray-800">
+        <div className="px-3 py-4 border-t border-gray-800 space-y-1">
+          <Link href="/super-admin/account" className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-800 transition-colors">
+            <UserCog className="w-4 h-4" /> My Account
+          </Link>
           <Link href="/admin" className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400 hover:text-white">← Back to Admin</Link>
         </div>
       </aside>
