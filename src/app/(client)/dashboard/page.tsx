@@ -21,6 +21,8 @@ import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
 
+export const dynamic = "force-dynamic";
+
 function formatCurrency(amount: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }

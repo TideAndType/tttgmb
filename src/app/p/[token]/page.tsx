@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { createNotificationForAdmins } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
 

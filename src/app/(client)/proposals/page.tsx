@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { FileText, ArrowRight } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 const STATUS_COLORS: Record<string, string> = {
   SENT: "bg-blue-100 text-blue-700 border-blue-200",
   VIEWED: "bg-amber-100 text-amber-700 border-amber-200",

@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, FolderOpen, FileText, Receipt } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function SuperAdminDashboard() {
   const session = await getServerSession(authOptions);
   const me = session?.user as any;

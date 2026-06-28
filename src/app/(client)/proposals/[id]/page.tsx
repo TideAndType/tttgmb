@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import { ClientProposalView } from "./client-view";
 
+export const dynamic = "force-dynamic";
+
 export default async function ClientProposalPage({
   params,
 }: {

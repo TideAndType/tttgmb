@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
 async function getMonthlyRevenue() {
   const months = Array.from({ length: 6 }, (_, i) => {
     const d = new Date();

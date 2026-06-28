@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import LoginForm from "./login-form";
 
+export const dynamic = "force-dynamic";
+
 const DEFAULTS = {
   appName: "Client Portal",
   logoFilename: null as string | null,

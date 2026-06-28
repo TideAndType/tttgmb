@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
 

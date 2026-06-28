@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Eye, Trash2, FileText } from "lucide-react";
 import { DeleteProposalButton } from "./delete-button";
 
+export const dynamic = "force-dynamic";
+
 const statusColors: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700 border-gray-200",
   SENT: "bg-blue-100 text-blue-700 border-blue-200",

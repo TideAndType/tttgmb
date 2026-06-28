@@ -9,6 +9,8 @@ import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText, Star } from "lu
 import { ProjectNotes } from "@/components/projects/project-notes";
 import { SatisfactionRating } from "@/components/projects/satisfaction-rating";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProjectHomePage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");

@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { AdminProposalNotes } from "./notes";
 import { Edit, ArrowLeft } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 type Section = {
   id: string;
   type: string;
