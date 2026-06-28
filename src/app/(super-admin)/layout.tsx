@@ -19,6 +19,7 @@ export default async function SuperAdminLayout({ children }: { children: React.R
           </div>
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
+          <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Platform</p>
           {[
             { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
             { href: "/super-admin/users", label: "Users", icon: Users },
