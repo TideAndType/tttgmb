@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const where: any = {};
   if (since) where.date = { gte: since };
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     if (filterUserId) where.userId = filterUserId;
     if (filterProjectId) where.projectId = filterProjectId;
     if (filterTaskId) where.taskId = filterTaskId;

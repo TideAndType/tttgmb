@@ -61,7 +61,7 @@ export async function POST(req: Request) {
   });
 
   // Notify the recipient of the new direct message
-  const author = user.name || (user.role === "ADMIN" ? "Admin" : "Client");
+  const author = user.name || ((user.role === "ADMIN" || user.role === "SUPER_ADMIN") ? "Admin" : "Client");
   const link = user.role === "CLIENT" ? "/admin/messages" : "/messages";
   const preview = body.length > 80 ? `${body.slice(0, 80)}…` : body;
   createNotification(toId, "dm_new", `New message from ${author}`, preview, link);

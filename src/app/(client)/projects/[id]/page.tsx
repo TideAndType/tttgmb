@@ -34,7 +34,7 @@ export default async function ProjectHomePage({ params }: { params: { id: string
   });
 
   if (!project) notFound();
-  if (user.role !== "ADMIN" && project.userId !== user.id) redirect("/projects");
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && project.userId !== user.id) redirect("/projects");
 
   const myRating = project.ratings.find((r) => r.userId === user.id) ?? null;
 
@@ -137,7 +137,7 @@ export default async function ProjectHomePage({ params }: { params: { id: string
       </div>
 
       {/* Ratings overview — admins see all client feedback */}
-      {user.role === "ADMIN" && project.ratings.length > 0 && (
+      {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && project.ratings.length > 0 && (
         <div className="mt-6">
           <Card>
             <CardHeader className="pb-3">
@@ -167,7 +167,7 @@ export default async function ProjectHomePage({ params }: { params: { id: string
       )}
 
       {/* Satisfaction rating — shown to clients once the project is completed */}
-      {user.role !== "ADMIN" && project.status === "completed" && (
+      {user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && project.status === "completed" && (
         <div className="mt-6">
           <Card>
             <CardHeader className="pb-3">
@@ -200,7 +200,7 @@ export default async function ProjectHomePage({ params }: { params: { id: string
             <ProjectNotes
               projectId={params.id}
               initialNotes={project.notes ?? ""}
-              readOnly={user.role !== "ADMIN"}
+              readOnly={user.role !== "ADMIN" && user.role !== "SUPER_ADMIN"}
             />
           </CardContent>
         </Card>

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   // Resolve which files the requester may download.
   let where: Record<string, any>;
   let zipBaseName = "files";
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     if (targetUserId) {
       const owner = await prisma.user.findUnique({
         where: { id: targetUserId },
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No files to download" }, { status: 404 });
   }
 
-  const isAdminAll = user.role === "ADMIN" && !targetUserId;
+  const isAdminAll = (user.role === "ADMIN" || user.role === "SUPER_ADMIN") && !targetUserId;
 
   // ClientFile has no `user` relation, so map userId -> display name when
   // we need per-client top-level folders (admin downloading everything).

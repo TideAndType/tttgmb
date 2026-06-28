@@ -482,7 +482,7 @@ export default function AdminFilesPage() {
   useEffect(() => {
     if (status === "loading") return;
     const user = session?.user as { role?: string } | undefined;
-    if (!session || user?.role !== "ADMIN") {
+    if (!session || user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") {
       router.replace("/login");
     }
   }, [session, status, router]);
@@ -595,7 +595,7 @@ export default function AdminFilesPage() {
 
   if (status === "loading") return null;
   const user = session?.user as { role?: string } | undefined;
-  if (!session || user?.role !== "ADMIN") return null;
+  if (!session || user?.role !== "ADMIN" && user?.role !== "SUPER_ADMIN") return null;
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">

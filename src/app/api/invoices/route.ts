@@ -13,7 +13,7 @@ export async function GET() {
 
   const user = session.user as any;
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     const invoices = await prisma.invoice.findMany({
       include: {
         user: { select: { id: true, name: true, companyName: true, email: true } },

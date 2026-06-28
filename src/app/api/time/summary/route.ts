@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     const allEntries = await prisma.timeEntry.findMany({
       include: {
         user: { select: { id: true, name: true, companyName: true } },

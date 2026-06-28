@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get("q")?.trim();
   if (!q) return NextResponse.json({ tasks: [], proposals: [], messages: [], projects: [] });
 
-  const isAdmin = user.role === "ADMIN";
+  const isAdmin = (user.role === "ADMIN" || user.role === "SUPER_ADMIN");
   const userFilter = isAdmin ? undefined : { in: await getCompanyUserIds(user.id) };
 
   const [tasks, proposals, messages, projects] = await Promise.all([

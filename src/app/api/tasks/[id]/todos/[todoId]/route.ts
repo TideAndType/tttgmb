@@ -30,7 +30,7 @@ export async function PATCH(
   const body = await req.json();
   const data: Record<string, unknown> = {};
   if (body.done !== undefined) data.done = body.done;
-  if (body.text !== undefined && user.role === "ADMIN") data.text = body.text;
+  if (body.text !== undefined && (user.role === "ADMIN" || user.role === "SUPER_ADMIN")) data.text = body.text;
 
   const updated = await prisma.taskTodo.update({ where: { id: params.todoId }, data });
   return NextResponse.json({ todo: updated });

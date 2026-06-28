@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   const user = session.user as any;
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     const proposals = await prisma.proposal.findMany({
       include: { user: { select: { id: true, name: true, companyName: true, email: true } } },
       orderBy: { updatedAt: "desc" },

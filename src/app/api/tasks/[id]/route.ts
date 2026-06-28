@@ -155,7 +155,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   // Replace assignees if provided (admin only)
-  if (Array.isArray(assigneeIds) && sessionUser.role === "ADMIN") {
+  if (Array.isArray(assigneeIds) && (sessionUser.role === "ADMIN" || sessionUser.role === "SUPER_ADMIN")) {
     await prisma.taskAssignee.deleteMany({ where: { taskId: params.id } });
     const idsToAssign = new Set<string>([task.userId, ...assigneeIds.filter((id): id is string => typeof id === "string")]);
     await prisma.taskAssignee.createMany({

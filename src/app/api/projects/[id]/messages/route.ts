@@ -49,7 +49,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     data: {
       projectId: params.id,
       authorId: user.id,
-      authorName: user.name || (user.role === "ADMIN" ? "Admin" : "Client"),
+      authorName: user.name || ((user.role === "ADMIN" || user.role === "SUPER_ADMIN") ? "Admin" : "Client"),
       title,
       body: messageBody,
     },
@@ -74,8 +74,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   // Notify the other party of the new message board post
   const link = `/projects/${params.id}/messages/${message.id}`;
-  const author = user.name || (user.role === "ADMIN" ? "Admin" : "Client");
-  if (user.role === "ADMIN") {
+  const author = user.name || ((user.role === "ADMIN" || user.role === "SUPER_ADMIN") ? "Admin" : "Client");
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     if (project.userId !== user.id) {
       createNotification(project.userId, "message_new", "New message", `${author} posted "${title}"`, link);
     }

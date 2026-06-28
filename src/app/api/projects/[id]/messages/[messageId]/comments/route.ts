@@ -53,7 +53,7 @@ export async function POST(
     data: {
       messageId: params.messageId,
       authorId: user.id,
-      authorName: user.name || (user.role === "ADMIN" ? "Admin" : "Client"),
+      authorName: user.name || ((user.role === "ADMIN" || user.role === "SUPER_ADMIN") ? "Admin" : "Client"),
       body: commentBody,
     },
   });
@@ -61,9 +61,9 @@ export async function POST(
   // Notify the other party of the new reply
   const message = await prisma.message.findUnique({ where: { id: params.messageId }, select: { title: true } });
   const link = `/projects/${params.id}/messages/${params.messageId}`;
-  const author = user.name || (user.role === "ADMIN" ? "Admin" : "Client");
+  const author = user.name || ((user.role === "ADMIN" || user.role === "SUPER_ADMIN") ? "Admin" : "Client");
   const desc = `${author} replied${message?.title ? ` on "${message.title}"` : ""}`;
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     if (project.userId !== user.id) {
       createNotification(project.userId, "comment_new", "New reply", desc, link);
     }

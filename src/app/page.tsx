@@ -9,7 +9,7 @@ export default async function Home() {
     redirect("/login");
   }
 
-  if ((session.user as any).role === "ADMIN") {
+  if (((session.user as any).role === "ADMIN" || (session.user as any).role === "SUPER_ADMIN")) {
     redirect("/admin");
   }
 

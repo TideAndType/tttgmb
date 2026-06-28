@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const statusFilter = searchParams.get("status");
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     const where: any = {};
     if (statusFilter) where.status = statusFilter;
     const deliverables = await prisma.deliverable.findMany({

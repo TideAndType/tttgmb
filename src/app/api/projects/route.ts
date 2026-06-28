@@ -12,7 +12,7 @@ export async function GET() {
 
   const user = session.user as any;
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     const projects = await prisma.project.findMany({
       include: {
         user: { select: { name: true, companyName: true } },

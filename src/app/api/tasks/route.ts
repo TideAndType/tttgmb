@@ -25,7 +25,7 @@ export async function GET() {
 
   const user = session.user as any;
 
-  if (user.role === "ADMIN") {
+  if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
     const cookieStore = cookies();
     const viewing = cookieStore.get("adminViewingAs");
     if (viewing?.value) {
