@@ -52,6 +52,26 @@ export default function AdminInvoicesPage() {
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [recurring, setRecurring] = useState<any[]>([]);
+
+  async function loadRecurring() {
+    try {
+      const res = await fetch("/api/recurring-invoices");
+      const data = await res.json();
+      setRecurring(Array.isArray(data) ? data : []);
+    } catch { /* ignore */ }
+  }
+
+  async function toggleRecurring(s: any) {
+    const res = await fetch(`/api/recurring-invoices/${s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: !s.active }) });
+    if (res.ok) setRecurring((p) => p.map((x) => x.id === s.id ? { ...x, active: !x.active } : x));
+  }
+
+  async function deleteRecurring(id: string) {
+    if (!confirm("Delete this recurring schedule? Existing invoices are kept.")) return;
+    const res = await fetch(`/api/recurring-invoices/${id}`, { method: "DELETE" });
+    if (res.ok) setRecurring((p) => p.filter((x) => x.id !== id));
+  }
 
   async function load() {
     setLoading(true);
@@ -64,7 +84,7 @@ export default function AdminInvoicesPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadRecurring(); }, []);
 
   async function handleSync() {
     setSyncing(true);
@@ -144,6 +164,32 @@ export default function AdminInvoicesPage() {
       {syncResult && (
         <div className="text-sm text-muted-foreground bg-muted px-4 py-2 rounded-md">
           {syncResult}
+        </div>
+      )}
+
+      {/* Recurring schedules */}
+      {recurring.length > 0 && (
+        <div className="rounded-lg border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <RefreshCw className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold text-foreground">Recurring Invoices ({recurring.length})</h2>
+          </div>
+          <div className="space-y-2">
+            {recurring.map((s) => (
+              <div key={s.id} className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <span className="font-medium text-foreground">{s.clientName}</span>
+                  <span className="text-muted-foreground"> · {s.interval} · next {new Date(s.nextRunAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button onClick={() => toggleRecurring(s)} className={`text-xs px-2 py-0.5 rounded-md border ${s.active ? "border-green-300 text-green-600" : "border-border text-muted-foreground"}`}>
+                    {s.active ? "Active" : "Paused"}
+                  </button>
+                  <button onClick={() => deleteRecurring(s.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

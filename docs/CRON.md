@@ -67,3 +67,17 @@ at `/api/cron/digest` instead:
 ```
 
 Response: `{ "recipients": N, "sent": M }`.
+
+## Recurring invoices
+
+`GET /api/cron/recurring-invoices` finds active recurring schedules whose
+`nextRunAt` is due, generates a new invoice via Invoiless for each, and advances
+`nextRunAt` by the schedule's interval (weekly/monthly/quarterly). Same
+`CRON_SECRET` bearer auth. Should run daily so schedules fire on their due date:
+
+```cron
+0 7 * * * curl -fsS -H "Authorization: Bearer your-secret" https://your-portal-domain.com/api/cron/recurring-invoices
+```
+
+Response: `{ "due": N, "generated": M }`. A schedule that fails to generate is
+still advanced so a persistent error doesn't retry every run.

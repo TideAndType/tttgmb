@@ -42,6 +42,7 @@ export default function NewInvoicePage() {
   const [dueDate, setDueDate] = useState("");
   const [status, setStatus] = useState("Draft");
   const [notes, setNotes] = useState("");
+  const [recurrence, setRecurrence] = useState("");
 
   // Line items
   const [items, setItems] = useState<LineItem[]>([
@@ -119,6 +120,7 @@ export default function NewInvoicePage() {
       invoiceDate: invoiceDate || undefined,
       dueDate: dueDate || undefined,
       notes: notes || undefined,
+      recurrence: recurrence || undefined,
     };
 
     if (taxValue && taxName) {
@@ -250,6 +252,24 @@ export default function NewInvoicePage() {
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Repeat</label>
+              <select
+                value={recurrence}
+                onChange={(e) => setRecurrence(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="">Does not repeat</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="quarterly">Quarterly</option>
+              </select>
+              {recurrence && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  This invoice is created now; a new one is generated automatically each {recurrence === "weekly" ? "week" : recurrence === "monthly" ? "month" : "quarter"}.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>

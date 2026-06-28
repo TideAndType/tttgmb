@@ -358,6 +358,21 @@ model IntakeResponse {
   @@unique([formId, userId])
 }
 
+model RecurringInvoice {
+  id          String   @id @default(cuid())
+  userId      String
+  items       Json     @default("[]")
+  currency    String   @default("USD")
+  notes       String?
+  taxes       Json?
+  discount    Json?
+  interval    String   // weekly | monthly | quarterly
+  nextRunAt   DateTime
+  lastRunAt   DateTime?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
 model Webhook {
   id        String   @id @default(cuid())
   url       String
