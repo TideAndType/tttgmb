@@ -23,7 +23,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
-import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
 import { UserAvatar } from "@/components/ui/avatar";
 import { CheckInsWidget } from "@/components/checkins/checkins-widget";
 
@@ -402,9 +401,6 @@ export default async function DashboardPage() {
           <AiVisibilityWidget />
         </div>
       </div>
-
-      {/* Customizable widgets */}
-      <DashboardCanvas />
     </div>
   );
 }
