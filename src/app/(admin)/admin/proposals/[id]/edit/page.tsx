@@ -274,7 +274,7 @@ function WysiwygPricing({ section, currency, onChange }: { section: Extract<Sect
           {section.rows.map((row) => (
             <tr key={row.id} className="border-b border-gray-100 group/row align-top">
               <td className="py-2 pr-4">
-                <input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 font-medium text-gray-900 placeholder:text-gray-300" value={row.service} onChange={(e) => updateRow(row.id, "service", e.target.value)} placeholder="Service name" />
+                <input onClick={(e) => e.stopPropagation()} className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 font-medium text-gray-900 placeholder:text-gray-300" value={row.service} onChange={(e) => updateRow(row.id, "service", e.target.value)} placeholder="Service name" />
                 <div className="flex items-center gap-2 mt-1">
                   <label className="flex items-center gap-1 text-[11px] text-gray-400"><input type="checkbox" checked={!!row.optional} onChange={(e) => updateRow(row.id, "optional", e.target.checked as any)} className="h-3 w-3 accent-blue-600" /> Optional</label>
                   {row.optional && <label className="flex items-center gap-1 text-[11px] text-gray-400"><input type="checkbox" checked={!!row.selected} onChange={(e) => updateRow(row.id, "selected", e.target.checked as any)} className="h-3 w-3 accent-blue-600" /> Pre-selected</label>}
@@ -285,9 +285,9 @@ function WysiwygPricing({ section, currency, onChange }: { section: Extract<Sect
                   </select>
                 </div>
               </td>
-              <td className="py-2 pr-4"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 text-gray-500 placeholder:text-gray-300" value={row.description} onChange={(e) => updateRow(row.id, "description", e.target.value)} placeholder="Description" /></td>
-              <td className="py-2 pr-4 text-right"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded text-right text-gray-700" type="number" min="0" value={row.qty} onChange={(e) => updateRow(row.id, "qty", parseFloat(e.target.value) || 0)} /></td>
-              <td className="py-2 pr-4 text-right"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded text-right text-gray-700" type="number" min="0" step="0.01" value={row.unitPrice} onChange={(e) => updateRow(row.id, "unitPrice", parseFloat(e.target.value) || 0)} /></td>
+              <td className="py-2 pr-4"><input onClick={(e) => e.stopPropagation()} className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 text-gray-500 placeholder:text-gray-300" value={row.description} onChange={(e) => updateRow(row.id, "description", e.target.value)} placeholder="Description" /></td>
+              <td className="py-2 pr-4 text-right"><input onClick={(e) => e.stopPropagation()} onFocus={(e) => e.currentTarget.select()} className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded text-right text-gray-700" type="number" min="0" value={row.qty} onChange={(e) => updateRow(row.id, "qty", parseFloat(e.target.value) || 0)} /></td>
+              <td className="py-2 pr-4 text-right"><input onClick={(e) => e.stopPropagation()} onFocus={(e) => e.currentTarget.select()} className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded text-right text-gray-700" type="number" min="0" step="0.01" value={row.unitPrice} onChange={(e) => updateRow(row.id, "unitPrice", parseFloat(e.target.value) || 0)} /></td>
               <td className="py-2 text-right text-gray-900 font-medium">{fmt(row.qty * row.unitPrice, currency)}</td>
               <td className="py-2 pl-2"><button onClick={() => onChange({ ...section, rows: section.rows.filter((r) => r.id !== row.id) })} className="opacity-0 group-hover/row:opacity-100 text-gray-300 hover:text-red-400 transition-all"><X className="h-4 w-4" /></button></td>
             </tr>
