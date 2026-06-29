@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { resolveMergeFields } from "@/lib/merge-fields";
 
 function PrintButton({ backHref }: { backHref: string }) {
   return (
@@ -233,10 +234,17 @@ export default function ProposalPdfPage() {
     return <div className="flex items-center justify-center h-screen text-gray-400">Loading...</div>;
   }
 
-  const sections = (proposal.sections as Section[]) || [];
+  const rawSections = (proposal.sections as Section[]) || [];
   const brand = (proposal.brand as Brand | null) || {};
   const clientName = proposal.user.companyName || proposal.user.name;
   const date = new Date(proposal.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const sections = resolveMergeFields(rawSections, {
+    clientName: proposal.user.name,
+    company: proposal.user.companyName || "",
+    contactEmail: (proposal.user as any).email || "",
+    date,
+    proposalValue: (proposal as any).totalAmount != null ? new Intl.NumberFormat("en-US", { style: "currency", currency: proposal.currency || "USD" }).format((proposal as any).totalAmount) : "",
+  }) as Section[];
   const docStyle = brand.font && brand.font !== "Inter" ? { fontFamily: brand.font } : {};
 
   return (

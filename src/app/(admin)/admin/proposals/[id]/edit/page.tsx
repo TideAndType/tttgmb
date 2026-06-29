@@ -7,7 +7,7 @@ import {
   FileText, Type, Table, ScrollText, PenLine, Plus, X, Eye, Send,
   Check, Loader2, GripVertical, Copy, Trash2, Monitor, Smartphone,
   Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles, Link2, Download,
-  Image as ImageIcon, Video as VideoIcon, Upload, BookmarkPlus, Library,
+  Image as ImageIcon, Video as VideoIcon, Upload, BookmarkPlus, Library, Braces,
 } from "lucide-react";
 import {
   DndContext,
@@ -33,6 +33,7 @@ import { AiAssistPanel } from "@/components/ai-assist-panel";
 import { SectionAiPanel } from "@/components/proposals/section-ai-panel";
 import { toEmbedUrl } from "@/lib/embed";
 import { sectionWrapper, type SectionSettings } from "@/lib/section-style";
+import { MERGE_FIELDS } from "@/lib/merge-fields";
 
 type Recurrence = "one_time" | "monthly" | "yearly";
 type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number; optional?: boolean; selected?: boolean; recurrence?: Recurrence };
@@ -180,14 +181,17 @@ function SectionHoverToolbar({ onDuplicate, onDelete }: { onDuplicate: () => voi
   );
 }
 
-function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplicate, onDelete, onSaveToLibrary }: {
+function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplicate, onDelete, onSaveToLibrary, onRename }: {
   section: Section; idx: number; total: number; isActive: boolean;
-  onSelect: () => void; onDuplicate: () => void; onDelete: () => void; onSaveToLibrary: () => void;
+  onSelect: () => void; onDuplicate: () => void; onDelete: () => void; onSaveToLibrary: () => void; onRename: (name: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   const Icon = SECTION_ICONS[section.type] ?? FileText;
   const label = section.type === "cover" ? (section as any).title || "Cover" : (section as any).heading || SECTION_LABELS[section.type];
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState(label);
+  const commit = () => { setRenaming(false); const v = draft.trim(); if (v && v !== label) onRename(v); };
   return (
     <div ref={setNodeRef} style={style}
       className={`group flex items-center gap-2 px-2.5 py-2 rounded-md cursor-pointer transition-colors ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
@@ -196,7 +200,11 @@ function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplic
         <GripVertical className="h-3.5 w-3.5" />
       </button>
       <Icon className="h-3.5 w-3.5 shrink-0" />
-      <span className="flex-1 text-sm truncate">{label}</span>
+      {renaming ? (
+        <input autoFocus value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={commit} onKeyDown={(e) => { if (e.key === "Enter") commit(); if (e.key === "Escape") setRenaming(false); }} onClick={(e) => e.stopPropagation()} className="flex-1 text-sm bg-background border border-primary rounded px-1 outline-none min-w-0" />
+      ) : (
+        <span className="flex-1 text-sm truncate" onDoubleClick={(e) => { e.stopPropagation(); setDraft(label); setRenaming(true); }} title="Double-click to rename">{label}</span>
+      )}
       <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={(e) => { e.stopPropagation(); onSaveToLibrary(); }} className="p-0.5 hover:text-primary" title="Save to library"><BookmarkPlus className="h-3 w-3" /></button>
         <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-0.5 hover:text-blue-500" title="Duplicate"><Copy className="h-3 w-3" /></button>
@@ -649,6 +657,7 @@ export default function ProposalEditPage() {
   const [layoutSelection, setLayoutSelection] = useState<Selection | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [libraryItems, setLibraryItems] = useState<{ id: string; name: string; category: string | null; data: any }[]>([]);
 
@@ -794,6 +803,20 @@ export default function ProposalEditPage() {
           {saveState === "saved" && <><Check className="h-3 w-3 text-green-500" /> Saved</>}
           {saveState === "unsaved" && "Unsaved changes..."}
         </span>
+        <div className="relative">
+          <Button variant="outline" size="sm" onClick={() => setMergeOpen((v) => !v)}><Braces className="h-4 w-4 mr-2" /> Merge Fields</Button>
+          {mergeOpen && (
+            <div className="absolute top-full right-0 mt-1 w-64 bg-card border border-border rounded-md shadow-lg z-30 p-2">
+              <p className="text-xs text-muted-foreground px-2 py-1">Type these anywhere — they auto-fill for the client. Click to copy.</p>
+              {MERGE_FIELDS.map((f) => (
+                <button key={f.token} onClick={() => { navigator.clipboard?.writeText(f.token).catch(() => {}); }} className="flex items-center justify-between w-full px-2 py-1.5 text-sm rounded hover:bg-accent text-left">
+                  <span className="font-mono text-xs text-primary">{f.token}</span>
+                  <span className="text-xs text-muted-foreground">{f.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <Button variant="outline" size="sm" onClick={() => setAiPanelOpen(true)}><Sparkles className="h-4 w-4 mr-2" /> AI Assist</Button>
         <Button variant="outline" size="sm" onClick={handleShare} title="Generate a public share link (no login required)">
           <Link2 className="h-4 w-4 mr-2" />{shareCopied ? "Copied!" : "Share Link"}
@@ -849,7 +872,7 @@ export default function ProposalEditPage() {
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                     {sections.map((s, idx) => (
-                      <SortableSidebarItem key={s.id} section={s} idx={idx} total={sections.length} isActive={s.id === selectedId} onSelect={() => scrollToSection(s.id)} onDuplicate={() => duplicateSection(s.id)} onDelete={() => deleteSection(s.id)} onSaveToLibrary={() => saveToLibrary(s)} />
+                      <SortableSidebarItem key={s.id} section={s} idx={idx} total={sections.length} isActive={s.id === selectedId} onSelect={() => scrollToSection(s.id)} onDuplicate={() => duplicateSection(s.id)} onDelete={() => deleteSection(s.id)} onSaveToLibrary={() => saveToLibrary(s)} onRename={(name) => updateSection({ ...s, ...(s.type === "cover" ? { title: name } : { heading: name }) } as Section)} />
                     ))}
                   </SortableContext>
                 </DndContext>

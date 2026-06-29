@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createNotificationForAdmins } from "@/lib/notifications";
 import { toEmbedUrl } from "@/lib/embed";
 import { sectionWrapper } from "@/lib/section-style";
+import { resolveMergeFields } from "@/lib/merge-fields";
 
 export const dynamic = "force-dynamic";
 
@@ -162,10 +163,17 @@ export default async function PublicProposalPage({ params }: { params: { token: 
     await createNotificationForAdmins("proposal_viewed", "Proposal viewed", `"${proposal.title}" was opened via share link`, "/admin/proposals");
   }
 
-  const sections = (proposal.sections as any[]) || [];
+  const rawSections = (proposal.sections as any[]) || [];
   const brand = (proposal.brand as Brand | null) || {};
   const clientName = proposal.user.companyName || proposal.user.name;
   const date = new Date(proposal.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const sections = resolveMergeFields(rawSections, {
+    clientName: proposal.user.name,
+    company: proposal.user.companyName || "",
+    contactEmail: (proposal.user as any).email || "",
+    date,
+    proposalValue: proposal.totalAmount != null ? new Intl.NumberFormat("en-US", { style: "currency", currency: proposal.currency || "USD" }).format(proposal.totalAmount) : "",
+  });
   const docStyle = brand.font && brand.font !== "Inter" ? { fontFamily: brand.font } : {};
 
   return (

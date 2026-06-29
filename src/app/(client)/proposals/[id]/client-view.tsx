@@ -5,6 +5,7 @@ import { CheckCircle } from "lucide-react";
 import { SignaturePad } from "@/components/proposals/signature-pad";
 import { toEmbedUrl } from "@/lib/embed";
 import { sectionWrapper } from "@/lib/section-style";
+import { resolveMergeFields } from "@/lib/merge-fields";
 
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
@@ -426,6 +427,14 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
   }
   const clientName = proposal.user.companyName || proposal.user.name;
   const date = new Date(proposal.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  // Substitute merge fields ({{client_name}} etc.) before rendering.
+  const mergedSections: Section[] = resolveMergeFields(proposal.sections, {
+    clientName: proposal.user.name,
+    company: proposal.user.companyName || "",
+    contactEmail: (proposal.user as any).email || "",
+    date,
+    proposalValue: (proposal as any).totalAmount != null ? formatCurrency((proposal as any).totalAmount, proposal.currency) : "",
+  });
   const hasSignatureSection = proposal.sections.some((s) => s.type === "signature");
   const brand = proposal.brand || {};
   const docStyle: React.CSSProperties = { fontFamily: brand.font && brand.font !== "Inter" ? brand.font : undefined };
@@ -438,7 +447,7 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
       <div className="bg-white max-w-4xl mx-auto my-8 rounded-xl shadow-sm border border-gray-100 overflow-hidden" style={docStyle}>
         {brand.logoUrl && <div className="px-12 py-4 border-b border-gray-100 flex items-center"><img src={brand.logoUrl} alt="Company logo" className="h-8 object-contain" /></div>}
         <div className="px-12 py-2">
-          {proposal.sections.map((section: Section) => {
+          {mergedSections.map((section: Section) => {
             if ((section as any).settings?.hidden) return null;
             const w = sectionWrapper((section as any).settings);
             const node = (() => {
