@@ -20,9 +20,11 @@ export default function AdminAnnouncementsPage() {
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [filterClient, setFilterClient] = useState("");
 
-  const load = async () => {
-    const res = await fetch("/api/announcements");
+  const load = async (clientId = filterClient) => {
+    const url = clientId ? `/api/announcements?clientId=${clientId}` : "/api/announcements";
+    const res = await fetch(url);
     if (res.ok) {
       setAnnouncements((await res.json()).announcements || []);
     } else {
@@ -33,8 +35,9 @@ export default function AdminAnnouncementsPage() {
 
   useEffect(() => {
     fetch("/api/admin/clients").then((r) => r.json()).then((d) => setClients(Array.isArray(d) ? d : []));
-    load();
   }, []);
+
+  useEffect(() => { load(filterClient); }, [filterClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const post = async () => {
     setError("");
@@ -93,9 +96,19 @@ export default function AdminAnnouncementsPage() {
         </CardContent>
       </Card>
 
-      <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Posted</h2>
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Posted</h2>
+        <select
+          value={filterClient}
+          onChange={(e) => setFilterClient(e.target.value)}
+          className="rounded-md border border-input bg-background px-2 py-1 text-xs"
+        >
+          <option value="">All clients</option>
+          {clients.map((c) => <option key={c.id} value={c.id}>{c.companyName || c.name}</option>)}
+        </select>
+      </div>
       {announcements.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No announcements yet.</p>
+        <p className="text-sm text-muted-foreground">{filterClient ? "No announcements for this client." : "No announcements yet."}</p>
       ) : (
         <div className="space-y-3">
           {announcements.map((a) => (
