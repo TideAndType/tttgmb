@@ -37,6 +37,7 @@ interface Task {
   commentCount?: number;
   projectId?: string | null;
   folderId?: string | null;
+  dependsOnIds?: string[];
   timeMinutes?: number;
 }
 
@@ -93,6 +94,15 @@ export default function AdminTasksPage() {
       body: JSON.stringify({ folderId: folderId || null }),
     });
     setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, folderId: folderId || null } : t));
+  };
+
+  const handleSetDeps = async (taskId: string, dependsOnIds: string[]) => {
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dependsOnIds }),
+    });
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, dependsOnIds } : t));
   };
   const [filterClient, setFilterClient] = useState("all");
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -540,6 +550,40 @@ export default function AdminTasksPage() {
                         </div>
                         <TimeLogger taskId={task.id} projectId={task.projectId || undefined} />
                       </div>
+
+                      {/* Dependencies — blocked by other tasks */}
+                      {(() => {
+                        const deps = task.dependsOnIds || [];
+                        const sameClient = tasks.filter((o) => o.id !== task.id && o.userId === task.userId);
+                        const depTasks = sameClient.filter((o) => deps.includes(o.id));
+                        const blocked = depTasks.some((d) => d.status !== "COMPLETED");
+                        const addable = sameClient.filter((o) => !deps.includes(o.id));
+                        return (
+                          <div className="mt-2 border-t pt-2 space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-muted-foreground">Blocked by:</span>
+                              {depTasks.length === 0 && <span className="text-xs text-muted-foreground/70">nothing</span>}
+                              {depTasks.map((d) => (
+                                <span key={d.id} className={cn("inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full", d.status === "COMPLETED" ? "bg-muted text-muted-foreground line-through" : "bg-amber-100 text-amber-800 border border-amber-200")}>
+                                  {d.title}
+                                  <button onClick={() => handleSetDeps(task.id, deps.filter((x) => x !== d.id))} className="hover:text-red-600"><X className="h-2.5 w-2.5" /></button>
+                                </span>
+                              ))}
+                              {blocked && <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">Blocked</span>}
+                            </div>
+                            {addable.length > 0 && (
+                              <select
+                                value=""
+                                onChange={(e) => { if (e.target.value) handleSetDeps(task.id, [...deps, e.target.value]); }}
+                                className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground max-w-[220px]"
+                              >
+                                <option value="">+ Add a blocking task…</option>
+                                {addable.map((o) => <option key={o.id} value={o.id}>{o.title}</option>)}
+                              </select>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Comments — shared with the client side so agency sees client replies */}
                       <div className="mt-2 border-t pt-2">

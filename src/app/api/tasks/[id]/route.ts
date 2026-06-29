@@ -115,7 +115,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { status, visibleToClient, assigneeIds, color, tags, projectId, folderId } = body;
+  const { status, visibleToClient, assigneeIds, color, tags, projectId, folderId, dependsOnIds } = body;
 
   const updateData: Record<string, unknown> = {};
   if (status !== undefined) updateData.status = status;
@@ -124,6 +124,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : [];
   if (projectId !== undefined) updateData.projectId = projectId || null;
   if (folderId !== undefined) updateData.folderId = folderId || null;
+  if (dependsOnIds !== undefined) updateData.dependsOnIds = Array.isArray(dependsOnIds) ? dependsOnIds : [];
 
   const updated = await prisma.task.update({
     where: { id: params.id },

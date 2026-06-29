@@ -9,8 +9,9 @@ import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText, Star } from "lu
 import { ProjectNotes } from "@/components/projects/project-notes";
 import { SatisfactionRating } from "@/components/projects/satisfaction-rating";
 import { ProjectChat } from "@/components/projects/project-chat";
+import { ProjectMilestones } from "@/components/projects/project-milestones";
 import { projectTimeMinutes } from "@/lib/time";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Flag } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +143,21 @@ export default async function ProjectHomePage({ params }: { params: { id: string
                 Manage Board
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Milestones */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Flag className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Milestones</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ProjectMilestones projectId={params.id} canManage={user.role === "ADMIN" || user.role === "SUPER_ADMIN"} />
           </CardContent>
         </Card>
       </div>
