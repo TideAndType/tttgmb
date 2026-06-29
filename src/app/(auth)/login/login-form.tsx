@@ -20,6 +20,7 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [needs2fa, setNeeds2fa] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
       email,
       password,
       totp,
+      rememberMe: rememberMe ? "true" : "false",
       redirect: false,
     });
 
@@ -140,6 +142,16 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
                   <p className="text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
                 </div>
               )}
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  disabled={loading}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                Keep me signed in for 30 days
+              </label>
               <button
                 type="submit"
                 disabled={loading}
