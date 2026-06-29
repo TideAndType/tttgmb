@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { cookies } from "next/headers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -74,9 +75,12 @@ const priorityColor: Record<string, string> = {
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const userId = (session?.user as any)?.id as string;
-  const firstName = session?.user?.name?.split(" ")[0] ?? "there";
-  const companyName = (session?.user as any)?.companyName ?? "Your Company";
+  const su = session?.user as any;
+  // Impersonation-aware: when an admin/super-admin is viewing a client, use
+  // the viewed client's id so the whole dashboard reflects THAT client.
+  const viewing = cookies().get("adminViewingAs")?.value;
+  const isAdminViewer = su?.role === "ADMIN" || su?.role === "SUPER_ADMIN";
+  const userId = (isAdminViewer && viewing) ? viewing : su?.id;
 
   const companyUserIds = await getCompanyUserIds(userId);
 
@@ -123,6 +127,7 @@ export default async function DashboardPage() {
     prisma.user.findUnique({
       where: { id: userId },
       select: {
+        name: true,
         companyName: true,
         gscProperty: true,
         _count: { select: { brandAssets: true, brandColors: true, brandFonts: true } },
@@ -133,6 +138,10 @@ export default async function DashboardPage() {
 
   const hoursThisMonth = ((timeResult._sum.minutes ?? 0) / 60).toFixed(1);
   const outstandingAmount = invoiceOutstanding._sum.totalAmount ?? 0;
+
+  // Header reflects the effective (possibly impersonated) user.
+  const firstName = (user?.name ?? su?.name ?? "there").split(" ")[0];
+  const companyName = user?.companyName ?? su?.companyName ?? "Your Company";
 
   const projectIds = projects.map((p) => p.id);
   const projectMap = Object.fromEntries(projects.map((p) => [p.id, p.name]));
