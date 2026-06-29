@@ -376,6 +376,25 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }, [projectId]);
 
+  const [mentions, setMentions] = useState<any[]>([]);
+  const [mentionsLoading, setMentionsLoading] = useState(false);
+  const [mentionsError, setMentionsError] = useState("");
+  const [showMentions, setShowMentions] = useState(false);
+
+  const fetchMentions = useCallback(async () => {
+    setMentionsLoading(true);
+    setMentionsError("");
+    try {
+      const data = await olFetch("/brand-mentions-summary", "GET", undefined, { projectId, limit: "20" });
+      const arr = Array.isArray(data) ? data : data.topics ?? data.data ?? [];
+      setMentions(Array.isArray(arr) ? arr : []);
+    } catch (e: any) {
+      setMentionsError(e.message);
+    } finally {
+      setMentionsLoading(false);
+    }
+  }, [projectId]);
+
   const [engines, setEngines] = useState<any>(null);
   const [enginesLoading, setEnginesLoading] = useState(false);
   const [enginesError, setEnginesError] = useState("");
@@ -770,6 +789,74 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Brand mentions — topics where the own brand was cited, with source URLs */}
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Brand Mentions</CardTitle>
+            <CardDescription className="text-xs">Top topics where your brand was mentioned, with the URLs cited</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { const next = !showMentions; setShowMentions(next); if (next && mentions.length === 0) fetchMentions(); }}
+          >
+            {showMentions ? "Hide" : "View mentions"}
+          </Button>
+        </CardHeader>
+        {showMentions && (
+          <CardContent>
+            {mentionsLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400 text-sm gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading mentions…
+              </div>
+            ) : mentionsError ? (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {mentionsError}
+              </div>
+            ) : mentions.length === 0 ? (
+              <p className="text-sm text-gray-400 py-6 text-center">No brand mentions yet. Run a scan first.</p>
+            ) : (
+              <div className="space-y-4">
+                {mentions.map((m: any) => (
+                  <div key={m.topicId} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div>
+                        <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.topicName}</p>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {(m.platforms ?? []).map((p: string) => (
+                            <span key={p} className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[11px] text-gray-600 dark:text-gray-300 capitalize">
+                              {p.replace("_app", "")}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 text-xs text-gray-500">
+                        <p><span className="font-semibold text-gray-800 dark:text-gray-200">{m.count}</span> mentions</p>
+                        {m.bestPosition != null && <p>Best #{m.bestPosition}</p>}
+                        {m.dominantSentiment && <p className="capitalize">{m.dominantSentiment}</p>}
+                      </div>
+                    </div>
+                    {(m.urls ?? []).length > 0 && (
+                      <ul className="space-y-1 mt-2">
+                        {m.urls.map((u: any, i: number) => (
+                          <li key={i} className="flex items-center justify-between gap-3 text-xs">
+                            <a href={u.url} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline truncate" title={u.url}>
+                              {u.title || u.domain || u.url}
+                            </a>
+                            <span className="text-gray-400 shrink-0">{u.domain}{u.count > 1 ? ` · ${u.count}×` : ""}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
