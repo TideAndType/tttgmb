@@ -5,10 +5,7 @@ import { getCompanyUserIds } from "@/lib/company";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  CheckSquare,
-  Clock,
   Timer,
-  Receipt,
   Search,
   Key,
   BookOpen,
@@ -22,6 +19,37 @@ import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
 
 export const dynamic = "force-dynamic";
+
+const AVATAR_COLORS = ["bg-teal-500", "bg-violet-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-orange-500"];
+
+function Avatar({ name, i }: { name: string; i: number }) {
+  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div
+      className={`h-9 w-9 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} text-white text-xs font-semibold flex items-center justify-center ring-2 ring-card -ml-2 first:ml-0`}
+      title={name}
+    >
+      {initials}
+    </div>
+  );
+}
+
+// Basecamp-style module card: centered title with an underline rule, then content.
+function Module({ title, children, footerHref, footerLabel }: { title: string; children: React.ReactNode; footerHref?: string; footerLabel?: string }) {
+  return (
+    <Card className="flex flex-col">
+      <div className="text-center px-5 pt-5 pb-3 border-b border-border">
+        <h3 className="font-bold text-foreground">{title}</h3>
+      </div>
+      <CardContent className="pt-4 flex-1">{children}</CardContent>
+      {footerHref && (
+        <div className="px-5 pb-4">
+          <Link href={footerHref} className="text-sm text-primary hover:underline">{footerLabel ?? "View all"} →</Link>
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function formatCurrency(amount: number, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
@@ -149,40 +177,11 @@ export default async function DashboardPage() {
     take: 4,
   });
 
-  const statCards = [
-    {
-      label: "Open Tasks",
-      value: openTaskCount.toString(),
-      icon: CheckSquare,
-      href: "/tasks",
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-    },
-    {
-      label: "Pending Approvals",
-      value: pendingApprovalCount.toString(),
-      icon: Clock,
-      href: "/approvals",
-      color: "text-amber-500",
-      bg: "bg-amber-500/10",
-    },
-    {
-      label: "Hours This Month",
-      value: `${hoursThisMonth}h`,
-      icon: Timer,
-      href: "/time",
-      color: "text-teal-500",
-      bg: "bg-teal-500/10",
-    },
-    {
-      label: "Outstanding",
-      value: formatCurrency(outstandingAmount),
-      icon: Receipt,
-      href: "/invoices",
-      color: "text-rose-500",
-      bg: "bg-rose-500/10",
-    },
-  ];
+  const teamUsers = await prisma.user.findMany({
+    where: { id: { in: companyUserIds } },
+    select: { id: true, name: true },
+    take: 16,
+  });
 
   const quickLinks = [
     { label: "SEO Overview", icon: Search, href: "/seo" },
@@ -195,10 +194,21 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Welcome back, {firstName}</h1>
-        <p className="text-muted-foreground mt-1">{companyName}</p>
+      {/* Header — centered, Basecamp style */}
+      <div className="text-center pt-2">
+        <p className="text-sm text-muted-foreground">{companyName}</p>
+        <h1 className="text-3xl font-bold text-foreground mt-0.5">Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Welcome back, {firstName}</p>
+        {teamUsers.length > 0 && (
+          <div className="mt-4 flex flex-col items-center">
+            <div className="flex items-center justify-center">
+              {teamUsers.map((u, i) => (
+                <Avatar key={u.id} name={u.name} i={i} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wider">The team</p>
+          </div>
+        )}
       </div>
 
       {/* Onboarding checklist — hidden once all steps complete */}
@@ -247,232 +257,125 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {/* Row 1 — Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.href} href={card.href}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-                <CardContent className="pt-6">
-                  <div className={`inline-flex p-2 rounded-md ${card.bg} mb-3`}>
-                    <Icon className={`h-5 w-5 ${card.color}`} />
-                  </div>
-                  <p className="text-2xl font-bold text-foreground">{card.value}</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">{card.label}</p>
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Widget dashboard */}
-      <DashboardCanvas />
-
-      {/* Row 2 — Two columns */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column (wider) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Upcoming Tasks */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Upcoming Tasks</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-0">
-              {upcomingTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No open tasks</p>
-              ) : (
-                <>
-                  {upcomingTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className="flex items-center gap-3 py-2.5 border-b border-border last:border-0"
-                    >
-                      <div
-                        className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${
-                          task.status === "IN_PROGRESS"
-                            ? "bg-primary border-primary"
-                            : "border-muted-foreground"
-                        }`}
-                      />
-                      <span className="flex-1 text-sm text-foreground truncate">{task.title}</span>
-                      {task.dueDate && (
-                        <span
-                          className={`text-xs ${
-                            isOverdue(task.dueDate) ? "text-red-500 font-medium" : "text-muted-foreground"
-                          }`}
-                        >
-                          {formatDate(task.dueDate)}
-                        </span>
-                      )}
-                      <Badge variant={priorityColor[task.priority] as any} className="text-xs">
-                        {task.priority}
-                      </Badge>
-                    </div>
-                  ))}
-                  <div className="pt-3">
-                    <Link
-                      href="/tasks"
-                      className="text-sm text-primary hover:underline"
-                    >
-                      View all tasks →
-                    </Link>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Recent Messages */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Recent Messages</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-0">
-              {recentMessages.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No messages yet</p>
-              ) : (
-                <>
-                  {recentMessages.map((msg) => (
-                    <div
-                      key={msg.id}
-                      className="flex items-start gap-3 py-2.5 border-b border-border last:border-0"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{msg.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {projectMap[msg.projectId] ?? "Project"} &middot;{" "}
-                          {msg._count.comments} comment{msg._count.comments !== 1 ? "s" : ""}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {formatDate(msg.createdAt)}
-                      </span>
-                    </div>
-                  ))}
-                  <div className="pt-3">
-                    <Link href="/projects" className="text-sm text-primary hover:underline">
-                      View all projects →
-                    </Link>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-6">
-          {/* Pending Approvals */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Pending Approvals</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-0">
-              {pendingApprovals.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">All caught up ✓</p>
-              ) : (
-                <>
-                  {pendingApprovals.map((d) => (
-                    <div
-                      key={d.id}
-                      className="flex items-center justify-between py-2.5 border-b border-border last:border-0 gap-2"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground truncate">{d.title}</p>
-                        <Badge variant="outline" className="text-xs mt-0.5">
-                          {d.type}
-                        </Badge>
-                      </div>
-                      <Link
-                        href={`/approvals`}
-                        className="text-xs text-primary hover:underline flex-shrink-0"
-                      >
-                        Review →
-                      </Link>
-                    </div>
-                  ))}
-                  <div className="pt-3">
-                    <Link href="/approvals" className="text-sm text-primary hover:underline">
-                      View all →
-                    </Link>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Latest Invoice */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">Latest Invoice</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!latestInvoice ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">No invoices yet</p>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      {latestInvoice.number ? `#${latestInvoice.number}` : "Invoice"}
-                    </span>
-                    <Badge
-                      variant={
-                        latestInvoice.status === "Paid"
-                          ? "default"
-                          : latestInvoice.status === "Unpaid"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                      className="text-xs"
-                    >
-                      {latestInvoice.status}
-                    </Badge>
-                  </div>
-                  {latestInvoice.totalAmount !== null && (
-                    <p className="text-2xl font-bold text-foreground">
-                      {formatCurrency(latestInvoice.totalAmount, latestInvoice.currency)}
-                    </p>
+      {/* Module grid — Basecamp-style equal cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {/* To-dos */}
+        <Module title="To-dos" footerHref="/tasks" footerLabel="View all tasks">
+          {upcomingTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No open tasks ✓</p>
+          ) : (
+            <div className="space-y-0">
+              {upcomingTasks.map((task) => (
+                <div key={task.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+                  <div className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${task.status === "IN_PROGRESS" ? "bg-primary border-primary" : "border-muted-foreground"}`} />
+                  <span className="flex-1 text-sm text-foreground truncate">{task.title}</span>
+                  {task.dueDate && (
+                    <span className={`text-xs ${isOverdue(task.dueDate) ? "text-red-500 font-medium" : "text-muted-foreground"}`}>{formatDate(task.dueDate)}</span>
                   )}
-                  {latestInvoice.dueDate && (
-                    <p className="text-xs text-muted-foreground">
-                      Due {formatDate(latestInvoice.dueDate)}
-                    </p>
-                  )}
-                  <div className="pt-2">
-                    <Link href="/invoices" className="text-sm text-primary hover:underline">
-                      View all invoices →
-                    </Link>
-                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+        </Module>
+
+        {/* Message Board */}
+        <Module title="Message Board" footerHref="/projects" footerLabel="View all projects">
+          {recentMessages.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>
+          ) : (
+            <div className="space-y-0">
+              {recentMessages.map((msg) => (
+                <div key={msg.id} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{msg.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {projectMap[msg.projectId] ?? "Project"} &middot; {msg._count.comments} comment{msg._count.comments !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">{formatDate(msg.createdAt)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </Module>
+
+        {/* Approvals */}
+        <Module title="Approvals" footerHref="/approvals" footerLabel="View all">
+          {pendingApprovals.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">All caught up ✓</p>
+          ) : (
+            <div className="space-y-0">
+              {pendingApprovals.map((d) => (
+                <div key={d.id} className="flex items-center justify-between py-2 border-b border-border last:border-0 gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">{d.title}</p>
+                    <Badge variant="outline" className="text-xs mt-0.5">{d.type}</Badge>
+                  </div>
+                  <Link href="/approvals" className="text-xs text-primary hover:underline flex-shrink-0">Review →</Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </Module>
+
+        {/* Schedule */}
+        <Module title="Schedule" footerHref="/calendar" footerLabel="Open calendar">
+          <div className="text-center py-2">
+            {openTaskCount > 0 ? (
+              <>
+                <p className="text-3xl font-bold text-foreground">{openTaskCount}</p>
+                <p className="text-sm text-muted-foreground mt-1">open task{openTaskCount !== 1 ? "s" : ""}</p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground py-2">Nothing scheduled</p>
+            )}
+            <p className="text-xs text-muted-foreground mt-3">{hoursThisMonth}h logged this month</p>
+          </div>
+        </Module>
+
+        {/* Latest Invoice */}
+        <Module title="Invoices" footerHref="/invoices" footerLabel="View all invoices">
+          {!latestInvoice ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No invoices yet</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{latestInvoice.number ? `#${latestInvoice.number}` : "Invoice"}</span>
+                <Badge variant={latestInvoice.status === "Paid" ? "default" : latestInvoice.status === "Unpaid" ? "destructive" : "secondary"} className="text-xs">
+                  {latestInvoice.status}
+                </Badge>
+              </div>
+              {latestInvoice.totalAmount !== null && (
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(latestInvoice.totalAmount, latestInvoice.currency)}</p>
               )}
-            </CardContent>
-          </Card>
+              <p className="text-xs text-muted-foreground">{formatCurrency(outstandingAmount)} outstanding</p>
+            </div>
+          )}
+        </Module>
+
+        {/* Explore — quick links (Docs & Files analog) */}
+        <Module title="Explore">
+          <div className="grid grid-cols-2 gap-2">
+            {quickLinks.map((ql) => {
+              const Icon = ql.icon;
+              return (
+                <Link key={ql.href} href={ql.href} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 hover:border-primary/50 hover:bg-accent transition-colors">
+                  <Icon className="h-4 w-4 text-primary flex-shrink-0" />
+                  <span className="text-xs text-foreground truncate">{ql.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </Module>
+
+        {/* AI Visibility — full-width module spanning the grid */}
+        <div className="md:col-span-2 xl:col-span-3">
+          <AiVisibilityWidget />
         </div>
       </div>
 
-      {/* Quick links */}
-      <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-          Quick Links
-        </h2>
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          {quickLinks.map((ql) => {
-            const Icon = ql.icon;
-            return (
-              <Link key={ql.href} href={ql.href}>
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer text-center">
-                  <CardContent className="pt-4 pb-4">
-                    <Icon className="h-5 w-5 mx-auto text-primary mb-1.5" />
-                    <p className="text-xs text-muted-foreground leading-tight">{ql.label}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
+      {/* Customizable widgets */}
+      <DashboardCanvas />
     </div>
   );
 }
