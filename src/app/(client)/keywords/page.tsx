@@ -109,6 +109,20 @@ export default function KeywordsPage() {
     }
   };
 
+  type DiscKey = "query" | "clicks" | "impressions" | "ctr" | "position";
+  const [discSortKey, setDiscSortKey] = useState<DiscKey | null>(null);
+  const [discSortDir, setDiscSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleDiscSort = (key: DiscKey) => {
+    if (discSortKey === key) {
+      setDiscSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setDiscSortKey(key);
+      // Metrics are most useful highest-first; query defaults A→Z.
+      setDiscSortDir(key === "query" ? "asc" : "desc");
+    }
+  };
+
   useEffect(() => {
     init();
   }, []);
@@ -241,6 +255,28 @@ export default function KeywordsPage() {
       {label}
       {sortKey === column ? (
         sortDir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-40" />
+      )}
+    </button>
+  );
+
+  const sortedDiscovered = [...discovered].sort((a, b) => {
+    if (!discSortKey) return 0;
+    const dir = discSortDir === "asc" ? 1 : -1;
+    const cmp =
+      discSortKey === "query" ? a.query.localeCompare(b.query) : a[discSortKey] - b[discSortKey];
+    return cmp * dir;
+  });
+
+  const DiscSortHead = ({ column, label, className }: { column: DiscKey; label: string; className?: string }) => (
+    <button
+      onClick={() => toggleDiscSort(column)}
+      className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${className || ""}`}
+    >
+      {label}
+      {discSortKey === column ? (
+        discSortDir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
       ) : (
         <ArrowUpDown className="h-3 w-3 opacity-40" />
       )}
@@ -527,16 +563,16 @@ export default function KeywordsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Query</TableHead>
-                  <TableHead className="text-right">Clicks</TableHead>
-                  <TableHead className="text-right">Impressions</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">Position</TableHead>
+                  <TableHead><DiscSortHead column="query" label="Query" /></TableHead>
+                  <TableHead className="text-right"><DiscSortHead column="clicks" label="Clicks" className="justify-end" /></TableHead>
+                  <TableHead className="text-right"><DiscSortHead column="impressions" label="Impressions" className="justify-end" /></TableHead>
+                  <TableHead className="text-right"><DiscSortHead column="ctr" label="CTR" className="justify-end" /></TableHead>
+                  <TableHead className="text-right"><DiscSortHead column="position" label="Position" className="justify-end" /></TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {discovered.map((kw, i) => {
+                {sortedDiscovered.map((kw, i) => {
                   const isTracked = trackedQueries.has(kw.query.toLowerCase());
                   return (
                     <TableRow key={i}>
