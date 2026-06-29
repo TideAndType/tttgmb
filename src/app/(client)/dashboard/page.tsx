@@ -188,7 +188,6 @@ export default async function DashboardPage() {
     { label: "Keywords", icon: Key, href: "/keywords" },
     { label: "Brand Book", icon: BookOpen, href: "/brand-book" },
     { label: "Reports", icon: BarChart2, href: "/reports" },
-    { label: "Time Tracking", icon: Timer, href: "/time" },
     { label: "Proposals", icon: FileText, href: "/proposals" },
   ];
 
@@ -329,7 +328,6 @@ export default async function DashboardPage() {
             ) : (
               <p className="text-sm text-muted-foreground py-2">Nothing scheduled</p>
             )}
-            <p className="text-xs text-muted-foreground mt-3">{hoursThisMonth}h logged this month</p>
           </div>
         </Module>
 

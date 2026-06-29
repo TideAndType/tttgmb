@@ -53,7 +53,6 @@ const navGroups: {
       { href: "/projects", label: "Projects", icon: FolderOpen },
       { href: "/tasks", label: "Tasks", icon: CheckSquare },
       { href: "/approvals", label: "Approvals", icon: CheckCircle },
-      { href: "/time", label: "Time Tracking", icon: Clock },
       { href: "/calendar", label: "Calendar", icon: CalendarDays },
       { href: "/timeline", label: "Timeline", icon: GanttChart },
       { href: "/meetings", label: "Meetings", icon: Video },

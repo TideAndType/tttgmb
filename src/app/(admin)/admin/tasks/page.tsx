@@ -11,6 +11,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TaskTodoList } from "@/components/tasks/task-todo-list";
 import { CommentThread } from "@/components/comments/comment-thread";
+import { TimeLogger } from "@/components/time/time-logger";
 
 interface TaskLink { id: string; url: string; label: string; }
 interface Assignee { user: { id: string; name: string }; }
@@ -466,6 +467,11 @@ export default function AdminTasksPage() {
                             ) : null}
                           </div>
                         )}
+                      </div>
+
+                      {/* Time tracking — agency logs time against the task */}
+                      <div className="mt-2 border-t pt-2">
+                        <TimeLogger taskId={task.id} />
                       </div>
 
                       {/* Comments — shared with the client side so agency sees client replies */}

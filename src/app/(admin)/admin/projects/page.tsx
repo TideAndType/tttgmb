@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TimeLogger } from "@/components/time/time-logger";
 
 interface Project {
   id: string;
@@ -331,6 +332,11 @@ export default function AdminProjectsPage() {
                       <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setExpandedDates(null)}>Cancel</Button>
                     </div>
                   )}
+
+                  {/* Time tracking — agency logs time against the project */}
+                  <div className="mt-2 border-t pt-2">
+                    <TimeLogger projectId={project.id} />
+                  </div>
                 </CardContent>
               </Card>
             );
