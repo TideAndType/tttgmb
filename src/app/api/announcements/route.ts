@@ -17,17 +17,20 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const user = session.user as any;
 
-  // Admin (not impersonating) can request a specific client's announcements.
+  // Admins always get the management view (all, or filtered by client) — even
+  // while impersonating, so the Announcements page shows every post. The
+  // `scope=client` param forces the company-scoped view (used by client UIs).
   const viewing = cookies().get("adminViewingAs")?.value;
   const filterClient = req.nextUrl.searchParams.get("clientId");
+  const scope = req.nextUrl.searchParams.get("scope");
 
-  if (isAdmin(user) && !viewing) {
+  if (isAdmin(user) && scope !== "client") {
     const where = filterClient ? { userId: filterClient } : {};
     const announcements = await prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } });
     return NextResponse.json({ announcements });
   }
 
-  // Client (or admin impersonating): announcements for their company.
+  // Client (or admin impersonating with scope=client): announcements for the company.
   const effectiveId = viewing && isAdmin(user) ? viewing : user.id;
   const companyUserIds = await getCompanyUserIds(effectiveId);
   const announcements = await prisma.announcement.findMany({
