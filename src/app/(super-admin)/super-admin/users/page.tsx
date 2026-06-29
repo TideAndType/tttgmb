@@ -9,6 +9,13 @@ interface User { id: string; name: string; email: string; role: string; companyN
 const ROLES = ["SUPER_ADMIN", "ADMIN", "CLIENT"];
 const roleColors: Record<string, string> = { SUPER_ADMIN: "bg-violet-100 text-violet-700", ADMIN: "bg-blue-100 text-blue-700", CLIENT: "bg-green-100 text-green-700" };
 
+const AVATAR_COLORS = ["bg-teal-500", "bg-violet-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-orange-500"];
+function Avatar({ name, seed }: { name: string; seed: string }) {
+  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const idx = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
+  return <div className={`h-8 w-8 rounded-full ${AVATAR_COLORS[idx]} text-white text-[11px] font-semibold flex items-center justify-center shrink-0`} title={name}>{initials}</div>;
+}
+
 export default function SuperAdminUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,9 +83,14 @@ export default function SuperAdminUsersPage() {
                 {filtered.map(u => (
                   <tr key={u.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{u.name}</p>
-                      <p className="text-xs text-gray-400">{u.email}</p>
-                      {u.companyName && <p className="text-xs text-gray-400">{u.companyName}</p>}
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={u.name} seed={u.id} />
+                        <div className="min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{u.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                          {u.companyName && <p className="text-xs text-gray-400 truncate">{u.companyName}</p>}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <select value={u.role} onChange={e => changeRole(u.id, e.target.value)} className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer focus:outline-none ${roleColors[u.role] ?? "bg-gray-100 text-gray-600"}`}>

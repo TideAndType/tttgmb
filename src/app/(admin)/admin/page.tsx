@@ -580,9 +580,12 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   {teamMembers.map((member) => (
                     <div key={member.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                      <div>
-                        <p className="text-sm font-medium">{member.name}</p>
-                        <p className="text-xs text-muted-foreground">{member.email}</p>
+                      <div className="flex items-center gap-2.5">
+                        <Avatar name={member.name} seed={member.id} />
+                        <div>
+                          <p className="text-sm font-medium">{member.name}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
                       </div>
                       <Button
                         size="sm"
