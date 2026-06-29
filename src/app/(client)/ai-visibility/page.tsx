@@ -17,6 +17,7 @@ interface Project {
 
 interface VisibilityScore {
   brand: string;
+  isOwn?: boolean;
   visibilityScore?: number;
   shareOfVoice?: number;
   sentiment?: string;
@@ -55,20 +56,27 @@ function num(v: any): number | undefined {
   const n = Number(v);
   return isNaN(n) ? undefined : n;
 }
-function pct(v: any): number | undefined {
-  const n = num(v);
-  if (n === undefined) return undefined;
-  return n <= 1 && n > 0 ? n * 100 : n; // 0–1 fraction → percentage
-}
+// Map an OpenLens VisibilityScore (overall, avgPosition, byPlatform, isOwn,
+// dominantSentiment) onto the page's shape. Fallbacks keep older/variant names working.
 function normalizeScore(r: any): VisibilityScore {
   return {
-    brand: r.brand ?? r.brandName ?? r.name ?? r.label ?? r.competitor ?? "—",
-    visibilityScore: pct(r.visibilityScore ?? r.visibility ?? r.mentionRate ?? r.mention_rate ?? r.score),
-    shareOfVoice: pct(r.shareOfVoice ?? r.share_of_voice ?? r.sov ?? r.shareOfVoicePct),
-    sentiment: r.sentiment ?? r.sentimentLabel ?? r.sentiment_label,
-    avgRank: num(r.avgRank ?? r.averageRank ?? r.average_rank ?? r.avg_rank ?? r.rank),
-    platforms: r.platforms ?? r.platformBreakdown ?? r.platform_breakdown ?? r.byPlatform,
+    brand: r.brandName ?? r.brand ?? r.name ?? r.label ?? "—",
+    isOwn: r.isOwn ?? false,
+    visibilityScore: num(r.overall ?? r.visibilityScore ?? r.visibility ?? r.mentionRate ?? r.score),
+    sentiment: r.dominantSentiment ?? r.sentiment ?? r.sentimentLabel,
+    avgRank: num(r.avgPosition ?? r.avgRank ?? r.averageRank ?? r.rank),
+    platforms: r.byPlatform ?? r.platforms ?? r.platformBreakdown,
   };
+}
+
+// OpenLens has no share-of-voice field — derive it as each brand's share of the
+// total mention rate across all brands in the run.
+function withShareOfVoice(scores: VisibilityScore[]): VisibilityScore[] {
+  const total = scores.reduce((sum, s) => sum + (s.visibilityScore ?? 0), 0);
+  return scores.map((s) => ({
+    ...s,
+    shareOfVoice: total > 0 ? ((s.visibilityScore ?? 0) / total) * 100 : 0,
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -314,7 +322,7 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
       const data = await olFetch("/visibility", "GET", undefined, { projectId, type: "overview" });
       setRawScores(data);
       const arr = Array.isArray(data) ? data : data.scores ?? data.brands ?? data.data ?? [];
-      setScores((Array.isArray(arr) ? arr : []).map(normalizeScore));
+      setScores(withShareOfVoice((Array.isArray(arr) ? arr : []).map(normalizeScore)));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -376,7 +384,7 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }
 
-  const myBrand = scores[0];
+  const myBrand = scores.find((s) => s.isOwn) ?? scores[0];
 
   return (
     <div className="space-y-6">
