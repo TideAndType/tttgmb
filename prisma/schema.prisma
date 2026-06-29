@@ -237,6 +237,14 @@ model CheckInAnswer {
   @@index([checkInId])
 }
 
+model ProposalLibraryItem {
+  id        String   @id @default(cuid())
+  name      String
+  category  String?
+  data      Json
+  createdAt DateTime @default(now())
+}
+
 model OpenLensCache {
   id        String   @id @default(cuid())
   projectId String   @unique

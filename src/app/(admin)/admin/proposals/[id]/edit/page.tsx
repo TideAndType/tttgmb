@@ -7,7 +7,7 @@ import {
   FileText, Type, Table, ScrollText, PenLine, Plus, X, Eye, Send,
   Check, Loader2, GripVertical, Copy, Trash2, Monitor, Smartphone,
   Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles, Link2, Download,
-  Image as ImageIcon, Video as VideoIcon, Upload,
+  Image as ImageIcon, Video as VideoIcon, Upload, BookmarkPlus, Library,
 } from "lucide-react";
 import {
   DndContext,
@@ -66,6 +66,21 @@ type Proposal = {
 const DEFAULT_BRAND: Brand = { primaryColor: "#2563eb", accentColor: "#7c3aed", font: "Inter", logoUrl: "" };
 
 function newId() { return `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
+
+// Deep-clone a section and assign fresh ids to it and any nested objects with
+// an `id` (rows, items, steps, columns, blocks) so library inserts don't collide.
+function cloneWithNewIds<T>(obj: T): T {
+  const clone = JSON.parse(JSON.stringify(obj));
+  const walk = (node: any) => {
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (node && typeof node === "object") {
+      if (typeof node.id === "string") node.id = newId();
+      Object.values(node).forEach(walk);
+    }
+  };
+  walk(clone);
+  return clone;
+}
 
 function computeTotal(sections: Section[]): number {
   let total = 0;
@@ -152,9 +167,9 @@ function SectionHoverToolbar({ onDuplicate, onDelete }: { onDuplicate: () => voi
   );
 }
 
-function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplicate, onDelete }: {
+function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplicate, onDelete, onSaveToLibrary }: {
   section: Section; idx: number; total: number; isActive: boolean;
-  onSelect: () => void; onDuplicate: () => void; onDelete: () => void;
+  onSelect: () => void; onDuplicate: () => void; onDelete: () => void; onSaveToLibrary: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -170,6 +185,7 @@ function SortableSidebarItem({ section, idx, total, isActive, onSelect, onDuplic
       <Icon className="h-3.5 w-3.5 shrink-0" />
       <span className="flex-1 text-sm truncate">{label}</span>
       <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button onClick={(e) => { e.stopPropagation(); onSaveToLibrary(); }} className="p-0.5 hover:text-primary" title="Save to library"><BookmarkPlus className="h-3 w-3" /></button>
         <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-0.5 hover:text-blue-500" title="Duplicate"><Copy className="h-3 w-3" /></button>
         <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-0.5 hover:text-destructive"><X className="h-3 w-3" /></button>
       </div>
@@ -546,6 +562,39 @@ export default function ProposalEditPage() {
   const [layoutSelection, setLayoutSelection] = useState<Selection | null>(null);
   const [saveState, setSaveState] = useState<"saved" | "saving" | "unsaved">("saved");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryItems, setLibraryItems] = useState<{ id: string; name: string; category: string | null; data: any }[]>([]);
+
+  const loadLibrary = useCallback(async () => {
+    const res = await fetch("/api/proposal-library");
+    if (res.ok) setLibraryItems((await res.json()).items || []);
+  }, []);
+  useEffect(() => { loadLibrary(); }, [loadLibrary]);
+
+  async function saveToLibrary(section: Section) {
+    const def = (section as any).heading || (section as any).title || SECTION_LABELS[section.type] || "Saved block";
+    const name = window.prompt("Save this section to your library as:", def);
+    if (!name) return;
+    const category = window.prompt("Category (optional, e.g. About Us, Terms):", "") || undefined;
+    const res = await fetch("/api/proposal-library", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, category, data: section }),
+    });
+    if (res.ok) loadLibrary();
+  }
+
+  function insertFromLibrary(item: { data: any }) {
+    const section = cloneWithNewIds(item.data) as Section;
+    section.id = newId();
+    const ns = [...sections, section];
+    setSections(ns); setSelectedId(section.id); setLibraryOpen(false); scheduleSave(ns, title, brand);
+    setTimeout(() => sectionRefs.current[section.id]?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  }
+
+  async function deleteLibraryItem(itemId: string) {
+    await fetch(`/api/proposal-library/${itemId}`, { method: "DELETE" });
+    setLibraryItems((prev) => prev.filter((i) => i.id !== itemId));
+  }
   const [sending, setSending] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
@@ -713,13 +762,33 @@ export default function ProposalEditPage() {
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                   <SortableContext items={sections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
                     {sections.map((s, idx) => (
-                      <SortableSidebarItem key={s.id} section={s} idx={idx} total={sections.length} isActive={s.id === selectedId} onSelect={() => scrollToSection(s.id)} onDuplicate={() => duplicateSection(s.id)} onDelete={() => deleteSection(s.id)} />
+                      <SortableSidebarItem key={s.id} section={s} idx={idx} total={sections.length} isActive={s.id === selectedId} onSelect={() => scrollToSection(s.id)} onDuplicate={() => duplicateSection(s.id)} onDelete={() => deleteSection(s.id)} onSaveToLibrary={() => saveToLibrary(s)} />
                     ))}
                   </SortableContext>
                 </DndContext>
               </div>
-              <div className="p-2.5 border-t border-border relative">
-                <Button variant="outline" size="sm" className="w-full" onClick={() => setAddMenuOpen((v) => !v)}><Plus className="h-4 w-4 mr-2" /> Add Section</Button>
+              <div className="p-2.5 border-t border-border relative space-y-2">
+                <Button variant="outline" size="sm" className="w-full" onClick={() => { setLibraryOpen((v) => !v); setAddMenuOpen(false); }}>
+                  <Library className="h-4 w-4 mr-2" /> Insert from Library
+                </Button>
+                {libraryOpen && (
+                  <div className="absolute bottom-full left-2.5 right-2.5 mb-1 bg-card border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-80 overflow-y-auto">
+                    {libraryItems.length === 0 ? (
+                      <p className="px-4 py-3 text-xs text-muted-foreground">No saved blocks yet. Hover a section in the outline and click the bookmark to save it here.</p>
+                    ) : (
+                      libraryItems.map((item) => (
+                        <div key={item.id} className="flex items-center group">
+                          <button className="flex-1 flex items-center gap-3 px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors text-left" onClick={() => insertFromLibrary(item)}>
+                            <Library className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="truncate">{item.name}{item.category ? <span className="text-xs text-muted-foreground"> · {item.category}</span> : null}</span>
+                          </button>
+                          <button onClick={() => deleteLibraryItem(item.id)} className="px-2 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" title="Remove from library"><X className="h-3.5 w-3.5" /></button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+                <Button variant="outline" size="sm" className="w-full" onClick={() => { setAddMenuOpen((v) => !v); setLibraryOpen(false); }}><Plus className="h-4 w-4 mr-2" /> Add Section</Button>
                 {addMenuOpen && (
                   <div className="absolute bottom-full left-2.5 right-2.5 mb-1 bg-card border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-80 overflow-y-auto">
                     {([["cover", "Cover"], ["text", "Text Block"], ["pricing", "Pricing Table"], ["terms", "Terms & Conditions"], ["signature", "Signature"], ["hero", "Hero Banner"], ["services", "Services Grid"], ["testimonials", "Testimonials"], ["faq", "FAQ"], ["cta", "Call to Action"], ["timeline", "Timeline"], ["image", "Image"], ["video", "Video"]] as const).map(([type, label]) => {
