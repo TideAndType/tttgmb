@@ -723,6 +723,19 @@ export default function ProposalEditPage() {
     }, 1500);
   }, [id]);
 
+  // Explicit "Save Draft" — flush any pending autosave immediately.
+  const saveDraft = useCallback(async () => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSaveState("saving");
+    try {
+      await fetch(`/api/proposals/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, sections, totalAmount: computeTotal(sections), brand }) });
+      setSaveState("saved");
+    } catch {
+      setSaveState("unsaved");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, title, sections, brand]);
+
   function updateSection(updated: Section) { const ns = sections.map((s) => (s.id === updated.id ? updated : s)); setSections(ns); scheduleSave(ns, title, brand); }
   function deleteSection(sectionId: string) { const ns = sections.filter((s) => s.id !== sectionId); setSections(ns); if (selectedId === sectionId) setSelectedId(ns[0]?.id ?? null); scheduleSave(ns, title, brand); }
   function duplicateSection(sectionId: string) {
@@ -803,6 +816,9 @@ export default function ProposalEditPage() {
           {saveState === "saved" && <><Check className="h-3 w-3 text-green-500" /> Saved</>}
           {saveState === "unsaved" && "Unsaved changes..."}
         </span>
+        <Button variant="outline" size="sm" onClick={saveDraft} disabled={saveState === "saving"}>
+          {saveState === "saving" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />} Save Draft
+        </Button>
         <div className="relative">
           <Button variant="outline" size="sm" onClick={() => setMergeOpen((v) => !v)}><Braces className="h-4 w-4 mr-2" /> Merge Fields</Button>
           {mergeOpen && (
