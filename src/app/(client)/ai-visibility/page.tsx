@@ -311,7 +311,7 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     setLoading(true);
     setError("");
     try {
-      const data = await olFetch("/visibility", "GET", undefined, { projectId });
+      const data = await olFetch("/visibility", "GET", undefined, { projectId, type: "overview" });
       setRawScores(data);
       const arr = Array.isArray(data) ? data : data.scores ?? data.brands ?? data.data ?? [];
       setScores((Array.isArray(arr) ? arr : []).map(normalizeScore));
