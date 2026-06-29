@@ -47,6 +47,31 @@ async function olFetch(path: string, method = "GET", body?: object, params?: Rec
 }
 
 // ---------------------------------------------------------------------------
+// Normalize a brand score — OpenLens field names vary, so accept variants and
+// scale 0–1 fractions to percentages.
+// ---------------------------------------------------------------------------
+function num(v: any): number | undefined {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = Number(v);
+  return isNaN(n) ? undefined : n;
+}
+function pct(v: any): number | undefined {
+  const n = num(v);
+  if (n === undefined) return undefined;
+  return n <= 1 && n > 0 ? n * 100 : n; // 0–1 fraction → percentage
+}
+function normalizeScore(r: any): VisibilityScore {
+  return {
+    brand: r.brand ?? r.brandName ?? r.name ?? r.label ?? r.competitor ?? "—",
+    visibilityScore: pct(r.visibilityScore ?? r.visibility ?? r.mentionRate ?? r.mention_rate ?? r.score),
+    shareOfVoice: pct(r.shareOfVoice ?? r.share_of_voice ?? r.sov ?? r.shareOfVoicePct),
+    sentiment: r.sentiment ?? r.sentimentLabel ?? r.sentiment_label,
+    avgRank: num(r.avgRank ?? r.averageRank ?? r.average_rank ?? r.avg_rank ?? r.rank),
+    platforms: r.platforms ?? r.platformBreakdown ?? r.platform_breakdown ?? r.byPlatform,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Status badge
 // ---------------------------------------------------------------------------
 function StatusPill({ status }: { status: string }) {
@@ -265,6 +290,8 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
   const [resultsLoading, setResultsLoading] = useState(false);
   const [resultsError, setResultsError] = useState("");
   const [showSearches, setShowSearches] = useState(false);
+  const [rawScores, setRawScores] = useState<any>(null);
+  const [showRaw, setShowRaw] = useState(false);
 
   const fetchResults = useCallback(async () => {
     setResultsLoading(true);
@@ -285,7 +312,9 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     setError("");
     try {
       const data = await olFetch("/visibility", "GET", undefined, { projectId });
-      setScores(Array.isArray(data) ? data : data.scores ?? []);
+      setRawScores(data);
+      const arr = Array.isArray(data) ? data : data.scores ?? data.brands ?? data.data ?? [];
+      setScores((Array.isArray(arr) ? arr : []).map(normalizeScore));
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -461,6 +490,20 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
                 </div>
               </CardContent>
             </Card>
+          )}
+        </div>
+      )}
+
+      {/* Raw data — diagnostic so we can see exactly what OpenLens returns */}
+      {rawScores != null && (
+        <div className="text-xs">
+          <button onClick={() => setShowRaw((s) => !s)} className="text-gray-400 hover:text-gray-600 underline">
+            {showRaw ? "Hide" : "Show"} raw visibility data
+          </button>
+          {showRaw && (
+            <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-gray-900 text-gray-100 p-3 text-[11px] leading-relaxed">
+              {JSON.stringify(rawScores, null, 2)}
+            </pre>
           )}
         </div>
       )}
