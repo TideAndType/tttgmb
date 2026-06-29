@@ -5,6 +5,7 @@ import { Eye, RefreshCw, Download, Plus, ChevronRight, Key, Check, AlertCircle, 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AiExplain } from "@/components/ai/ai-explain";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -666,6 +667,9 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
               ))}
             </div>
           )}
+
+          {/* AI explanation of the visibility scores */}
+          <AiExplain reportType="AI Visibility across ChatGPT, Perplexity, Google AI Overviews, DeepSeek" data={{ brand: myBrand, competitors: scores }} />
 
           {/* Visibility trend over time */}
           {trendSeries.length > 0 && (

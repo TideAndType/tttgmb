@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ConnectionBadge } from "@/components/integrations/connection-badge";
+import { AiExplain } from "@/components/ai/ai-explain";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -329,6 +330,12 @@ export default function GmbPage() {
           <StatCard icon={Globe} label="Website Clicks" value={metrics.websiteClicks.toLocaleString()} />
           <StatCard icon={Phone} label="Call Clicks" value={metrics.callClicks.toLocaleString()} />
           <StatCard icon={MapPin} label="Direction Requests" value={metrics.directionRequests.toLocaleString()} />
+        </div>
+      )}
+
+      {metrics && (
+        <div className="mb-8">
+          <AiExplain reportType="Google Business Profile — last 30 days" data={metrics} />
         </div>
       )}
 

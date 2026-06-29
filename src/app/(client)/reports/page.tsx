@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { CombinedChart } from "@/components/charts/combined-chart";
+import { AiExplain } from "@/components/ai/ai-explain";
 import {
   BarChart2,
   Search,
@@ -221,6 +222,12 @@ export default function ReportsPage() {
       </div>
 
       {error && <Alert variant="destructive" className="mb-6">{error}</Alert>}
+
+      {(gaMetrics || gscTotals || gmbMetrics) && (
+        <div className="mb-8">
+          <AiExplain reportType="Combined marketing report (Analytics, Search Console, Business Profile) — last 30 days" data={{ analytics: gaMetrics, searchConsole: gscTotals, businessProfile: gmbMetrics }} />
+        </div>
+      )}
 
       {/* Connection banners */}
       <div className="flex flex-wrap gap-3 mb-8">
