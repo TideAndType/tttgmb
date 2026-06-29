@@ -7,10 +7,31 @@ import Link from "next/link";
 
 interface Score {
   brand: string;
+  isOwn?: boolean;
   visibilityScore?: number;
   shareOfVoice?: number;
   sentiment?: string;
   avgRank?: number;
+}
+
+function num(v: any): number | undefined {
+  if (v === null || v === undefined || v === "") return undefined;
+  const n = Number(v);
+  return isNaN(n) ? undefined : n;
+}
+
+// Map OpenLens VisibilityScore (overall/avgPosition/brandName/isOwn) and derive
+// share of voice from each brand's share of total mention rate.
+function normalize(rows: any[]): Score[] {
+  const mapped = rows.map((r) => ({
+    brand: r.brandName ?? r.brand ?? r.name ?? "—",
+    isOwn: r.isOwn ?? false,
+    visibilityScore: num(r.overall ?? r.visibilityScore ?? r.visibility ?? r.score),
+    sentiment: r.dominantSentiment ?? r.sentiment,
+    avgRank: num(r.avgPosition ?? r.avgRank ?? r.averageRank),
+  }));
+  const total = mapped.reduce((s, m) => s + (m.visibilityScore ?? 0), 0);
+  return mapped.map((m) => ({ ...m, shareOfVoice: total > 0 ? ((m.visibilityScore ?? 0) / total) * 100 : 0 }));
 }
 
 async function proxy(path: string, method = "GET", params?: Record<string, string>) {
@@ -40,9 +61,9 @@ export function AiVisibilityWidget() {
 
         const first = projects[0];
         setProjectName(first.name);
-        const vis = await proxy("/visibility", "GET", { projectId: first.id });
-        const list: Score[] = Array.isArray(vis) ? vis : vis.scores ?? [];
-        setScores(list);
+        const vis = await proxy("/visibility", "GET", { projectId: first.id, type: "overview" });
+        const list = Array.isArray(vis) ? vis : vis.scores ?? vis.brands ?? vis.data ?? [];
+        setScores(normalize(Array.isArray(list) ? list : []));
         setState("loaded");
       } catch {
         setState("error");
@@ -50,7 +71,11 @@ export function AiVisibilityWidget() {
     })();
   }, []);
 
-  const myBrand = scores[0];
+  const myBrand = scores.find((s) => s.isOwn) ?? scores[0];
+  // Own brand first, then the rest by share of voice.
+  const ranked = [...scores].sort((a, b) =>
+    (b.isOwn ? 1 : 0) - (a.isOwn ? 1 : 0) || (b.shareOfVoice ?? 0) - (a.shareOfVoice ?? 0)
+  );
   const maxSov = Math.max(...scores.map((s) => s.shareOfVoice ?? s.visibilityScore ?? 0), 1);
 
   if (state === "no-key") {
@@ -129,17 +154,17 @@ export function AiVisibilityWidget() {
         {scores.length > 1 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Share of Voice</p>
-            {scores.slice(0, 5).map((s, i) => {
+            {ranked.slice(0, 5).map((s, i) => {
               const pct = s.shareOfVoice ?? s.visibilityScore ?? 0;
               return (
                 <div key={s.brand}>
                   <div className="flex justify-between text-xs mb-0.5">
-                    <span className={`font-medium ${i === 0 ? "text-violet-700 dark:text-violet-400" : "text-muted-foreground"}`}>{s.brand}</span>
+                    <span className={`font-medium ${s.isOwn ? "text-violet-700 dark:text-violet-400" : "text-muted-foreground"}`}>{s.brand}</span>
                     <span className="text-muted-foreground">{pct.toFixed(1)}%</span>
                   </div>
                   <div className="h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${i === 0 ? "bg-violet-500" : "bg-gray-300 dark:bg-gray-600"}`}
+                      className={`h-full rounded-full ${s.isOwn ? "bg-violet-500" : "bg-gray-300 dark:bg-gray-600"}`}
                       style={{ width: `${(pct / maxSov) * 100}%` }}
                     />
                   </div>
