@@ -34,7 +34,8 @@ import { SectionAiPanel } from "@/components/proposals/section-ai-panel";
 import { toEmbedUrl } from "@/lib/embed";
 import { sectionWrapper, type SectionSettings } from "@/lib/section-style";
 
-type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number };
+type Recurrence = "one_time" | "monthly" | "yearly";
+type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number; optional?: boolean; selected?: boolean; recurrence?: Recurrence };
 type ServiceItem = { id: string; icon: string; name: string; description: string };
 type TestimonialItem = { id: string; quote: string; name: string; role: string; company: string };
 type FaqItem = { id: string; question: string; answer: string };
@@ -43,7 +44,7 @@ type TimelineStep = { id: string; title: string; description: string };
 type Section = (
   | { id: string; type: "cover"; title: string; subtitle: string }
   | { id: string; type: "text"; heading: string; body: string }
-  | { id: string; type: "pricing"; heading: string; rows: PricingRow[] }
+  | { id: string; type: "pricing"; heading: string; rows: PricingRow[]; discountPercent?: number }
   | { id: string; type: "terms"; heading: string; body: string }
   | { id: string; type: "signature"; heading: string; message: string }
   | { id: string; type: "hero"; headline: string; subheadline: string; ctaLabel: string; ctaUrl: string; bgColor: string; bgVideo?: string }
@@ -84,10 +85,20 @@ function cloneWithNewIds<T>(obj: T): T {
   return clone;
 }
 
+// A row is included unless it's optional and not pre-selected.
+function rowIncluded(r: PricingRow): boolean {
+  return !r.optional || r.selected === true;
+}
+
 function computeTotal(sections: Section[]): number {
   let total = 0;
   for (const s of sections) {
-    if (s.type === "pricing") for (const row of s.rows) total += row.qty * row.unitPrice;
+    if (s.type === "pricing") {
+      let sub = 0;
+      for (const row of s.rows) if (rowIncluded(row)) sub += row.qty * row.unitPrice;
+      if (s.discountPercent) sub = sub * (1 - s.discountPercent / 100);
+      total += sub;
+    }
   }
   return total;
 }
@@ -228,7 +239,11 @@ function WysiwygPricing({ section, currency, onChange }: { section: Extract<Sect
   function updateRow(rowId: string, field: keyof PricingRow, value: string | number) {
     onChange({ ...section, rows: section.rows.map((r) => (r.id === rowId ? { ...r, [field]: value } : r)) });
   }
-  const grandTotal = section.rows.reduce((sum, r) => sum + r.qty * r.unitPrice, 0);
+  const grandTotal = (() => {
+    let sub = section.rows.reduce((s, r) => s + (rowIncluded(r) ? r.qty * r.unitPrice : 0), 0);
+    if (section.discountPercent) sub = sub * (1 - section.discountPercent / 100);
+    return sub;
+  })();
   return (
     <div className="py-10 border-b border-gray-100">
       <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Investment" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-6 focus:ring-2 focus:ring-blue-200 focus:rounded px-1 -mx-1" />
@@ -243,8 +258,19 @@ function WysiwygPricing({ section, currency, onChange }: { section: Extract<Sect
         </tr></thead>
         <tbody>
           {section.rows.map((row) => (
-            <tr key={row.id} className="border-b border-gray-100 group/row">
-              <td className="py-2 pr-4"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 font-medium text-gray-900 placeholder:text-gray-300" value={row.service} onChange={(e) => updateRow(row.id, "service", e.target.value)} placeholder="Service name" /></td>
+            <tr key={row.id} className="border-b border-gray-100 group/row align-top">
+              <td className="py-2 pr-4">
+                <input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 font-medium text-gray-900 placeholder:text-gray-300" value={row.service} onChange={(e) => updateRow(row.id, "service", e.target.value)} placeholder="Service name" />
+                <div className="flex items-center gap-2 mt-1">
+                  <label className="flex items-center gap-1 text-[11px] text-gray-400"><input type="checkbox" checked={!!row.optional} onChange={(e) => updateRow(row.id, "optional", e.target.checked as any)} className="h-3 w-3 accent-blue-600" /> Optional</label>
+                  {row.optional && <label className="flex items-center gap-1 text-[11px] text-gray-400"><input type="checkbox" checked={!!row.selected} onChange={(e) => updateRow(row.id, "selected", e.target.checked as any)} className="h-3 w-3 accent-blue-600" /> Pre-selected</label>}
+                  <select value={row.recurrence || "one_time"} onChange={(e) => updateRow(row.id, "recurrence", e.target.value as any)} className="text-[11px] text-gray-500 border border-gray-200 rounded px-1 py-0.5 bg-white">
+                    <option value="one_time">One-time</option>
+                    <option value="monthly">/ month</option>
+                    <option value="yearly">/ year</option>
+                  </select>
+                </div>
+              </td>
               <td className="py-2 pr-4"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded px-1 -mx-1 text-gray-500 placeholder:text-gray-300" value={row.description} onChange={(e) => updateRow(row.id, "description", e.target.value)} placeholder="Description" /></td>
               <td className="py-2 pr-4 text-right"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded text-right text-gray-700" type="number" min="0" value={row.qty} onChange={(e) => updateRow(row.id, "qty", parseFloat(e.target.value) || 0)} /></td>
               <td className="py-2 pr-4 text-right"><input className="w-full bg-transparent outline-none focus:bg-blue-50 focus:rounded text-right text-gray-700" type="number" min="0" step="0.01" value={row.unitPrice} onChange={(e) => updateRow(row.id, "unitPrice", parseFloat(e.target.value) || 0)} /></td>
@@ -259,7 +285,12 @@ function WysiwygPricing({ section, currency, onChange }: { section: Extract<Sect
           <td></td>
         </tr></tfoot>
       </table>
-      <button onClick={() => onChange({ ...section, rows: [...section.rows, { id: newId(), service: "", description: "", qty: 1, unitPrice: 0 }] })} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors"><Plus className="h-3.5 w-3.5" /> Add row</button>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <button onClick={() => onChange({ ...section, rows: [...section.rows, { id: newId(), service: "", description: "", qty: 1, unitPrice: 0 }] })} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors"><Plus className="h-3.5 w-3.5" /> Add row</button>
+        <label className="flex items-center gap-1.5 text-xs text-gray-500">Discount %
+          <input type="number" min="0" max="100" value={section.discountPercent ?? ""} onChange={(e) => onChange({ ...section, discountPercent: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="0" className="w-16 border border-gray-200 rounded px-2 py-1 text-right" />
+        </label>
+      </div>
     </div>
   );
 }
