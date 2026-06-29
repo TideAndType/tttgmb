@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText, Star } from "lucide-react";
 import { ProjectNotes } from "@/components/projects/project-notes";
 import { SatisfactionRating } from "@/components/projects/satisfaction-rating";
+import { ProjectChat } from "@/components/projects/project-chat";
 import { projectTimeMinutes } from "@/lib/time";
+import { MessageCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +142,21 @@ export default async function ProjectHomePage({ params }: { params: { id: string
                 Manage Board
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Project chat */}
+      <div className="mt-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Chat</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ProjectChat projectId={params.id} />
           </CardContent>
         </Card>
       </div>

@@ -237,6 +237,18 @@ model CheckInAnswer {
   @@index([checkInId])
 }
 
+model ProjectChatMessage {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId     String
+  authorName String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([projectId])
+}
+
 model Announcement {
   id         String   @id @default(cuid())
   userId     String   // target client (company owner)
@@ -413,6 +425,7 @@ model Project {
   tasks       Task[]
   folderId    String?
   folder      ProjectFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  chatMessages ProjectChatMessage[]
 }
 
 model Message {
