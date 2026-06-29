@@ -36,6 +36,7 @@ import {
   ChevronRight,
   Megaphone,
   LifeBuoy,
+  BookOpen,
 } from "lucide-react";
 
 const navGroups: {
@@ -86,6 +87,7 @@ const navGroups: {
       { href: "/admin/content", label: "Content", icon: Instagram },
       { href: "/admin/forms", label: "Intake Forms", icon: ClipboardList },
       { href: "/admin/support", label: "Support", icon: LifeBuoy },
+      { href: "/admin/knowledge-base", label: "Knowledge Base", icon: BookOpen },
       { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
     ],
   },

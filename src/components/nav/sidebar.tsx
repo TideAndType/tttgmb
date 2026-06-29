@@ -82,6 +82,7 @@ const navGroups: {
       { href: "/brand-book", label: "Brand Book", icon: BookOpen },
       { href: "/files", label: "Files", icon: Paperclip },
       { href: "/forms", label: "Forms", icon: ClipboardList },
+      { href: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
       { href: "/support", label: "Help & Support", icon: LifeBuoy },
     ],
   },

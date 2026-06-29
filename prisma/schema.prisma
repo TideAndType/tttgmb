@@ -237,6 +237,16 @@ model CheckInAnswer {
   @@index([checkInId])
 }
 
+model KbArticle {
+  id        String   @id @default(cuid())
+  title     String
+  category  String?
+  body      String   @db.Text
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model SupportTicket {
   id        String          @id @default(cuid())
   userId    String          // creator (client or team member)
