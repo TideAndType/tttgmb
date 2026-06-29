@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
-import { Search, Plus, X, TrendingUp, TrendingDown, Minus, Tag, Folder as FolderIcon } from "lucide-react";
+import { Search, Plus, X, TrendingUp, TrendingDown, Minus, Tag, Folder as FolderIcon, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 
 interface KeywordRow {
@@ -95,6 +95,19 @@ export default function KeywordsPage() {
   // null = all, "none" = uncategorized, otherwise a folder id
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [newFolderName, setNewFolderName] = useState("");
+
+  type SortKey = "query" | "folder" | "position" | "change";
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   useEffect(() => {
     init();
@@ -190,12 +203,49 @@ export default function KeywordsPage() {
     return Array.from(s).sort();
   }, [tracked]);
 
-  const visibleTracked = tracked.filter((t) => {
-    if (activeFolder === "none" && t.folderId) return false;
-    if (activeFolder && activeFolder !== "none" && t.folderId !== activeFolder) return false;
-    if (activeTag && !t.tags.includes(activeTag)) return false;
-    return true;
-  });
+  const folderName = (id: string | null) => folders.find((f) => f.id === id)?.name || "";
+
+  const visibleTracked = tracked
+    .filter((t) => {
+      if (activeFolder === "none" && t.folderId) return false;
+      if (activeFolder && activeFolder !== "none" && t.folderId !== activeFolder) return false;
+      if (activeTag && !t.tags.includes(activeTag)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (!sortKey) return 0;
+      const dir = sortDir === "asc" ? 1 : -1;
+      let cmp = 0;
+      if (sortKey === "query") {
+        cmp = a.query.localeCompare(b.query);
+      } else if (sortKey === "folder") {
+        cmp = folderName(a.folderId).localeCompare(folderName(b.folderId));
+      } else if (sortKey === "position") {
+        // Keywords without a snapshot sort to the bottom regardless of direction.
+        const ap = a.latest?.position ?? Infinity;
+        const bp = b.latest?.position ?? Infinity;
+        cmp = ap - bp;
+      } else if (sortKey === "change") {
+        const ac = a.change ?? -Infinity;
+        const bc = b.change ?? -Infinity;
+        cmp = ac - bc;
+      }
+      return cmp * dir;
+    });
+
+  const SortHead = ({ column, label, className }: { column: SortKey; label: string; className?: string }) => (
+    <button
+      onClick={() => toggleSort(column)}
+      className={`inline-flex items-center gap-1 hover:text-foreground transition-colors ${className || ""}`}
+    >
+      {label}
+      {sortKey === column ? (
+        sortDir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+      ) : (
+        <ArrowUpDown className="h-3 w-3 opacity-40" />
+      )}
+    </button>
+  );
 
   const addKeyword = async (query: string, tags: string[], folderId?: string | null) => {
     const q = query.trim();
@@ -395,11 +445,11 @@ export default function KeywordsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Keyword</TableHead>
-                  <TableHead>Folder</TableHead>
+                  <TableHead><SortHead column="query" label="Keyword" /></TableHead>
+                  <TableHead><SortHead column="folder" label="Folder" /></TableHead>
                   <TableHead>Tags</TableHead>
-                  <TableHead className="text-right">Position</TableHead>
-                  <TableHead className="text-right">Change</TableHead>
+                  <TableHead className="text-right"><SortHead column="position" label="Position" className="justify-end" /></TableHead>
+                  <TableHead className="text-right"><SortHead column="change" label="Change" className="justify-end" /></TableHead>
                   <TableHead>Trend</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
