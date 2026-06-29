@@ -4,6 +4,7 @@ import { createNotificationForAdmins } from "@/lib/notifications";
 import { toEmbedUrl } from "@/lib/embed";
 import { sectionWrapper } from "@/lib/section-style";
 import { resolveMergeFields } from "@/lib/merge-fields";
+import { renderExtraBlock } from "@/components/proposals/extra-blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -219,7 +220,7 @@ export default async function PublicProposalPage({ params }: { params: { token: 
                   </div>
                 ) : null;
               }
-              default: return null;
+              default: return renderExtraBlock(section);
             }
             })();
             if (!node) return null;

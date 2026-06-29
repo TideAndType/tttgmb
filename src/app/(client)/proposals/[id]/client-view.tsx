@@ -292,6 +292,63 @@ function VideoSection({ section }: { section: Section }) {
   );
 }
 
+function DividerSection() {
+  return <div className="px-10 py-6"><hr className="border-t border-gray-200" /></div>;
+}
+function SpacerSection({ section }: { section: Section }) {
+  return <div style={{ height: (section as any).height || 32 }} />;
+}
+function StatisticsSection({ section }: { section: Section }) {
+  const items: any[] = (section as any).items || [];
+  return (
+    <div className="px-10 py-10 border-b border-gray-100">
+      {section.heading && <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{section.heading}</h2>}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {items.map((it) => (
+          <div key={it.id} className="text-center">
+            <p className="text-3xl font-bold text-blue-600">{it.value}</p>
+            <p className="text-sm text-gray-500 mt-1">{it.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function TeamSection({ section }: { section: Section }) {
+  const members: any[] = (section as any).members || [];
+  return (
+    <div className="px-10 py-10 border-b border-gray-100">
+      {section.heading && <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{section.heading}</h2>}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+        {members.map((m) => (
+          <div key={m.id} className="text-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {m.photo ? <img src={m.photo} alt={m.name} className="h-20 w-20 rounded-full object-cover mx-auto mb-2" /> : <div className="h-20 w-20 rounded-full bg-gray-100 mx-auto mb-2" />}
+            <p className="font-semibold text-gray-900">{m.name}</p>
+            <p className="text-sm text-gray-500">{m.role}</p>
+            {m.bio && <p className="text-xs text-gray-400 mt-1">{m.bio}</p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function GallerySection({ section }: { section: Section }) {
+  const images: any[] = (section as any).images || [];
+  if (images.length === 0) return null;
+  return (
+    <div className="px-10 py-10 border-b border-gray-100">
+      {section.heading && <h2 className="text-2xl font-bold text-gray-900 mb-6">{section.heading}</h2>}
+      <div className="grid grid-cols-3 gap-2">
+        {images.map((im) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={im.id} src={im.url} alt={im.caption || ""} className="w-full h-40 object-cover rounded-lg" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SignatureSection({ section, proposal, onAccept, onDecline }: {
   section: Section; proposal: ProposalData; onAccept: (name: string, signature: string | null) => Promise<void>; onDecline: () => Promise<void>;
 }) {
@@ -465,6 +522,11 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
               case "timeline": return <TimelineSection key={section.id} section={section} />;
               case "image": return <ImageSection key={section.id} section={section} />;
               case "video": return <VideoSection key={section.id} section={section} />;
+              case "divider": return <DividerSection key={section.id} />;
+              case "spacer": return <SpacerSection key={section.id} section={section} />;
+              case "statistics": return <StatisticsSection key={section.id} section={section} />;
+              case "team": return <TeamSection key={section.id} section={section} />;
+              case "gallery": return <GallerySection key={section.id} section={section} />;
               default: return null;
             }
             })();

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { resolveMergeFields } from "@/lib/merge-fields";
+import { renderExtraBlock } from "@/components/proposals/extra-blocks";
 
 function PrintButton({ backHref }: { backHref: string }) {
   return (
@@ -284,7 +285,7 @@ export default function ProposalPdfPage() {
                   <a href={section.url} className="text-blue-600 underline">▶ {section.caption || "Watch the video"}</a>
                 </div>
               ) : null;
-              default: return null;
+              default: return renderExtraBlock(section);
             }
           })}
         </div>

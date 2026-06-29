@@ -8,6 +8,7 @@ import {
   Check, Loader2, GripVertical, Copy, Trash2, Monitor, Smartphone,
   Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles, Link2, Download,
   Image as ImageIcon, Video as VideoIcon, Upload, BookmarkPlus, Library, Braces,
+  Minus, MoveVertical, BarChart3, UsersRound, LayoutGrid,
 } from "lucide-react";
 import {
   DndContext,
@@ -56,6 +57,11 @@ type Section = (
   | { id: string; type: "timeline"; heading: string; steps: TimelineStep[] }
   | { id: string; type: "image"; url: string; caption: string }
   | { id: string; type: "video"; url: string; caption: string }
+  | { id: string; type: "divider" }
+  | { id: string; type: "spacer"; height: number }
+  | { id: string; type: "statistics"; heading: string; items: { id: string; value: string; label: string }[] }
+  | { id: string; type: "team"; heading: string; members: { id: string; name: string; role: string; photo?: string; bio?: string }[] }
+  | { id: string; type: "gallery"; heading: string; images: { id: string; url: string; caption?: string }[] }
   | LayoutSection
 ) & { settings?: SectionSettings };
 
@@ -111,13 +117,13 @@ function fmt(amount: number, currency: string) {
 const SECTION_ICONS: Record<string, React.ElementType> = {
   cover: FileText, text: Type, pricing: Table, terms: ScrollText, signature: PenLine,
   hero: Layout, services: Star, testimonials: MessageSquare, faq: HelpCircle, cta: Megaphone, timeline: GitBranch, layout: Layout,
-  image: ImageIcon, video: VideoIcon,
+  image: ImageIcon, video: VideoIcon, divider: Minus, spacer: MoveVertical, statistics: BarChart3, team: UsersRound, gallery: LayoutGrid,
 };
 
 const SECTION_LABELS: Record<string, string> = {
   cover: "Cover", text: "Text Block", pricing: "Pricing Table", terms: "Terms & Conditions", signature: "Signature",
   hero: "Hero Banner", services: "Services", testimonials: "Testimonials", faq: "FAQ", cta: "Call to Action", timeline: "Timeline", layout: "Layout Block",
-  image: "Image", video: "Video",
+  image: "Image", video: "Video", divider: "Divider", spacer: "Spacer", statistics: "Statistics", team: "Team", gallery: "Gallery",
 };
 
 // Downscale an image file to a ~1200px-wide JPEG data URL (DB/Vercel-safe).
@@ -557,6 +563,93 @@ function WysiwygVideo({ section, onChange }: { section: Extract<Section, { type:
   );
 }
 
+function WysiwygDivider() {
+  return <div className="py-6"><hr className="border-t border-gray-200" /></div>;
+}
+
+function WysiwygSpacer({ section, onChange }: { section: Extract<Section, { type: "spacer" }>; onChange: (s: Section) => void }) {
+  return (
+    <div className="py-2 group/spacer">
+      <div className="rounded border border-dashed border-gray-300 flex items-center justify-center text-xs text-gray-400 bg-gray-50/50" style={{ height: section.height }}>
+        <span className="opacity-0 group-hover/spacer:opacity-100 transition-opacity flex items-center gap-2">
+          Spacer
+          <input type="number" min="8" step="8" value={section.height} onChange={(e) => onChange({ ...section, height: Number(e.target.value) || 0 })} className="w-16 border border-gray-200 rounded px-1 py-0.5 text-center" /> px
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function WysiwygStatistics({ section, onChange }: { section: Extract<Section, { type: "statistics" }>; onChange: (s: Section) => void }) {
+  const upd = (id: string, f: "value" | "label", v: string) => onChange({ ...section, items: section.items.map((i) => i.id === id ? { ...i, [f]: v } : i) });
+  return (
+    <div className="py-10 border-b border-gray-100">
+      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="By the numbers" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-6 text-center focus:ring-2 focus:ring-blue-200 focus:rounded px-1" />
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {section.items.map((it) => (
+          <div key={it.id} className="text-center group/stat relative">
+            <input value={it.value} onChange={(e) => upd(it.id, "value", e.target.value)} className="w-full text-3xl font-bold text-blue-600 text-center bg-transparent outline-none focus:bg-blue-50 rounded" placeholder="100+" />
+            <input value={it.label} onChange={(e) => upd(it.id, "label", e.target.value)} className="w-full text-sm text-gray-500 text-center bg-transparent outline-none focus:bg-blue-50 rounded mt-1" placeholder="Label" />
+            <button onClick={() => onChange({ ...section, items: section.items.filter((x) => x.id !== it.id) })} className="absolute top-0 right-0 opacity-0 group-hover/stat:opacity-100 text-gray-300 hover:text-red-400"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => onChange({ ...section, items: [...section.items, { id: newId(), value: "", label: "" }] })} className="mt-4 text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add stat</button>
+    </div>
+  );
+}
+
+function WysiwygTeam({ section, onChange }: { section: Extract<Section, { type: "team" }>; onChange: (s: Section) => void }) {
+  const upd = (id: string, f: "name" | "role" | "photo" | "bio", v: string) => onChange({ ...section, members: section.members.map((m) => m.id === id ? { ...m, [f]: v } : m) });
+  return (
+    <div className="py-10 border-b border-gray-100">
+      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Meet the team" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-6 text-center focus:ring-2 focus:ring-blue-200 focus:rounded px-1" />
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+        {section.members.map((m) => (
+          <div key={m.id} className="text-center group/mem relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {m.photo ? <img src={m.photo} alt={m.name} className="h-20 w-20 rounded-full object-cover mx-auto mb-2" /> : <div className="h-20 w-20 rounded-full bg-gray-100 mx-auto mb-2" />}
+            <input value={m.photo || ""} onChange={(e) => upd(m.id, "photo", e.target.value)} placeholder="Photo URL" className="w-full text-[11px] text-gray-400 text-center bg-transparent outline-none focus:bg-blue-50 rounded mb-1" />
+            <input value={m.name} onChange={(e) => upd(m.id, "name", e.target.value)} placeholder="Name" className="w-full font-semibold text-gray-900 text-center bg-transparent outline-none focus:bg-blue-50 rounded" />
+            <input value={m.role} onChange={(e) => upd(m.id, "role", e.target.value)} placeholder="Role" className="w-full text-sm text-gray-500 text-center bg-transparent outline-none focus:bg-blue-50 rounded" />
+            <button onClick={() => onChange({ ...section, members: section.members.filter((x) => x.id !== m.id) })} className="absolute top-0 right-0 opacity-0 group-hover/mem:opacity-100 text-gray-300 hover:text-red-400"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        ))}
+      </div>
+      <button onClick={() => onChange({ ...section, members: [...section.members, { id: newId(), name: "", role: "" }] })} className="mt-4 text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1"><Plus className="h-3.5 w-3.5" /> Add member</button>
+    </div>
+  );
+}
+
+function WysiwygGallery({ section, onChange }: { section: Extract<Section, { type: "gallery" }>; onChange: (s: Section) => void }) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  async function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []);
+    const urls = await Promise.all(files.map((f) => imageFileToDataUrl(f).catch(() => "")));
+    onChange({ ...section, images: [...section.images, ...urls.filter(Boolean).map((u) => ({ id: newId(), url: u }))] });
+    if (fileRef.current) fileRef.current.value = "";
+  }
+  return (
+    <div className="py-10 border-b border-gray-100">
+      <Editable sectionId={section.id} value={section.heading} onChange={(v) => onChange({ ...section, heading: v })} tag="h2" placeholder="Gallery" singleLine className="wysiwyg-editable text-2xl font-bold text-gray-900 mb-6 focus:ring-2 focus:ring-blue-200 focus:rounded px-1" />
+      <div className="grid grid-cols-3 gap-2">
+        {section.images.map((im) => (
+          <div key={im.id} className="relative group/img">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={im.url} alt={im.caption || ""} className="w-full h-32 object-cover rounded-lg" />
+            <button onClick={() => onChange({ ...section, images: section.images.filter((x) => x.id !== im.id) })} className="absolute top-1 right-1 bg-black/50 text-white rounded p-0.5 opacity-0 group-hover/img:opacity-100"><X className="h-3.5 w-3.5" /></button>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mt-3">
+        <input placeholder="Image URL — press Enter to add" onKeyDown={(e) => { if (e.key === "Enter") { const v = (e.target as HTMLInputElement).value.trim(); if (v) { onChange({ ...section, images: [...section.images, { id: newId(), url: v }] }); (e.target as HTMLInputElement).value = ""; } } }} className="flex-1 text-sm border border-gray-200 rounded px-2 py-1.5" />
+        <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()}><Upload className="h-4 w-4 mr-1" /> Upload</Button>
+        <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
+      </div>
+    </div>
+  );
+}
+
 function SectionInspector({ section, onChange, onClose }: { section: Section; onChange: (s: Section) => void; onClose: () => void }) {
   const s = section.settings || {};
   const set = (patch: Partial<SectionSettings>) => onChange({ ...section, settings: { ...s, ...patch } } as Section);
@@ -767,6 +860,11 @@ export default function ProposalEditPage() {
       case "timeline": section = { id: sid, type: "timeline", heading: "Our Process", steps: [{ id: newId(), title: "Discovery", description: "We learn about your goals and requirements." }] }; break;
       case "image": section = { id: sid, type: "image", url: "", caption: "" }; break;
       case "video": section = { id: sid, type: "video", url: "", caption: "" }; break;
+      case "divider": section = { id: sid, type: "divider" }; break;
+      case "spacer": section = { id: sid, type: "spacer", height: 48 }; break;
+      case "statistics": section = { id: sid, type: "statistics", heading: "By the Numbers", items: [{ id: newId(), value: "100+", label: "Projects" }, { id: newId(), value: "98%", label: "Satisfaction" }] }; break;
+      case "team": section = { id: sid, type: "team", heading: "Meet the Team", members: [{ id: newId(), name: "Jane Doe", role: "Account Lead" }] }; break;
+      case "gallery": section = { id: sid, type: "gallery", heading: "Gallery", images: [] }; break;
       case "layout": section = makeLayoutSection("1col"); break;
       default: return;
     }
@@ -917,7 +1015,7 @@ export default function ProposalEditPage() {
                 <Button variant="outline" size="sm" className="w-full" onClick={() => { setAddMenuOpen((v) => !v); setLibraryOpen(false); }}><Plus className="h-4 w-4 mr-2" /> Add Section</Button>
                 {addMenuOpen && (
                   <div className="absolute bottom-full left-2.5 right-2.5 mb-1 bg-card border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-80 overflow-y-auto">
-                    {([["cover", "Cover"], ["text", "Text Block"], ["pricing", "Pricing Table"], ["terms", "Terms & Conditions"], ["signature", "Signature"], ["hero", "Hero Banner"], ["services", "Services Grid"], ["testimonials", "Testimonials"], ["faq", "FAQ"], ["cta", "Call to Action"], ["timeline", "Timeline"], ["image", "Image"], ["video", "Video"]] as const).map(([type, label]) => {
+                    {([["cover", "Cover"], ["text", "Text Block"], ["pricing", "Pricing Table"], ["terms", "Terms & Conditions"], ["signature", "Signature"], ["hero", "Hero Banner"], ["services", "Services Grid"], ["testimonials", "Testimonials"], ["faq", "FAQ"], ["cta", "Call to Action"], ["timeline", "Timeline"], ["image", "Image"], ["video", "Video"], ["gallery", "Gallery"], ["team", "Team"], ["statistics", "Statistics"], ["divider", "Divider"], ["spacer", "Spacer"]] as const).map(([type, label]) => {
                       const Icon = SECTION_ICONS[type];
                       return <button key={type} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors" onClick={() => addSection(type)}><Icon className="h-4 w-4 text-muted-foreground" /> {label}</button>;
                     })}
@@ -965,6 +1063,11 @@ export default function ProposalEditPage() {
                       {section.type === "timeline" && <WysiwygTimeline section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "image" && <WysiwygImage section={section} onChange={updateSection} />}
                       {section.type === "video" && <WysiwygVideo section={section} onChange={updateSection} />}
+                      {section.type === "divider" && <WysiwygDivider />}
+                      {section.type === "spacer" && <WysiwygSpacer section={section} onChange={updateSection} />}
+                      {section.type === "statistics" && <WysiwygStatistics section={section} onChange={updateSection} />}
+                      {section.type === "team" && <WysiwygTeam section={section} onChange={updateSection} />}
+                      {section.type === "gallery" && <WysiwygGallery section={section} onChange={updateSection} />}
                       {section.type === "layout" && (
                         <LayoutSectionEditor
                           section={section as LayoutSection}
