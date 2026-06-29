@@ -24,6 +24,13 @@ export async function GET(req: NextRequest) {
   const filterClient = req.nextUrl.searchParams.get("clientId");
   const scope = req.nextUrl.searchParams.get("scope");
 
+  // Announcements addressed directly to the signed-in account (e.g. an agency
+  // admin seeing messages from the super admin).
+  if (scope === "mine") {
+    const announcements = await prisma.announcement.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" } });
+    return NextResponse.json({ announcements });
+  }
+
   if (isAdmin(user) && scope !== "client") {
     const where = filterClient ? { userId: filterClient } : {};
     const announcements = await prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } });

@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, BarChart2, Shield, UserCog, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, BarChart2, Shield, UserCog, Menu, X, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/super-admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/super-admin/users", label: "Users", icon: Users },
+  { href: "/super-admin/announcements", label: "Announcements", icon: Megaphone },
   { href: "/super-admin/analytics", label: "Analytics", icon: BarChart2 },
 ];
 
