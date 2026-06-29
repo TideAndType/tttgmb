@@ -103,7 +103,7 @@ export function AiVisibilityWidget() {
       <CardContent className="space-y-4">
         {/* Hero metrics */}
         {myBrand && (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="bg-violet-50 dark:bg-violet-900/20 rounded-lg p-3 text-center">
               <p className="text-xs text-muted-foreground mb-1">Visibility</p>
               <p className="text-xl font-bold text-violet-700 dark:text-violet-400">

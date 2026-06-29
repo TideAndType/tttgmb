@@ -204,7 +204,7 @@ export default function ContentCalendarPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 px-6 py-4 border-b border-border shrink-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 py-4 border-b border-border shrink-0">
         {[
           { label: "This Month", value: totalItems, color: "text-foreground" },
           { label: "Published", value: published, color: "text-green-600" },

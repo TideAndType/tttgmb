@@ -278,7 +278,7 @@ function StepDone({ onFinish }: { onFinish: () => void }) {
           Everything is set up. Here are some quick links to get you started.
         </p>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Link href="/projects" onClick={onFinish} className="flex flex-col items-center gap-2 p-3 rounded-lg border border-border hover:bg-muted transition-colors">
           <FolderOpen className="h-5 w-5 text-primary" />
           <span className="text-xs font-medium">Projects</span>
