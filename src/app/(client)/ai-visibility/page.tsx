@@ -81,6 +81,43 @@ function withShareOfVoice(scores: VisibilityScore[]): VisibilityScore[] {
 }
 
 // ---------------------------------------------------------------------------
+// Adaptive engine-insights normalizer. The response shape isn't pinned, so
+// coerce array-of-engines or object-keyed-by-platform into a uniform list.
+// ---------------------------------------------------------------------------
+function toEngineList(data: any): { name: string; entries: [string, any][] }[] {
+  if (!data) return [];
+  const raw = Array.isArray(data) ? data : data.engines ?? data.platforms ?? data.data ?? data;
+  let items: { name: string; obj: any }[] = [];
+  if (Array.isArray(raw)) {
+    items = raw.map((r: any, i: number) => ({
+      name: (r.platform ?? r.engine ?? r.platformId ?? r.name ?? `Engine ${i + 1}`).toString().replace("_app", ""),
+      obj: r,
+    }));
+  } else if (raw && typeof raw === "object") {
+    items = Object.entries(raw).map(([k, v]) => ({
+      name: k.replace("_app", ""),
+      obj: v && typeof v === "object" ? v : { value: v },
+    }));
+  }
+  return items.map(({ name, obj }) => ({
+    name,
+    entries: Object.entries(obj).filter(([k]) => !["platform", "engine", "platformId", "name"].includes(k)),
+  }));
+}
+
+function fmtVal(v: any): string {
+  if (v === null || v === undefined) return "—";
+  if (Array.isArray(v)) return v.map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x))).join(", ");
+  if (typeof v === "object") return JSON.stringify(v);
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  return String(v);
+}
+
+function labelize(k: string): string {
+  return k.replace(/([A-Z])/g, " $1").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase()).trim();
+}
+
+// ---------------------------------------------------------------------------
 // Status badge
 // ---------------------------------------------------------------------------
 function StatusPill({ status }: { status: string }) {
@@ -301,6 +338,24 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
   const [showSearches, setShowSearches] = useState(false);
   const [rawScores, setRawScores] = useState<any>(null);
   const [showRaw, setShowRaw] = useState(false);
+
+  const [engines, setEngines] = useState<any>(null);
+  const [enginesLoading, setEnginesLoading] = useState(false);
+  const [enginesError, setEnginesError] = useState("");
+  const [showEngines, setShowEngines] = useState(false);
+
+  const fetchEngines = useCallback(async () => {
+    setEnginesLoading(true);
+    setEnginesError("");
+    try {
+      const data = await olFetch("/insights/engines", "GET", undefined, { projectId });
+      setEngines(data);
+    } catch (e: any) {
+      setEnginesError(e.message);
+    } finally {
+      setEnginesLoading(false);
+    }
+  }, [projectId]);
 
   const [trendSeries, setTrendSeries] = useState<any[]>([]);
   const [trendSummary, setTrendSummary] = useState<{ currentScore: number; previousScore: number; changePercent: number; trend: string } | null>(null);
@@ -634,6 +689,54 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Engine insights — per-platform source behavior for the latest run */}
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Engine Insights</CardTitle>
+            <CardDescription className="text-xs">How each AI platform sources and surfaces answers</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { const next = !showEngines; setShowEngines(next); if (next && engines == null) fetchEngines(); }}
+          >
+            {showEngines ? "Hide" : "View insights"}
+          </Button>
+        </CardHeader>
+        {showEngines && (
+          <CardContent>
+            {enginesLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400 text-sm gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading insights…
+              </div>
+            ) : enginesError ? (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {enginesError}
+              </div>
+            ) : toEngineList(engines).length === 0 ? (
+              <p className="text-sm text-gray-400 py-6 text-center">No engine insights yet. Run a scan first.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {toEngineList(engines).map((eng) => (
+                  <div key={eng.name} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <p className="font-medium text-sm text-gray-900 dark:text-gray-100 capitalize mb-2">{eng.name}</p>
+                    <dl className="space-y-1">
+                      {eng.entries.map(([k, v]) => (
+                        <div key={k} className="flex justify-between gap-3 text-xs">
+                          <dt className="text-gray-500">{labelize(k)}</dt>
+                          <dd className="text-gray-800 dark:text-gray-200 text-right">{fmtVal(v)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
