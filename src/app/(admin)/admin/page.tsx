@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
-import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History, Paperclip } from "lucide-react";
+import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History, Paperclip, MoreHorizontal } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 
@@ -28,6 +28,18 @@ interface Member {
   name: string;
   email: string;
   createdAt: string;
+}
+
+const AVATAR_COLORS = ["bg-teal-500", "bg-violet-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-orange-500"];
+
+function Avatar({ name, seed }: { name: string; seed: string }) {
+  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const idx = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
+  return (
+    <div className={`h-7 w-7 rounded-full ${AVATAR_COLORS[idx]} text-white text-[10px] font-semibold flex items-center justify-center shrink-0`} title={name}>
+      {initials}
+    </div>
+  );
 }
 
 export default function AdminPage() {
@@ -230,6 +242,48 @@ export default function AdminPage() {
     setAddMemberLoading(false);
   };
 
+  // Compact per-row actions menu.
+  function RowActions({ client }: { client: Client }) {
+    const [open, setOpen] = useState(false);
+    const item = "w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-accent transition-colors";
+    return (
+      <div className="relative inline-block text-left">
+        <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)} aria-label="Actions">
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 z-50 mt-1 w-44 rounded-lg border border-border bg-popover shadow-lg py-1">
+              <button className={item} onClick={() => { setOpen(false); handleViewPortal(client.id); }}>
+                <Eye className="h-4 w-4 text-muted-foreground" /> View portal
+              </button>
+              <button className={item} onClick={() => { setOpen(false); openTeamDialog(client); }}>
+                <Users className="h-4 w-4 text-muted-foreground" /> Team
+              </button>
+              <button className={item} onClick={() => { setOpen(false); openNotesDialog(client); }}>
+                <StickyNote className="h-4 w-4 text-muted-foreground" /> Notes
+              </button>
+              <button className={item} onClick={() => { setOpen(false); openFilesDialog(client); }}>
+                <Paperclip className="h-4 w-4 text-muted-foreground" /> Files
+              </button>
+              <button className={item} onClick={() => { setOpen(false); setGscDialog(client); setGscUrl(client.gscProperty || ""); }}>
+                <Globe className="h-4 w-4 text-muted-foreground" /> GSC property
+              </button>
+              <Link href={`/admin/clients/${client.id}/history`} className={item} onClick={() => setOpen(false)}>
+                <History className="h-4 w-4 text-muted-foreground" /> History
+              </Link>
+              <div className="my-1 border-t border-border" />
+              <button className={`${item} text-destructive`} onClick={() => { setOpen(false); setDeleteId(client.id); }}>
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-6xl mx-auto">
       {/* Centered header */}
@@ -290,7 +344,12 @@ export default function AdminPage() {
               <TableBody>
                 {clients.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell className="font-medium">{client.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Avatar name={client.name} seed={client.id} />
+                        <span className="truncate">{client.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{client.email}</TableCell>
                     <TableCell>{client.companyName || "-"}</TableCell>
                     <TableCell>
@@ -322,61 +381,7 @@ export default function AdminPage() {
                       {new Date(client.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewPortal(client.id)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openTeamDialog(client)}
-                        >
-                          <Users className="h-3 w-3 mr-1" />
-                          Team
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openNotesDialog(client)}
-                        >
-                          <StickyNote className="h-3 w-3 mr-1" />
-                          Notes
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openFilesDialog(client)}
-                        >
-                          <Paperclip className="h-3 w-3 mr-1" />
-                          Files
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => { setGscDialog(client); setGscUrl(client.gscProperty || ""); }}
-                        >
-                          <Globe className="h-3 w-3 mr-1" />
-                          GSC
-                        </Button>
-                        <Link href={`/admin/clients/${client.id}/history`}>
-                          <Button size="sm" variant="outline">
-                            <History className="h-3 w-3 mr-1" />
-                            History
-                          </Button>
-                        </Link>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteId(client.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      <RowActions client={client} />
                     </TableCell>
                   </TableRow>
                 ))}

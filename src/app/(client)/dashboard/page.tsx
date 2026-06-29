@@ -13,6 +13,12 @@ import {
   FileText,
   CheckCircle2,
   Circle,
+  CheckSquare,
+  MessageSquare,
+  ThumbsUp,
+  CalendarDays,
+  Receipt,
+  Compass,
 } from "lucide-react";
 import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
@@ -34,12 +40,15 @@ function Avatar({ name, i }: { name: string; i: number }) {
   );
 }
 
-// Basecamp-style module card: centered title with an underline rule, then content.
-function Module({ title, children, footerHref, footerLabel }: { title: string; children: React.ReactNode; footerHref?: string; footerLabel?: string }) {
+// Basecamp-style module card: centered title (with icon) + underline rule, then content.
+function Module({ title, icon: Icon, children, footerHref, footerLabel }: { title: string; icon?: any; children: React.ReactNode; footerHref?: string; footerLabel?: string }) {
   return (
     <Card className="flex flex-col">
       <div className="text-center px-5 pt-5 pb-3 border-b border-border">
-        <h3 className="font-bold text-foreground">{title}</h3>
+        <h3 className="font-bold text-foreground inline-flex items-center gap-2">
+          {Icon && <Icon className="h-4 w-4 text-primary" />}
+          {title}
+        </h3>
       </div>
       <CardContent className="pt-4 flex-1">{children}</CardContent>
       {footerHref && (
@@ -260,7 +269,7 @@ export default async function DashboardPage() {
       {/* Module grid — Basecamp-style equal cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {/* To-dos */}
-        <Module title="To-dos" footerHref="/tasks" footerLabel="View all tasks">
+        <Module title="To-dos" icon={CheckSquare} footerHref="/tasks" footerLabel="View all tasks">
           {upcomingTasks.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">No open tasks ✓</p>
           ) : (
@@ -279,7 +288,7 @@ export default async function DashboardPage() {
         </Module>
 
         {/* Message Board */}
-        <Module title="Message Board" footerHref="/projects" footerLabel="View all projects">
+        <Module title="Message Board" icon={MessageSquare} footerHref="/projects" footerLabel="View all projects">
           {recentMessages.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">No messages yet</p>
           ) : (
@@ -300,7 +309,7 @@ export default async function DashboardPage() {
         </Module>
 
         {/* Approvals */}
-        <Module title="Approvals" footerHref="/approvals" footerLabel="View all">
+        <Module title="Approvals" icon={ThumbsUp} footerHref="/approvals" footerLabel="View all">
           {pendingApprovals.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-4">All caught up ✓</p>
           ) : (
@@ -319,7 +328,7 @@ export default async function DashboardPage() {
         </Module>
 
         {/* Schedule */}
-        <Module title="Schedule" footerHref="/calendar" footerLabel="Open calendar">
+        <Module title="Schedule" icon={CalendarDays} footerHref="/calendar" footerLabel="Open calendar">
           <div className="text-center py-2">
             {openTaskCount > 0 ? (
               <>
@@ -334,7 +343,7 @@ export default async function DashboardPage() {
         </Module>
 
         {/* Latest Invoice */}
-        <Module title="Invoices" footerHref="/invoices" footerLabel="View all invoices">
+        <Module title="Invoices" icon={Receipt} footerHref="/invoices" footerLabel="View all invoices">
           {!latestInvoice ? (
             <p className="text-sm text-muted-foreground text-center py-4">No invoices yet</p>
           ) : (
@@ -354,7 +363,7 @@ export default async function DashboardPage() {
         </Module>
 
         {/* Explore — quick links (Docs & Files analog) */}
-        <Module title="Explore">
+        <Module title="Explore" icon={Compass}>
           <div className="grid grid-cols-2 gap-2">
             {quickLinks.map((ql) => {
               const Icon = ql.icon;
