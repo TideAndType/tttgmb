@@ -26,6 +26,7 @@ import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 import { UserAvatar } from "@/components/ui/avatar";
 import { CheckInsWidget } from "@/components/checkins/checkins-widget";
+import { AnnouncementBanners } from "@/components/announcements/announcement-banners";
 
 export const dynamic = "force-dynamic";
 
@@ -271,25 +272,8 @@ export default async function DashboardPage() {
         </Card>
       )}
 
-      {/* Announcements from your agency */}
-      {announcements.length > 0 && (
-        <div className="space-y-3">
-          {announcements.map((a) => (
-            <Card key={a.id} className="border-primary/30 bg-primary/5">
-              <CardContent className="py-4 flex items-start gap-3">
-                <Megaphone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-foreground">{a.title}</p>
-                    <span className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-0.5">{a.body}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Announcements from your agency (dismissible) */}
+      <AnnouncementBanners items={announcements.map((a) => ({ id: a.id, title: a.title, body: a.body, createdAt: new Date(a.createdAt).toISOString() }))} />
 
       {/* Automatic check-ins */}
       <CheckInsWidget />

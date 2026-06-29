@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert } from "@/components/ui/alert";
-import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History, Paperclip, MoreHorizontal, Megaphone } from "lucide-react";
+import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History, Paperclip, MoreHorizontal } from "lucide-react";
+import { AnnouncementBanners } from "@/components/announcements/announcement-banners";
 import { Textarea } from "@/components/ui/textarea";
 import { UserAvatar } from "@/components/ui/avatar";
 import Link from "next/link";
@@ -304,25 +305,8 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Announcements from the platform (super admin) */}
-      {myAnnouncements.length > 0 && (
-        <div className="space-y-3 mb-8">
-          {myAnnouncements.map((a) => (
-            <Card key={a.id} className="border-violet-300 bg-violet-50/50 dark:border-violet-800 dark:bg-violet-900/10">
-              <CardContent className="py-4 flex items-start gap-3">
-                <Megaphone className="h-5 w-5 text-violet-600 shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-foreground">{a.title}</p>
-                    <span className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-0.5">{a.body}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {/* Platform announcements from the super admin (dismissible) */}
+      <AnnouncementBanners items={myAnnouncements} accent="violet" />
 
       {/* Stat modules — centered title with underline rule */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">

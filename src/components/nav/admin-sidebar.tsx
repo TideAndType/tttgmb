@@ -25,7 +25,6 @@ import {
   AlertCircle,
   CalendarDays,
   GanttChart,
-  Target,
   Folder,
   Instagram,
   Video,
@@ -55,7 +54,6 @@ const navGroups: {
     title: "Clients",
     items: [
       { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
-      { href: "/admin/leads", label: "Leads", icon: Target },
       { href: "/admin/messages", label: "Messages", icon: MessageCircle },
       { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
       { href: "/admin/checkins", label: "Check-ins", icon: MessageCircle },

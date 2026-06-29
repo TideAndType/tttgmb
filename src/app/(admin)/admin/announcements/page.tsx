@@ -23,7 +23,12 @@ export default function AdminAnnouncementsPage() {
 
   const load = async () => {
     const res = await fetch("/api/announcements");
-    if (res.ok) setAnnouncements((await res.json()).announcements || []);
+    if (res.ok) {
+      setAnnouncements((await res.json()).announcements || []);
+    } else {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || `Couldn't load announcements (${res.status}). Has the migration been run?`);
+    }
   };
 
   useEffect(() => {

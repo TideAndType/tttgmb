@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { CheckCircle, ArrowRight, FolderOpen, Receipt, FileText } from "lucide-react";
+import { CheckCircle, ArrowRight, FolderOpen, Receipt, FileText, X } from "lucide-react";
 import Link from "next/link";
 
 const INDUSTRIES = ["Agency", "E-commerce", "Healthcare", "Other"];
@@ -89,9 +89,21 @@ export function OnboardingWizard() {
 
   if (!show) return null;
 
+  const dismiss = () => {
+    if (typeof window !== "undefined") localStorage.setItem("onboardingComplete", "true");
+    setShow(false);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+      <div className="relative bg-background rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        <button
+          onClick={dismiss}
+          aria-label="Close"
+          className="absolute top-3 right-3 z-10 text-muted-foreground hover:text-foreground rounded-md p-1 hover:bg-accent"
+        >
+          <X className="h-5 w-5" />
+        </button>
         {/* Progress bar */}
         <div className="h-1 bg-muted">
           <div
