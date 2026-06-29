@@ -33,9 +33,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { visibility, memberIds, name, description, color, status, startDate, dueDate, notes } = body;
+  const { visibility, memberIds, name, description, color, status, startDate, dueDate, notes, folderId } = body;
 
   const data: Record<string, any> = {};
+  if (folderId !== undefined) data.folderId = folderId || null;
   if (visibility !== undefined) data.visibility = visibility;
   if (memberIds !== undefined) data.memberIds = memberIds;
   if (name !== undefined) data.name = name;

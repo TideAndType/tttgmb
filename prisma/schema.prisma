@@ -211,12 +211,28 @@ model ApprovalComment {
   createdAt     DateTime    @default(now())
 }
 
+model TaskFolder {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  tasks     Task[]
+}
+
+model ProjectFolder {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  projects  Project[]
+}
+
 model Task {
   id          String        @id @default(cuid())
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   projectId   String?
   project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  folderId    String?
+  folder      TaskFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
   title       String
   description String?
   status      TaskStatus    @default(PENDING)
@@ -338,6 +354,8 @@ model Project {
   timeEntries TimeEntry[]
   ratings     SatisfactionRating[]
   tasks       Task[]
+  folderId    String?
+  folder      ProjectFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 }
 
 model Message {

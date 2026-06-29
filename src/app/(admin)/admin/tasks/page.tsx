@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { TaskTodoList } from "@/components/tasks/task-todo-list";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { TimeLogger } from "@/components/time/time-logger";
+import { FolderBar, type Folder } from "@/components/folders/folder-bar";
 
 interface TaskLink { id: string; url: string; label: string; }
 interface Assignee { user: { id: string; name: string }; }
@@ -35,6 +36,7 @@ interface Task {
   assignees?: Assignee[];
   commentCount?: number;
   projectId?: string | null;
+  folderId?: string | null;
   timeMinutes?: number;
 }
 
@@ -79,8 +81,19 @@ const priorityConfig = {
 export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [folderOptions, setFolderOptions] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const handleSetFolder = async (taskId: string, folderId: string) => {
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId: folderId || null }),
+    });
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, folderId: folderId || null } : t));
+  };
   const [filterClient, setFilterClient] = useState("all");
   const [deleting, setDeleting] = useState<string | null>(null);
   const [togglingVisibility, setTogglingVisibility] = useState<string | null>(null);
@@ -250,7 +263,12 @@ export default function AdminTasksPage() {
   };
 
   const clients = Array.from(new Map(tasks.map((t) => [t.user.id, t.user])).values());
-  const filtered = filterClient === "all" ? tasks : tasks.filter((t) => t.user.id === filterClient);
+  const filtered = tasks.filter((t) => {
+    if (filterClient !== "all" && t.user.id !== filterClient) return false;
+    if (activeFolder === "none" && t.folderId) return false;
+    if (activeFolder && activeFolder !== "none" && t.folderId !== activeFolder) return false;
+    return true;
+  });
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -286,6 +304,8 @@ export default function AdminTasksPage() {
           })}
         </div>
       )}
+
+      <FolderBar baseUrl="/api/task-folders" active={activeFolder} onChange={setActiveFolder} onFoldersLoaded={setFolderOptions} />
 
       {loading ? (
         <p className="text-muted-foreground">Loading...</p>
@@ -494,7 +514,7 @@ export default function AdminTasksPage() {
 
                       {/* Time tracking — agency logs time against the task; rolls up to the project */}
                       <div className="mt-2 border-t pt-2 space-y-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs text-muted-foreground">Project:</span>
                           <select
                             value={task.projectId || ""}
@@ -504,6 +524,17 @@ export default function AdminTasksPage() {
                             <option value="">— No project —</option>
                             {projectOptions.filter((p) => p.userId === task.userId).map((p) => (
                               <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                          <span className="text-xs text-muted-foreground">Folder:</span>
+                          <select
+                            value={task.folderId || ""}
+                            onChange={(e) => handleSetFolder(task.id, e.target.value)}
+                            className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[160px]"
+                          >
+                            <option value="">— No folder —</option>
+                            {folderOptions.map((f) => (
+                              <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
                           </select>
                         </div>

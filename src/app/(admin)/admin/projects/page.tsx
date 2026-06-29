@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate, Star, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeLogger } from "@/components/time/time-logger";
+import { FolderBar, type Folder } from "@/components/folders/folder-bar";
 
 interface Project {
   id: string;
@@ -26,6 +27,7 @@ interface Project {
   ratingAvg: number | null;
   ratingCount: number;
   timeMinutes?: number;
+  folderId?: string | null;
 }
 
 interface Member { id: string; name: string; email: string; }
@@ -67,6 +69,8 @@ export default function AdminProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [filterClient, setFilterClient] = useState("all");
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [folderOptions, setFolderOptions] = useState<Folder[]>([]);
   const [visDialog, setVisDialog] = useState<VisibilityState | null>(null);
   const [expandedDates, setExpandedDates] = useState<string | null>(null);
   const [savingDates, setSavingDates] = useState<string | null>(null);
@@ -174,7 +178,21 @@ export default function AdminProjectsPage() {
   };
 
   const clients = Array.from(new Map(projects.map((p) => [p.user.name, p.user])).values());
-  const filtered = filterClient === "all" ? projects : projects.filter((p) => p.user.name === filterClient);
+  const filtered = projects.filter((p) => {
+    if (filterClient !== "all" && p.user.name !== filterClient) return false;
+    if (activeFolder === "none" && p.folderId) return false;
+    if (activeFolder && activeFolder !== "none" && p.folderId !== activeFolder) return false;
+    return true;
+  });
+
+  const handleSetFolder = async (id: string, folderId: string) => {
+    await fetch(`/api/projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId: folderId || null }),
+    });
+    setProjects((prev) => prev.map((p) => p.id === id ? { ...p, folderId: folderId || null } : p));
+  };
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -228,6 +246,8 @@ export default function AdminProjectsPage() {
           })}
         </div>
       )}
+
+      <FolderBar baseUrl="/api/project-folders" active={activeFolder} onChange={setActiveFolder} onFoldersLoaded={setFolderOptions} />
 
       {loading ? (
         <p className="text-muted-foreground">Loading...</p>
@@ -337,8 +357,21 @@ export default function AdminProjectsPage() {
                     </div>
                   )}
 
-                  {/* Time tracking — agency logs time against the project */}
-                  <div className="mt-2 border-t pt-2">
+                  {/* Folder + time tracking */}
+                  <div className="mt-2 border-t pt-2 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Folder:</span>
+                      <select
+                        value={project.folderId || ""}
+                        onChange={(e) => handleSetFolder(project.id, e.target.value)}
+                        className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[180px]"
+                      >
+                        <option value="">— No folder —</option>
+                        {folderOptions.map((f) => (
+                          <option key={f.id} value={f.id}>{f.name}</option>
+                        ))}
+                      </select>
+                    </div>
                     <TimeLogger projectId={project.id} />
                   </div>
                 </CardContent>
