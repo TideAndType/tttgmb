@@ -184,11 +184,10 @@ export default async function DashboardPage() {
     take: 16,
   });
 
-  const announcements = await prisma.announcement.findMany({
-    where: { userId: { in: companyUserIds } },
-    orderBy: { createdAt: "desc" },
-    take: 3,
-  });
+  // Resilient: don't let a missing table (migration not yet run) break the dashboard.
+  const announcements = await prisma.announcement
+    .findMany({ where: { userId: { in: companyUserIds } }, orderBy: { createdAt: "desc" }, take: 3 })
+    .catch(() => [] as { id: string; title: string; body: string; createdAt: Date }[]);
 
   const quickLinks = [
     { label: "SEO Overview", icon: Search, href: "/seo" },

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Eye, RefreshCw, Loader2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
@@ -45,31 +46,37 @@ async function proxy(path: string, method = "GET", params?: Record<string, strin
 }
 
 export function AiVisibilityWidget() {
-  const [state, setState] = useState<"loading" | "no-key" | "no-projects" | "loaded" | "error">("loading");
+  const [state, setState] = useState<"loading" | "no-key" | "no-projects" | "loaded" | "error" | "idle">("loading");
   const [scores, setScores] = useState<Score[]>([]);
   const [projectName, setProjectName] = useState("");
 
+  // Only check the (internal) key on mount — never auto-hit the OpenLens API.
   useEffect(() => {
     (async () => {
       try {
-        const keyRes = await fetch("/api/profile/openlens");
-        const keyData = await keyRes.json();
-        if (!keyData.hasKey) { setState("no-key"); return; }
-
-        const projects = await proxy("/projects").then((d) => Array.isArray(d) ? d : d.projects ?? []);
-        if (!projects.length) { setState("no-projects"); return; }
-
-        const first = projects[0];
-        setProjectName(first.name);
-        const vis = await proxy("/visibility", "GET", { projectId: first.id, type: "overview" });
-        const list = Array.isArray(vis) ? vis : vis.scores ?? vis.brands ?? vis.data ?? [];
-        setScores(normalize(Array.isArray(list) ? list : []));
-        setState("loaded");
+        const keyData = await fetch("/api/profile/openlens").then((r) => r.json());
+        setState(keyData.hasKey ? "idle" : "no-key");
       } catch {
         setState("error");
       }
     })();
   }, []);
+
+  const loadData = async () => {
+    setState("loading");
+    try {
+      const projects = await proxy("/projects").then((d) => Array.isArray(d) ? d : d.projects ?? []);
+      if (!projects.length) { setState("no-projects"); return; }
+      const first = projects[0];
+      setProjectName(first.name);
+      const vis = await proxy("/visibility", "GET", { projectId: first.id, type: "overview" });
+      const list = Array.isArray(vis) ? vis : vis.scores ?? vis.brands ?? vis.data ?? [];
+      setScores(normalize(Array.isArray(list) ? list : []));
+      setState("loaded");
+    } catch {
+      setState("error");
+    }
+  };
 
   const myBrand = scores.find((s) => s.isOwn) ?? scores[0];
   // Own brand first, then the rest by share of voice.
@@ -94,6 +101,27 @@ export function AiVisibilityWidget() {
           <Link href="/ai-visibility" className="text-xs text-violet-600 hover:underline flex items-center gap-0.5 shrink-0">
             Connect <ChevronRight className="w-3 h-3" />
           </Link>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (state === "idle") {
+    return (
+      <Card>
+        <CardContent className="py-5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center">
+              <Eye className="w-4 h-4 text-violet-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">AI Visibility</p>
+              <p className="text-xs text-gray-500">Loaded on demand to save your API quota.</p>
+            </div>
+          </div>
+          <Button size="sm" variant="outline" onClick={loadData} className="shrink-0">
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Load
+          </Button>
         </CardContent>
       </Card>
     );

@@ -329,7 +329,8 @@ function OnboardModal({ onClose, onCreated }: { onClose: () => void; onCreated: 
 function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () => void }) {
   const [scores, setScores] = useState<VisibilityScore[]>([]);
   const [runStatus, setRunStatus] = useState<RunStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [runLoading, setRunLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState("");
@@ -482,21 +483,14 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }, [projectId]);
 
-  useEffect(() => { fetchScores(); fetchTrends(); fetchTopics(); }, [fetchScores, fetchTrends, fetchTopics]);
-
-  // On open, detect a run already in progress (e.g. started elsewhere) so the
-  // progress indicator and polling resume after a page reload.
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await olFetch("/prompts/status", "GET", undefined, { projectId });
-        if (data?.status === "running" && data.runId) {
-          setRunStatus({ status: "running", runId: data.runId, totalTasks: data.totalTasks, completedTasks: data.completedTasks });
-        }
-      } catch {}
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  // Loading OpenLens data costs API quota, so it's manual — the user clicks
+  // "Load data" instead of auto-fetching on every page open.
+  const loadAll = useCallback(() => {
+    setLoaded(true);
+    fetchScores();
+    fetchTrends();
+    fetchTopics();
+  }, [fetchScores, fetchTrends, fetchTopics]);
 
   // Auto-select the first topic and load its insight.
   useEffect(() => {
@@ -638,7 +632,13 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
         </div>
       )}
 
-      {loading ? (
+      {!loaded ? (
+        <div className="text-center py-20">
+          <Eye className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm text-gray-500 mb-4">Visibility data is loaded on demand to save your OpenLens API quota.</p>
+          <Button onClick={loadAll} className="bg-violet-600 hover:bg-violet-700 text-white">Load data</Button>
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center py-20 text-gray-400 text-sm gap-2">
           <Loader2 className="w-5 h-5 animate-spin" /> Loading scores…
         </div>
