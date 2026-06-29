@@ -10,6 +10,7 @@ import { Plus, CalendarDays, AlertCircle, Trash2, Eye, EyeOff, ExternalLink, X, 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { TaskTodoList } from "@/components/tasks/task-todo-list";
+import { CommentThread } from "@/components/comments/comment-thread";
 
 interface TaskLink { id: string; url: string; label: string; }
 interface Assignee { user: { id: string; name: string }; }
@@ -31,6 +32,7 @@ interface Task {
   user: { id: string; name: string; companyName?: string | null };
   links?: TaskLink[];
   assignees?: Assignee[];
+  commentCount?: number;
 }
 
 interface TeamMember { id: string; name: string; email: string; }
@@ -464,6 +466,11 @@ export default function AdminTasksPage() {
                             ) : null}
                           </div>
                         )}
+                      </div>
+
+                      {/* Comments — shared with the client side so agency sees client replies */}
+                      <div className="mt-2 border-t pt-2">
+                        <CommentThread commentsUrl={`/api/tasks/${task.id}/comments`} initialCount={task.commentCount ?? 0} />
                       </div>
                     </CardContent>
                   </div>
