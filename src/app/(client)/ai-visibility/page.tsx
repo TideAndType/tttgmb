@@ -339,6 +339,43 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
   const [rawScores, setRawScores] = useState<any>(null);
   const [showRaw, setShowRaw] = useState(false);
 
+  const [topics, setTopics] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState("");
+  const [insight, setInsight] = useState("");
+  const [insightLoading, setInsightLoading] = useState(false);
+  const [insightError, setInsightError] = useState("");
+
+  const fetchTopics = useCallback(async () => {
+    try {
+      const data = await olFetch("/visibility", "GET", undefined, { projectId, type: "topics" });
+      const arr = Array.isArray(data) ? data : data.topics ?? data.data ?? [];
+      const mapped = (Array.isArray(arr) ? arr : [])
+        .map((t: any) => ({ id: t.topicId ?? t.id ?? "", name: t.topic ?? t.name ?? t.title ?? t.topicName ?? "Topic" }))
+        .filter((t: any) => t.id);
+      // De-dupe by id (per-topic summaries can repeat across platforms).
+      const seen = new Set<string>();
+      setTopics(mapped.filter((t: any) => (seen.has(t.id) ? false : (seen.add(t.id), true))));
+    } catch {
+      setTopics([]);
+    }
+  }, [projectId]);
+
+  const fetchInsight = useCallback(async (topicId: string) => {
+    if (!topicId) { setInsight(""); return; }
+    setInsightLoading(true);
+    setInsightError("");
+    setInsight("");
+    try {
+      const data = await olFetch("/insights/topic", "GET", undefined, { projectId, topicId });
+      setInsight(data.insight ?? "");
+    } catch (e: any) {
+      // 404 = no usable run / unknown topic; show a friendly note rather than an error.
+      setInsightError(/404/.test(e.message || "") ? "No insight available for this topic yet — run a scan first." : e.message);
+    } finally {
+      setInsightLoading(false);
+    }
+  }, [projectId]);
+
   const [engines, setEngines] = useState<any>(null);
   const [enginesLoading, setEnginesLoading] = useState(false);
   const [enginesError, setEnginesError] = useState("");
@@ -405,7 +442,15 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }, [projectId]);
 
-  useEffect(() => { fetchScores(); fetchTrends(); }, [fetchScores, fetchTrends]);
+  useEffect(() => { fetchScores(); fetchTrends(); fetchTopics(); }, [fetchScores, fetchTrends, fetchTopics]);
+
+  // Auto-select the first topic and load its insight.
+  useEffect(() => {
+    if (topics.length > 0 && !selectedTopic) {
+      setSelectedTopic(topics[0].id);
+      fetchInsight(topics[0].id);
+    }
+  }, [topics, selectedTopic, fetchInsight]);
 
   // Poll run status
   useEffect(() => {
@@ -418,11 +463,13 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
           clearInterval(t);
           fetchScores();
           fetchTrends();
+          fetchTopics();
+          if (selectedTopic) fetchInsight(selectedTopic);
         }
       } catch {}
     }, 15000);
     return () => clearInterval(t);
-  }, [runStatus, projectId, fetchScores, fetchTrends]);
+  }, [runStatus, projectId, fetchScores, fetchTrends, fetchTopics, fetchInsight, selectedTopic]);
 
   async function startScan() {
     setRunLoading(true);
@@ -559,6 +606,40 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
                     <Line type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} dot={false} name="Visibility" />
                   </LineChart>
                 </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* AI-generated insight per topic */}
+          {topics.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base">AI Insight</CardTitle>
+                  <CardDescription className="text-xs">An actionable takeaway for the selected topic</CardDescription>
+                </div>
+                <select
+                  value={selectedTopic}
+                  onChange={(e) => { setSelectedTopic(e.target.value); fetchInsight(e.target.value); }}
+                  className="border border-gray-200 dark:border-gray-700 rounded-md px-2 py-1.5 text-sm bg-white dark:bg-gray-900 max-w-[220px]"
+                >
+                  {topics.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </CardHeader>
+              <CardContent>
+                {insightLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Generating insight…
+                  </div>
+                ) : insightError ? (
+                  <p className="text-sm text-gray-400">{insightError}</p>
+                ) : insight ? (
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{insight}</p>
+                ) : (
+                  <p className="text-sm text-gray-400">Select a topic to see its insight.</p>
+                )}
               </CardContent>
             </Card>
           )}
