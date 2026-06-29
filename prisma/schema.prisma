@@ -211,6 +211,32 @@ model ApprovalComment {
   createdAt     DateTime    @default(now())
 }
 
+model CheckIn {
+  id        String          @id @default(cuid())
+  userId    String          // target company owner (client)
+  prompt    String
+  cadence   String          @default("weekdays")
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  answers   CheckInAnswer[]
+
+  @@index([userId])
+}
+
+model CheckInAnswer {
+  id         String   @id @default(cuid())
+  checkInId  String
+  checkIn    CheckIn  @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  userId     String
+  authorName String
+  body       String   @db.Text
+  date       DateTime @db.Date
+  createdAt  DateTime @default(now())
+
+  @@unique([checkInId, userId, date])
+  @@index([checkInId])
+}
+
 model Announcement {
   id         String   @id @default(cuid())
   userId     String   // target client (company owner)

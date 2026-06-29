@@ -56,6 +56,7 @@ const navGroups: {
       { href: "/admin/leads", label: "Leads", icon: Target },
       { href: "/admin/messages", label: "Messages", icon: MessageCircle },
       { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
+      { href: "/admin/checkins", label: "Check-ins", icon: MessageCircle },
       { href: "/admin/meetings", label: "Meetings", icon: Video },
     ],
   },

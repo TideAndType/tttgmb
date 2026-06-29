@@ -25,6 +25,7 @@ import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
 import { UserAvatar } from "@/components/ui/avatar";
+import { CheckInsWidget } from "@/components/checkins/checkins-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -282,6 +283,9 @@ export default async function DashboardPage() {
           ))}
         </div>
       )}
+
+      {/* Automatic check-ins */}
+      <CheckInsWidget />
 
       {/* Module grid — Basecamp-style equal cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
