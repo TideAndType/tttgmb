@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Alert } from "@/components/ui/alert";
 import { Users, Trash2, Plus, Globe, Eye, StickyNote, X, History, Paperclip, MoreHorizontal } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { UserAvatar } from "@/components/ui/avatar";
 import Link from "next/link";
 
 interface Client {
@@ -21,6 +22,7 @@ interface Client {
   companyName: string | null;
   gscProperty: string | null;
   createdAt: string;
+  image?: string | null;
 }
 
 interface Member {
@@ -28,18 +30,11 @@ interface Member {
   name: string;
   email: string;
   createdAt: string;
+  image?: string | null;
 }
 
-const AVATAR_COLORS = ["bg-teal-500", "bg-violet-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-orange-500"];
-
-function Avatar({ name, seed }: { name: string; seed: string }) {
-  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  const idx = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
-  return (
-    <div className={`h-7 w-7 rounded-full ${AVATAR_COLORS[idx]} text-white text-[10px] font-semibold flex items-center justify-center shrink-0`} title={name}>
-      {initials}
-    </div>
-  );
+function Avatar({ name, seed, image }: { name: string; seed: string; image?: string | null }) {
+  return <UserAvatar name={name} seed={seed} image={image} className="h-7 w-7 text-[10px]" />;
 }
 
 export default function AdminPage() {
@@ -346,7 +341,7 @@ export default function AdminPage() {
                   <TableRow key={client.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <Avatar name={client.name} seed={client.id} />
+                        <Avatar name={client.name} seed={client.id} image={client.image} />
                         <span className="truncate">{client.name}</span>
                       </div>
                     </TableCell>
@@ -581,7 +576,7 @@ export default function AdminPage() {
                   {teamMembers.map((member) => (
                     <div key={member.id} className="flex items-center justify-between py-2 border-b border-border last:border-0">
                       <div className="flex items-center gap-2.5">
-                        <Avatar name={member.name} seed={member.id} />
+                        <Avatar name={member.name} seed={member.id} image={member.image} />
                         <div>
                           <p className="text-sm font-medium">{member.name}</p>
                           <p className="text-xs text-muted-foreground">{member.email}</p>

@@ -3,17 +3,15 @@ import { useEffect, useState } from "react";
 import { Trash2, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { UserAvatar } from "@/components/ui/avatar";
 
-interface User { id: string; name: string; email: string; role: string; companyName: string | null; createdAt: string; _count: { projects: number; invoices: number }; }
+interface User { id: string; name: string; email: string; role: string; companyName: string | null; createdAt: string; image?: string | null; _count: { projects: number; invoices: number }; }
 
 const ROLES = ["SUPER_ADMIN", "ADMIN", "CLIENT"];
 const roleColors: Record<string, string> = { SUPER_ADMIN: "bg-violet-100 text-violet-700", ADMIN: "bg-blue-100 text-blue-700", CLIENT: "bg-green-100 text-green-700" };
 
-const AVATAR_COLORS = ["bg-teal-500", "bg-violet-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-orange-500"];
-function Avatar({ name, seed }: { name: string; seed: string }) {
-  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  const idx = seed.split("").reduce((a, c) => a + c.charCodeAt(0), 0) % AVATAR_COLORS.length;
-  return <div className={`h-8 w-8 rounded-full ${AVATAR_COLORS[idx]} text-white text-[11px] font-semibold flex items-center justify-center shrink-0`} title={name}>{initials}</div>;
+function Avatar({ name, seed, image }: { name: string; seed: string; image?: string | null }) {
+  return <UserAvatar name={name} seed={seed} image={image} className="h-8 w-8 text-[11px]" />;
 }
 
 export default function SuperAdminUsersPage() {
@@ -84,7 +82,7 @@ export default function SuperAdminUsersPage() {
                   <tr key={u.id} className="border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <Avatar name={u.name} seed={u.id} />
+                        <Avatar name={u.name} seed={u.id} image={u.image} />
                         <div className="min-w-0">
                           <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{u.name}</p>
                           <p className="text-xs text-gray-400 truncate">{u.email}</p>

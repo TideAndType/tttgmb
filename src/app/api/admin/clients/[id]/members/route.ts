@@ -26,7 +26,7 @@ export async function GET(
 
   const members = await prisma.user.findMany({
     where: { companyId: client.companyId, id: { not: params.id } },
-    select: { id: true, name: true, email: true, createdAt: true },
+    select: { id: true, name: true, email: true, createdAt: true, image: true },
     orderBy: { createdAt: "asc" },
   });
 

@@ -22,6 +22,7 @@ export async function GET() {
       companyName: true,
       gscProperty: true,
       createdAt: true,
+      image: true,
     },
     orderBy: { createdAt: "desc" },
   });

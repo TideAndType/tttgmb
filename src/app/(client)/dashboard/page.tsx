@@ -23,21 +23,12 @@ import {
 import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 import { DashboardCanvas } from "@/components/dashboard/dashboard-canvas";
+import { UserAvatar } from "@/components/ui/avatar";
 
 export const dynamic = "force-dynamic";
 
-const AVATAR_COLORS = ["bg-teal-500", "bg-violet-500", "bg-amber-500", "bg-rose-500", "bg-blue-500", "bg-emerald-500", "bg-indigo-500", "bg-orange-500"];
-
-function Avatar({ name, i }: { name: string; i: number }) {
-  const initials = (name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  return (
-    <div
-      className={`h-9 w-9 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} text-white text-xs font-semibold flex items-center justify-center ring-2 ring-card -ml-2 first:ml-0`}
-      title={name}
-    >
-      {initials}
-    </div>
-  );
+function Avatar({ name, image }: { name: string; image?: string | null }) {
+  return <UserAvatar name={name} seed={name} image={image} className="h-9 w-9 text-xs ring-2 ring-card -ml-2 first:ml-0" />;
 }
 
 // Basecamp-style module card: centered title (with icon) + underline rule, then content.
@@ -188,7 +179,7 @@ export default async function DashboardPage() {
 
   const teamUsers = await prisma.user.findMany({
     where: { id: { in: companyUserIds } },
-    select: { id: true, name: true },
+    select: { id: true, name: true, image: true },
     take: 16,
   });
 
@@ -211,8 +202,8 @@ export default async function DashboardPage() {
         {teamUsers.length > 0 && (
           <div className="mt-4 flex flex-col items-center">
             <div className="flex items-center justify-center">
-              {teamUsers.map((u, i) => (
-                <Avatar key={u.id} name={u.name} i={i} />
+              {teamUsers.map((u) => (
+                <Avatar key={u.id} name={u.name} image={u.image} />
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-2 uppercase tracking-wider">The team</p>

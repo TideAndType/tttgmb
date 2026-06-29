@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { TwoFactorSettings } from "@/components/profile/two-factor-settings";
+import { AvatarUpload } from "@/components/profile/avatar-upload";
 import { Button } from "@/components/ui/button";
 import { Trash2, UserPlus, Mail, ShieldCheck } from "lucide-react";
 import { PERMISSIONS, ALL_PERMISSION_KEYS } from "@/lib/permissions";
@@ -263,6 +264,9 @@ export default function ProfilePage() {
           <CardTitle className="text-base font-semibold">Profile Information</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="mb-6 pb-6 border-b border-border">
+            <AvatarUpload name={name || user?.name || "You"} />
+          </div>
           <form onSubmit={handleProfileSave} className="space-y-4">
             <div className="space-y-1">
               <label className="text-sm font-medium text-foreground" htmlFor="name">Name</label>
