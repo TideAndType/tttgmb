@@ -232,45 +232,44 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Manage client accounts</p>
+      {/* Centered header */}
+      <div className="text-center pt-2 mb-8">
+        <p className="text-sm text-muted-foreground">Client Portal</p>
+        <h1 className="text-3xl font-bold text-foreground mt-0.5">Admin Dashboard</h1>
+        <p className="text-muted-foreground mt-1">Manage client accounts</p>
+        <div className="mt-4 flex justify-center">
+          <Link href="/admin/clients/new">
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              New Client
+            </Button>
+          </Link>
         </div>
-        <Link href="/admin/clients/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            New Client
-          </Button>
-        </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Clients</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{clients.length}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">GSC Connected</CardTitle>
-            <Globe className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{clients.filter(c => c.gscProperty).length}</p>
-          </CardContent>
-        </Card>
+      {/* Stat modules — centered title with underline rule */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+        {[
+          { label: "Total Clients", value: clients.length, Icon: Users },
+          { label: "GSC Connected", value: clients.filter((c) => c.gscProperty).length, Icon: Globe },
+          { label: "Admins", value: clients.filter((c) => c.role === "ADMIN").length, Icon: Eye },
+        ].map(({ label, value, Icon }) => (
+          <Card key={label}>
+            <div className="text-center px-5 pt-5 pb-3 border-b border-border">
+              <h3 className="font-bold text-foreground inline-flex items-center gap-2"><Icon className="h-4 w-4 text-muted-foreground" />{label}</h3>
+            </div>
+            <CardContent className="pt-4 text-center">
+              <p className="text-3xl font-bold">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>All Clients</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <div className="text-center px-5 pt-5 pb-3 border-b border-border">
+          <h3 className="font-bold text-foreground">All Clients</h3>
+        </div>
+        <CardContent className="pt-4">
           {loading ? (
             <p className="text-muted-foreground text-center py-8">Loading...</p>
           ) : clients.length === 0 ? (
