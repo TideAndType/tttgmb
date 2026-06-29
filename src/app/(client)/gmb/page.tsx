@@ -110,7 +110,7 @@ export default function GmbPage() {
         setLoading(false);
         return;
       }
-      // GMB connected but no account set — try loading accounts
+      // "GMB account not selected" (or anything else) — connected but no account set
       setGmbConnected(true);
       setAccountSet(false);
       loadAccounts();

@@ -30,6 +30,7 @@ export async function GET() {
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user?.gmbAccessToken || !user?.gmbRefreshToken) return NextResponse.json({ error: "GMB not connected" }, { status: 400 });
+  if (!user?.gmbAccountId) return NextResponse.json({ error: "GMB account not selected" }, { status: 400 });
   if (!user?.gmbLocationId) return NextResponse.json({ error: "GMB location not selected" }, { status: 400 });
 
   try {
