@@ -19,6 +19,7 @@ import {
   CalendarDays,
   Receipt,
   Compass,
+  Megaphone,
 } from "lucide-react";
 import Link from "next/link";
 import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
@@ -183,6 +184,12 @@ export default async function DashboardPage() {
     take: 16,
   });
 
+  const announcements = await prisma.announcement.findMany({
+    where: { userId: { in: companyUserIds } },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+
   const quickLinks = [
     { label: "SEO Overview", icon: Search, href: "/seo" },
     { label: "Keywords", icon: Key, href: "/keywords" },
@@ -254,6 +261,26 @@ export default async function DashboardPage() {
             </ul>
           </CardContent>
         </Card>
+      )}
+
+      {/* Announcements from your agency */}
+      {announcements.length > 0 && (
+        <div className="space-y-3">
+          {announcements.map((a) => (
+            <Card key={a.id} className="border-primary/30 bg-primary/5">
+              <CardContent className="py-4 flex items-start gap-3">
+                <Megaphone className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-foreground">{a.title}</p>
+                    <span className="text-xs text-muted-foreground">{new Date(a.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap mt-0.5">{a.body}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
 
       {/* Module grid — Basecamp-style equal cards */}

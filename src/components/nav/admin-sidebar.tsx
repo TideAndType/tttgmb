@@ -34,6 +34,7 @@ import {
   UserCog,
   ChevronDown,
   ChevronRight,
+  Megaphone,
 } from "lucide-react";
 
 const navGroups: {
@@ -54,6 +55,7 @@ const navGroups: {
       { href: "/admin/clients/new", label: "New Client", icon: UserPlus },
       { href: "/admin/leads", label: "Leads", icon: Target },
       { href: "/admin/messages", label: "Messages", icon: MessageCircle },
+      { href: "/admin/announcements", label: "Announcements", icon: Megaphone },
       { href: "/admin/meetings", label: "Meetings", icon: Video },
     ],
   },

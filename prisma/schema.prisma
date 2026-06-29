@@ -211,6 +211,17 @@ model ApprovalComment {
   createdAt     DateTime    @default(now())
 }
 
+model Announcement {
+  id         String   @id @default(cuid())
+  userId     String   // target client (company owner)
+  authorName String
+  title      String
+  body       String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
+
 model Calendar {
   id        String          @id @default(cuid())
   name      String
