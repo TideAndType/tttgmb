@@ -110,6 +110,36 @@ model User {
   invoices        Invoice[]
   assignedTasks   TaskAssignee[]
   meetings        Meeting[]
+  trackedKeywords TrackedKeyword[]
+}
+
+model TrackedKeyword {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  tags      String[]           @default([])
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  snapshots KeywordSnapshot[]
+
+  @@unique([userId, query])
+  @@index([userId])
+}
+
+model KeywordSnapshot {
+  id        String         @id @default(cuid())
+  keywordId String
+  keyword   TrackedKeyword @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  date      DateTime       @db.Date
+  position  Float
+  clicks    Int            @default(0)
+  impressions Int          @default(0)
+  ctr       Float          @default(0)
+  createdAt DateTime       @default(now())
+
+  @@unique([keywordId, date])
+  @@index([keywordId])
 }
 
 model Proposal {
