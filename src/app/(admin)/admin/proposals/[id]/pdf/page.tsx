@@ -263,6 +263,18 @@ export default function ProposalPdfPage() {
               case "faq": return <FaqSection key={section.id} section={section} />;
               case "cta": return <CtaSection key={section.id} section={section} />;
               case "timeline": return <TimelineSection key={section.id} section={section} />;
+              case "image": return section.url ? (
+                <div key={section.id} className="px-10 py-8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={section.url} alt={section.caption || "Image"} className="w-full rounded-lg" />
+                  {section.caption && <p className="text-center text-sm text-gray-500 mt-2">{section.caption}</p>}
+                </div>
+              ) : null;
+              case "video": return section.url ? (
+                <div key={section.id} className="px-10 py-8 text-center">
+                  <a href={section.url} className="text-blue-600 underline">▶ {section.caption || "Watch the video"}</a>
+                </div>
+              ) : null;
               default: return null;
             }
           })}

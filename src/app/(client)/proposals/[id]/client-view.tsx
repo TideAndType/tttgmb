@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle } from "lucide-react";
 import { SignaturePad } from "@/components/proposals/signature-pad";
+import { toEmbedUrl } from "@/lib/embed";
 
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
@@ -230,6 +231,36 @@ function TimelineSection({ section }: { section: Section }) {
   );
 }
 
+function ImageSection({ section }: { section: Section }) {
+  const s = section as any;
+  if (!s.url) return null;
+  return (
+    <div className="px-10 py-8">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={s.url} alt={s.caption || "Image"} className="w-full rounded-lg" />
+      {s.caption && <p className="text-center text-sm text-gray-500 mt-2">{s.caption}</p>}
+    </div>
+  );
+}
+
+function VideoSection({ section }: { section: Section }) {
+  const s = section as any;
+  const embed = toEmbedUrl(s.url);
+  if (!embed) return null;
+  return (
+    <div className="px-10 py-8">
+      <div className="relative w-full rounded-lg overflow-hidden bg-black" style={{ aspectRatio: "16 / 9" }}>
+        {embed.kind === "iframe" ? (
+          <iframe src={embed.src} className="absolute inset-0 w-full h-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+        ) : (
+          <video src={embed.src} controls className="absolute inset-0 w-full h-full" />
+        )}
+      </div>
+      {s.caption && <p className="text-center text-sm text-gray-500 mt-2">{s.caption}</p>}
+    </div>
+  );
+}
+
 function SignatureSection({ section, proposal, onAccept, onDecline }: {
   section: Section; proposal: ProposalData; onAccept: (name: string, signature: string | null) => Promise<void>; onDecline: () => Promise<void>;
 }) {
@@ -390,6 +421,8 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
               case "faq": return <FaqSection key={section.id} section={section} />;
               case "cta": return <CtaSection key={section.id} section={section} />;
               case "timeline": return <TimelineSection key={section.id} section={section} />;
+              case "image": return <ImageSection key={section.id} section={section} />;
+              case "video": return <VideoSection key={section.id} section={section} />;
               default: return null;
             }
           })}

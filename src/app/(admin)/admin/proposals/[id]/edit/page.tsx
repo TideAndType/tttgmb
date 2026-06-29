@@ -7,6 +7,7 @@ import {
   FileText, Type, Table, ScrollText, PenLine, Plus, X, Eye, Send,
   Check, Loader2, GripVertical, Copy, Trash2, Monitor, Smartphone,
   Layout, Palette, Star, MessageSquare, HelpCircle, Megaphone, GitBranch, Sparkles, Link2, Download,
+  Image as ImageIcon, Video as VideoIcon, Upload,
 } from "lucide-react";
 import {
   DndContext,
@@ -30,6 +31,7 @@ import { LayoutSectionEditor } from "./layout-section";
 import { PropertiesBar } from "./properties-bar";
 import { AiAssistPanel } from "@/components/ai-assist-panel";
 import { SectionAiPanel } from "@/components/proposals/section-ai-panel";
+import { toEmbedUrl } from "@/lib/embed";
 
 type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number };
 type ServiceItem = { id: string; icon: string; name: string; description: string };
@@ -49,6 +51,8 @@ type Section =
   | { id: string; type: "faq"; heading: string; items: FaqItem[] }
   | { id: string; type: "cta"; heading: string; subtext: string; buttonLabel: string; buttonUrl: string; bgColor: string; bgVideo?: string }
   | { id: string; type: "timeline"; heading: string; steps: TimelineStep[] }
+  | { id: string; type: "image"; url: string; caption: string }
+  | { id: string; type: "video"; url: string; caption: string }
   | LayoutSection;
 
 type Brand = { primaryColor: string; accentColor: string; font: string; logoUrl: string };
@@ -78,12 +82,39 @@ function fmt(amount: number, currency: string) {
 const SECTION_ICONS: Record<string, React.ElementType> = {
   cover: FileText, text: Type, pricing: Table, terms: ScrollText, signature: PenLine,
   hero: Layout, services: Star, testimonials: MessageSquare, faq: HelpCircle, cta: Megaphone, timeline: GitBranch, layout: Layout,
+  image: ImageIcon, video: VideoIcon,
 };
 
 const SECTION_LABELS: Record<string, string> = {
   cover: "Cover", text: "Text Block", pricing: "Pricing Table", terms: "Terms & Conditions", signature: "Signature",
   hero: "Hero Banner", services: "Services", testimonials: "Testimonials", faq: "FAQ", cta: "Call to Action", timeline: "Timeline", layout: "Layout Block",
+  image: "Image", video: "Video",
 };
+
+// Downscale an image file to a ~1200px-wide JPEG data URL (DB/Vercel-safe).
+function imageFileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new window.Image();
+      img.onload = () => {
+        const maxW = 1200;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("no canvas"));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = reject;
+      img.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-gray-100 text-gray-700 border-gray-200", SENT: "bg-blue-100 text-blue-700 border-blue-200",
@@ -417,6 +448,58 @@ function WysiwygTimeline({ section, onChange, onAiClick }: { section: Extract<Se
   );
 }
 
+function WysiwygImage({ section, onChange }: { section: Extract<Section, { type: "image" }>; onChange: (s: Section) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setUploading(true);
+    try { onChange({ ...section, url: await imageFileToDataUrl(f) }); } catch { /* ignore */ }
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+  return (
+    <div className="py-10 border-b border-gray-100">
+      {section.url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={section.url} alt={section.caption || "Image"} className="w-full rounded-lg" />
+      ) : (
+        <div className="w-full rounded-lg border-2 border-dashed border-gray-300 py-16 text-center text-gray-400 text-sm">No image yet — paste a URL or upload below</div>
+      )}
+      <div className="flex flex-wrap items-center gap-2 mt-3">
+        <input value={section.url.startsWith("data:") ? "" : section.url} onChange={(e) => onChange({ ...section, url: e.target.value })} placeholder="Image URL (https://…)" className="flex-1 min-w-[180px] text-sm border border-gray-200 rounded px-2 py-1.5" />
+        <Button type="button" size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1" /> Upload</>}
+        </Button>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+      </div>
+      <input value={section.caption} onChange={(e) => onChange({ ...section, caption: e.target.value })} placeholder="Caption (optional)" className="w-full text-sm text-gray-500 text-center mt-2 bg-transparent outline-none focus:bg-blue-50 rounded px-1 py-1" />
+    </div>
+  );
+}
+
+function WysiwygVideo({ section, onChange }: { section: Extract<Section, { type: "video" }>; onChange: (s: Section) => void }) {
+  const embed = toEmbedUrl(section.url);
+  return (
+    <div className="py-10 border-b border-gray-100">
+      {embed ? (
+        <div className="relative w-full rounded-lg overflow-hidden bg-black" style={{ aspectRatio: "16 / 9" }}>
+          {embed.kind === "iframe" ? (
+            <iframe src={embed.src} className="absolute inset-0 w-full h-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+          ) : (
+            <video src={embed.src} controls className="absolute inset-0 w-full h-full" />
+          )}
+        </div>
+      ) : (
+        <div className="w-full rounded-lg border-2 border-dashed border-gray-300 py-16 text-center text-gray-400 text-sm">Paste a YouTube, Vimeo, or .mp4 URL below</div>
+      )}
+      <input value={section.url} onChange={(e) => onChange({ ...section, url: e.target.value })} placeholder="Video URL (YouTube, Vimeo, or .mp4)" className="w-full text-sm border border-gray-200 rounded px-2 py-1.5 mt-3" />
+      <input value={section.caption} onChange={(e) => onChange({ ...section, caption: e.target.value })} placeholder="Caption (optional)" className="w-full text-sm text-gray-500 text-center mt-2 bg-transparent outline-none focus:bg-blue-50 rounded px-1 py-1" />
+    </div>
+  );
+}
+
 function BrandPanel({ brand, onChange }: { brand: Brand; onChange: (b: Brand) => void }) {
   return (
     <div className="p-4 space-y-4">
@@ -524,6 +607,8 @@ export default function ProposalEditPage() {
       case "faq": section = { id: sid, type: "faq", heading: "Frequently Asked Questions", items: [{ id: newId(), question: "How long does the project take?", answer: "Typically 4–6 weeks depending on scope." }] }; break;
       case "cta": section = { id: sid, type: "cta", heading: "Ready to Get Started?", subtext: "Let's build something great together.", buttonLabel: "Contact Us", buttonUrl: "", bgColor: "#7c3aed" }; break;
       case "timeline": section = { id: sid, type: "timeline", heading: "Our Process", steps: [{ id: newId(), title: "Discovery", description: "We learn about your goals and requirements." }] }; break;
+      case "image": section = { id: sid, type: "image", url: "", caption: "" }; break;
+      case "video": section = { id: sid, type: "video", url: "", caption: "" }; break;
       case "layout": section = makeLayoutSection("1col"); break;
       default: return;
     }
@@ -637,7 +722,7 @@ export default function ProposalEditPage() {
                 <Button variant="outline" size="sm" className="w-full" onClick={() => setAddMenuOpen((v) => !v)}><Plus className="h-4 w-4 mr-2" /> Add Section</Button>
                 {addMenuOpen && (
                   <div className="absolute bottom-full left-2.5 right-2.5 mb-1 bg-card border border-border rounded-md shadow-lg overflow-hidden z-10 max-h-80 overflow-y-auto">
-                    {([["cover", "Cover"], ["text", "Text Block"], ["pricing", "Pricing Table"], ["terms", "Terms & Conditions"], ["signature", "Signature"], ["hero", "Hero Banner"], ["services", "Services Grid"], ["testimonials", "Testimonials"], ["faq", "FAQ"], ["cta", "Call to Action"], ["timeline", "Timeline"]] as const).map(([type, label]) => {
+                    {([["cover", "Cover"], ["text", "Text Block"], ["pricing", "Pricing Table"], ["terms", "Terms & Conditions"], ["signature", "Signature"], ["hero", "Hero Banner"], ["services", "Services Grid"], ["testimonials", "Testimonials"], ["faq", "FAQ"], ["cta", "Call to Action"], ["timeline", "Timeline"], ["image", "Image"], ["video", "Video"]] as const).map(([type, label]) => {
                       const Icon = SECTION_ICONS[type];
                       return <button key={type} className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-foreground hover:bg-accent transition-colors" onClick={() => addSection(type)}><Icon className="h-4 w-4 text-muted-foreground" /> {label}</button>;
                     })}
@@ -679,6 +764,8 @@ export default function ProposalEditPage() {
                       {section.type === "faq" && <WysiwygFaq section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "cta" && <WysiwygCta section={section} onChange={updateSection} />}
                       {section.type === "timeline" && <WysiwygTimeline section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
+                      {section.type === "image" && <WysiwygImage section={section} onChange={updateSection} />}
+                      {section.type === "video" && <WysiwygVideo section={section} onChange={updateSection} />}
                       {section.type === "layout" && (
                         <LayoutSectionEditor
                           section={section as LayoutSection}

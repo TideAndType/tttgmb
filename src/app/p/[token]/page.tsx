@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { createNotificationForAdmins } from "@/lib/notifications";
+import { toEmbedUrl } from "@/lib/embed";
 
 export const dynamic = "force-dynamic";
 
@@ -186,6 +187,26 @@ export default async function PublicProposalPage({ params }: { params: { token: 
               case "services": return <ServicesSection key={section.id} section={section} />;
               case "cta": return <CtaSection key={section.id} section={section} />;
               case "signature": return <SignatureSection key={section.id} section={section} proposal={proposal} />;
+              case "image": return section.url ? (
+                <div key={section.id} className="px-10 py-8">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={section.url} alt={section.caption || "Image"} className="w-full rounded-lg" />
+                  {section.caption && <p className="text-center text-sm text-gray-500 mt-2">{section.caption}</p>}
+                </div>
+              ) : null;
+              case "video": {
+                const e = toEmbedUrl(section.url);
+                return e ? (
+                  <div key={section.id} className="px-10 py-8">
+                    <div className="relative w-full rounded-lg overflow-hidden bg-black" style={{ aspectRatio: "16 / 9" }}>
+                      {e.kind === "iframe"
+                        ? <iframe src={e.src} className="absolute inset-0 w-full h-full" allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
+                        : <video src={e.src} controls className="absolute inset-0 w-full h-full" />}
+                    </div>
+                    {section.caption && <p className="text-center text-sm text-gray-500 mt-2">{section.caption}</p>}
+                  </div>
+                ) : null;
+              }
               default: return null;
             }
           })}
