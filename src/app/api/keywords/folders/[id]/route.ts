@@ -12,40 +12,31 @@ function effectiveUserId(session: any): string {
   return (v && (u.role === "ADMIN" || u.role === "SUPER_ADMIN")) ? v : u.id;
 }
 
-// Update tags on a tracked keyword.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = effectiveUserId(session);
-  const existing = await prisma.trackedKeyword.findUnique({ where: { id: params.id } });
-  if (!existing || existing.userId !== userId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  const existing = await prisma.keywordFolder.findUnique({ where: { id: params.id } });
+  if (!existing || existing.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body = await req.json();
-  const data: { tags?: string[]; folderId?: string | null } = {};
-  if (body.tags !== undefined) {
-    data.tags = Array.isArray(body.tags) ? body.tags.map((t: any) => String(t).trim()).filter(Boolean) : [];
-  }
-  if (body.folderId !== undefined) {
-    data.folderId = body.folderId ? String(body.folderId) : null;
-  }
-  await prisma.trackedKeyword.update({ where: { id: params.id }, data });
+  const { name } = await req.json();
+  const clean = String(name || "").trim();
+  if (!clean) return NextResponse.json({ error: "Folder name required" }, { status: 400 });
+
+  await prisma.keywordFolder.update({ where: { id: params.id }, data: { name: clean } });
   return NextResponse.json({ ok: true });
 }
 
-// Stop tracking a keyword.
+// Delete the folder; keywords inside are kept (folder set to null via SetNull).
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const userId = effectiveUserId(session);
-  const existing = await prisma.trackedKeyword.findUnique({ where: { id: params.id } });
-  if (!existing || existing.userId !== userId) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  const existing = await prisma.keywordFolder.findUnique({ where: { id: params.id } });
+  if (!existing || existing.userId !== userId) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.trackedKeyword.delete({ where: { id: params.id } });
+  await prisma.keywordFolder.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

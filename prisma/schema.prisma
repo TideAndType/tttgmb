@@ -111,6 +111,19 @@ model User {
   assignedTasks   TaskAssignee[]
   meetings        Meeting[]
   trackedKeywords TrackedKeyword[]
+  keywordFolders  KeywordFolder[]
+}
+
+model KeywordFolder {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime         @default(now())
+  keywords  TrackedKeyword[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model TrackedKeyword {
@@ -119,12 +132,15 @@ model TrackedKeyword {
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   query     String
   tags      String[]           @default([])
+  folderId  String?
+  folder    KeywordFolder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
   snapshots KeywordSnapshot[]
 
   @@unique([userId, query])
   @@index([userId])
+  @@index([folderId])
 }
 
 model KeywordSnapshot {

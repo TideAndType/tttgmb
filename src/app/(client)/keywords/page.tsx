@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
-import { Search, Plus, X, TrendingUp, TrendingDown, Minus, Tag } from "lucide-react";
+import { Search, Plus, X, TrendingUp, TrendingDown, Minus, Tag, Folder as FolderIcon } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer, YAxis } from "recharts";
 
 interface KeywordRow {
@@ -22,9 +22,16 @@ interface TrackedKeyword {
   id: string;
   query: string;
   tags: string[];
+  folderId: string | null;
   latest: { date: string; position: number; clicks: number; impressions: number; ctr: number } | null;
   change: number | null;
   history: { date: string; position: number }[];
+}
+
+interface Folder {
+  id: string;
+  name: string;
+  count?: number;
 }
 
 function PositionBadge({ pos }: { pos: number }) {
@@ -79,9 +86,15 @@ export default function KeywordsPage() {
 
   const [newKeyword, setNewKeyword] = useState("");
   const [newTags, setNewTags] = useState("");
+  const [newFolderForKeyword, setNewFolderForKeyword] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [editingTagsFor, setEditingTagsFor] = useState<string | null>(null);
   const [tagDraft, setTagDraft] = useState("");
+
+  const [folders, setFolders] = useState<Folder[]>([]);
+  // null = all, "none" = uncategorized, otherwise a folder id
+  const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [newFolderName, setNewFolderName] = useState("");
 
   useEffect(() => {
     init();
@@ -89,7 +102,7 @@ export default function KeywordsPage() {
 
   const init = async () => {
     setLoading(true);
-    await loadTracked();
+    await Promise.all([loadTracked(), loadFolders()]);
     // Record today's snapshot in the background, then refresh history.
     fetch("/api/keywords/snapshot", { method: "POST" })
       .then((r) => (r.ok ? loadTracked() : null))
@@ -104,6 +117,41 @@ export default function KeywordsPage() {
       const data = await res.json();
       setTracked(data.keywords || []);
     }
+  };
+
+  const loadFolders = async () => {
+    const res = await fetch("/api/keywords/folders");
+    if (res.ok) {
+      const data = await res.json();
+      setFolders(data.folders || []);
+    }
+  };
+
+  const createFolder = async () => {
+    const name = newFolderName.trim();
+    if (!name) return;
+    await fetch("/api/keywords/folders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    setNewFolderName("");
+    loadFolders();
+  };
+
+  const deleteFolder = async (id: string) => {
+    await fetch(`/api/keywords/folders/${id}`, { method: "DELETE" });
+    if (activeFolder === id) setActiveFolder(null);
+    await Promise.all([loadFolders(), loadTracked()]);
+  };
+
+  const moveToFolder = async (keywordId: string, folderId: string | null) => {
+    await fetch(`/api/keywords/tracked/${keywordId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ folderId }),
+    });
+    await Promise.all([loadTracked(), loadFolders()]);
   };
 
   const loadDiscovered = async () => {
@@ -136,27 +184,33 @@ export default function KeywordsPage() {
     return Array.from(s).sort();
   }, [tracked]);
 
-  const visibleTracked = activeTag
-    ? tracked.filter((t) => t.tags.includes(activeTag))
-    : tracked;
+  const visibleTracked = tracked.filter((t) => {
+    if (activeFolder === "none" && t.folderId) return false;
+    if (activeFolder && activeFolder !== "none" && t.folderId !== activeFolder) return false;
+    if (activeTag && !t.tags.includes(activeTag)) return false;
+    return true;
+  });
 
-  const addKeyword = async (query: string, tags: string[]) => {
+  const addKeyword = async (query: string, tags: string[], folderId?: string | null) => {
     const q = query.trim();
     if (!q) return;
     await fetch("/api/keywords/tracked", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query: q, tags }),
+      body: JSON.stringify({ query: q, tags, folderId: folderId ?? null }),
     });
-    await loadTracked();
+    await Promise.all([loadTracked(), loadFolders()]);
     fetch("/api/keywords/snapshot", { method: "POST" }).then((r) => (r.ok ? loadTracked() : null)).catch(() => {});
   };
 
   const handleAddManual = async () => {
     const tags = newTags.split(",").map((t) => t.trim()).filter(Boolean);
-    await addKeyword(newKeyword, tags);
+    // If a folder filter is active, default new keyword into it.
+    const folderId = newFolderForKeyword || (activeFolder && activeFolder !== "none" ? activeFolder : null);
+    await addKeyword(newKeyword, tags, folderId);
     setNewKeyword("");
     setNewTags("");
+    setNewFolderForKeyword("");
   };
 
   const untrack = async (id: string) => {
@@ -244,6 +298,16 @@ export default function KeywordsPage() {
               onKeyDown={(e) => e.key === "Enter" && handleAddManual()}
               className="max-w-xs"
             />
+            <select
+              value={newFolderForKeyword}
+              onChange={(e) => setNewFolderForKeyword(e.target.value)}
+              className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground h-10"
+            >
+              <option value="">No folder</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
             <Button onClick={handleAddManual} disabled={!newKeyword.trim()}>
               <Plus className="h-4 w-4 mr-1" /> Track
             </Button>
@@ -256,8 +320,53 @@ export default function KeywordsPage() {
         <CardHeader>
           <CardTitle>Tracked Keywords</CardTitle>
           <CardDescription>{tracked.length} tracked</CardDescription>
+
+          {/* Folders */}
+          <div className="flex flex-wrap gap-2 items-center pt-3">
+            <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1">
+              <FolderIcon className="h-3.5 w-3.5" /> Folders:
+            </span>
+            <button onClick={() => setActiveFolder(null)}>
+              <Badge variant={activeFolder === null ? "default" : "outline"} className="cursor-pointer">All</Badge>
+            </button>
+            {folders.map((f) => (
+              <span key={f.id} className="inline-flex items-center group">
+                <button onClick={() => setActiveFolder(f.id === activeFolder ? null : f.id)}>
+                  <Badge variant={activeFolder === f.id ? "default" : "outline"} className="cursor-pointer">
+                    {f.name}{typeof f.count === "number" ? ` (${f.count})` : ""}
+                  </Badge>
+                </button>
+                <button
+                  onClick={() => deleteFolder(f.id)}
+                  title="Delete folder"
+                  className="ml-0.5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <button onClick={() => setActiveFolder(activeFolder === "none" ? null : "none")}>
+              <Badge variant={activeFolder === "none" ? "default" : "outline"} className="cursor-pointer">Uncategorized</Badge>
+            </button>
+            <div className="inline-flex items-center gap-1 ml-2">
+              <Input
+                placeholder="New folder"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && createFolder()}
+                className="h-7 text-xs w-32"
+              />
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={createFolder} disabled={!newFolderName.trim()}>
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+
           {allTags.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-2">
+            <div className="flex flex-wrap gap-2 items-center pt-2">
+              <span className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5" /> Tags:
+              </span>
               <button onClick={() => setActiveTag(null)}>
                 <Badge variant={activeTag === null ? "default" : "outline"} className="cursor-pointer">All</Badge>
               </button>
@@ -281,6 +390,7 @@ export default function KeywordsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Keyword</TableHead>
+                  <TableHead>Folder</TableHead>
                   <TableHead>Tags</TableHead>
                   <TableHead className="text-right">Position</TableHead>
                   <TableHead className="text-right">Change</TableHead>
@@ -292,6 +402,18 @@ export default function KeywordsPage() {
                 {visibleTracked.map((kw) => (
                   <TableRow key={kw.id}>
                     <TableCell className="font-medium">{kw.query}</TableCell>
+                    <TableCell>
+                      <select
+                        value={kw.folderId || ""}
+                        onChange={(e) => moveToFolder(kw.id, e.target.value || null)}
+                        className="border border-input rounded-md px-2 py-1 text-xs bg-background text-foreground max-w-[150px]"
+                      >
+                        <option value="">No folder</option>
+                        {folders.map((f) => (
+                          <option key={f.id} value={f.id}>{f.name}</option>
+                        ))}
+                      </select>
+                    </TableCell>
                     <TableCell>
                       {editingTagsFor === kw.id ? (
                         <div className="flex gap-1 items-center">

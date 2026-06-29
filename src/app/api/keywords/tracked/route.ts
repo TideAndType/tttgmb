@@ -32,6 +32,7 @@ export async function GET() {
       id: k.id,
       query: k.query,
       tags: k.tags,
+      folderId: k.folderId,
       latest: latest
         ? { date: latest.date, position: latest.position, clicks: latest.clicks, impressions: latest.impressions, ctr: latest.ctr }
         : null,
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest) {
     ? [body.query]
     : [];
   const tags: string[] = Array.isArray(body.tags) ? body.tags.filter(Boolean) : [];
+  const folderId: string | null = body.folderId ? String(body.folderId) : null;
 
   const cleaned = queries.map((q) => String(q).trim()).filter(Boolean);
   if (cleaned.length === 0) return NextResponse.json({ error: "No keywords provided" }, { status: 400 });
@@ -64,8 +66,8 @@ export async function POST(req: NextRequest) {
     cleaned.map((query) =>
       prisma.trackedKeyword.upsert({
         where: { userId_query: { userId, query } },
-        create: { userId, query, tags },
-        update: tags.length ? { tags } : {},
+        create: { userId, query, tags, folderId },
+        update: { ...(tags.length ? { tags } : {}), ...(body.folderId !== undefined ? { folderId } : {}) },
       })
     )
   );
