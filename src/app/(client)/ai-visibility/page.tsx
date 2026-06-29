@@ -27,9 +27,10 @@ interface VisibilityScore {
 }
 
 interface RunStatus {
-  status: "pending" | "running" | "completed" | "failed";
+  status: "pending" | "running" | "completed" | "failed" | "interrupted" | "cancelled" | "none";
   runId: string;
-  progress?: number;
+  totalTasks?: number;
+  completedTasks?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -482,6 +483,20 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
 
   useEffect(() => { fetchScores(); fetchTrends(); fetchTopics(); }, [fetchScores, fetchTrends, fetchTopics]);
 
+  // On open, detect a run already in progress (e.g. started elsewhere) so the
+  // progress indicator and polling resume after a page reload.
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await olFetch("/prompts/status", "GET", undefined, { projectId });
+        if (data?.status === "running" && data.runId) {
+          setRunStatus({ status: "running", runId: data.runId, totalTasks: data.totalTasks, completedTasks: data.completedTasks });
+        }
+      } catch {}
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
   // Auto-select the first topic and load its insight.
   useEffect(() => {
     if (topics.length > 0 && !selectedTopic) {
@@ -490,19 +505,21 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }, [topics, selectedTopic, fetchInsight]);
 
-  // Poll run status
+  // Poll run status. Anything other than running/pending is terminal.
   useEffect(() => {
-    if (!runStatus || runStatus.status === "completed" || runStatus.status === "failed") return;
+    if (!runStatus || !["running", "pending"].includes(runStatus.status)) return;
     const t = setInterval(async () => {
       try {
         const data = await olFetch("/prompts/status", "GET", undefined, { projectId, runId: runStatus.runId });
-        setRunStatus((prev) => prev ? { ...prev, status: data.status, progress: data.progress } : null);
-        if (data.status === "completed") {
+        setRunStatus((prev) => prev ? { ...prev, status: data.status, totalTasks: data.totalTasks, completedTasks: data.completedTasks } : null);
+        if (!["running", "pending"].includes(data.status)) {
           clearInterval(t);
-          fetchScores();
-          fetchTrends();
-          fetchTopics();
-          if (selectedTopic) fetchInsight(selectedTopic);
+          if (data.status === "completed") {
+            fetchScores();
+            fetchTrends();
+            fetchTopics();
+            if (selectedTopic) fetchInsight(selectedTopic);
+          }
         }
       } catch {}
     }, 15000);
@@ -583,15 +600,36 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
         </div>
       </div>
 
-      {runStatus && (
-        <div className="flex items-center gap-3 text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg px-4 py-3">
-          {runStatus.status === "running" ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> : <Check className="w-4 h-4 text-green-600" />}
-          <span className="text-blue-700 dark:text-blue-300">
-            {runStatus.status === "running" ? "Scan in progress — AI platforms are responding. Scores update when complete (5–15 min)." : "Scan complete."}
-          </span>
-          <StatusPill status={runStatus.status} />
-        </div>
-      )}
+      {runStatus && runStatus.status !== "none" && (() => {
+        const running = runStatus.status === "running" || runStatus.status === "pending";
+        const failed = runStatus.status === "failed" || runStatus.status === "interrupted" || runStatus.status === "cancelled";
+        const done = Number(runStatus.completedTasks ?? 0);
+        const total = Number(runStatus.totalTasks ?? 0);
+        const progress = total > 0 ? Math.round((done / total) * 100) : null;
+        return (
+          <div className={`text-sm rounded-lg px-4 py-3 border ${
+            failed ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                   : "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800"}`}>
+            <div className="flex items-center gap-3">
+              {running ? <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                : failed ? <AlertCircle className="w-4 h-4 text-red-600" />
+                : <Check className="w-4 h-4 text-green-600" />}
+              <span className={failed ? "text-red-700 dark:text-red-300" : "text-blue-700 dark:text-blue-300"}>
+                {running
+                  ? `Scan in progress — AI platforms are responding${progress != null ? ` (${progress}%, ${done}/${total} prompts)` : ""}. Scores update when complete (5–15 min).`
+                  : failed ? `Scan ${runStatus.status}. You can re-run it.`
+                  : "Scan complete."}
+              </span>
+              <StatusPill status={runStatus.status} />
+            </div>
+            {running && progress != null && (
+              <div className="mt-2 h-1.5 bg-blue-100 dark:bg-blue-900/40 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {error && (
         <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
