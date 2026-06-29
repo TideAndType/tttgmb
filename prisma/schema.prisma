@@ -215,6 +215,8 @@ model Task {
   id          String        @id @default(cuid())
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
   title       String
   description String?
   status      TaskStatus    @default(PENDING)
@@ -335,6 +337,7 @@ model Project {
   columns     CardColumn[]
   timeEntries TimeEntry[]
   ratings     SatisfactionRating[]
+  tasks       Task[]
 }
 
 model Message {

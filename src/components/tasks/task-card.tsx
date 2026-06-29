@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { CalendarDays, AlertCircle, ExternalLink } from "lucide-react";
+import { CalendarDays, AlertCircle, ExternalLink, Clock } from "lucide-react";
 import { CommentThread } from "@/components/comments/comment-thread";
 import { TaskTodoList } from "@/components/tasks/task-todo-list";
 
@@ -25,6 +25,7 @@ interface Task {
   tags?: string[];
   todos?: Todo[];
   commentCount?: number;
+  timeMinutes?: number;
   links?: { id: string; url: string; label: string }[];
   assignees?: { user: { id: string; name: string } }[];
 }
@@ -136,6 +137,11 @@ export function TaskCard({ task, onStatusChange, loading }: TaskCardProps) {
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
+                {typeof task.timeMinutes === "number" && task.timeMinutes > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Time tracked by your team">
+                    <Clock className="h-3.5 w-3.5" />{(task.timeMinutes / 60).toFixed(1)}h
+                  </span>
+                )}
                 <CommentThread commentsUrl={`/api/tasks/${task.id}/comments`} initialCount={task.commentCount ?? 0} />
                 {nextStatus && (
                   <Button size="sm" variant="outline" onClick={() => onStatusChange(task.id, nextStatus)} disabled={loading} className="text-xs h-7">

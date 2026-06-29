@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getCompanyUserIds } from "@/lib/company";
+import { projectTimeMap } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,13 @@ export async function GET() {
       },
       orderBy: { createdAt: "desc" },
     });
+    const timeMap = await projectTimeMap(projects.map((p) => p.id));
     // Collapse ratings into an average + count for the admin list.
     const result = projects.map(({ ratings, ...p }) => ({
       ...p,
       ratingAvg: ratings.length ? ratings.reduce((s, r) => s + r.score, 0) / ratings.length : null,
       ratingCount: ratings.length,
+      timeMinutes: timeMap[p.id] ?? 0,
     }));
     return NextResponse.json(result);
   }
@@ -45,7 +48,8 @@ export async function GET() {
     },
     orderBy: { createdAt: "desc" },
   });
-  return NextResponse.json(projects);
+  const timeMap = await projectTimeMap(projects.map((p) => p.id));
+  return NextResponse.json(projects.map((p) => ({ ...p, timeMinutes: timeMap[p.id] ?? 0 })));
 }
 
 export async function POST(req: Request) {

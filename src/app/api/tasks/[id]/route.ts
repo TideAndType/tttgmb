@@ -115,13 +115,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const { status, visibleToClient, assigneeIds, color, tags } = body;
+  const { status, visibleToClient, assigneeIds, color, tags, projectId } = body;
 
   const updateData: Record<string, unknown> = {};
   if (status !== undefined) updateData.status = status;
   if (visibleToClient !== undefined) updateData.visibleToClient = visibleToClient;
   if (color !== undefined) updateData.color = color || null;
   if (tags !== undefined) updateData.tags = Array.isArray(tags) ? tags : [];
+  if (projectId !== undefined) updateData.projectId = projectId || null;
 
   const updated = await prisma.task.update({
     where: { id: params.id },

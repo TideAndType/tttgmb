@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate, Star } from "lucide-react";
+import { Plus, FolderOpen, MessageSquare, LayoutGrid, Trash2, Settings2, X, CalendarDays, ChevronDown, ChevronUp, LayoutTemplate, Star, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TimeLogger } from "@/components/time/time-logger";
 
@@ -25,6 +25,7 @@ interface Project {
   _count: { messages: number; cards: number };
   ratingAvg: number | null;
   ratingCount: number;
+  timeMinutes?: number;
 }
 
 interface Member { id: string; name: string; email: string; }
@@ -270,6 +271,9 @@ export default function AdminProjectsPage() {
                       <div className="flex items-center gap-4 mt-1.5 text-xs text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1"><MessageSquare className="h-3.5 w-3.5" />{project._count.messages} messages</span>
                         <span className="flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" />{project._count.cards} cards</span>
+                        {typeof project.timeMinutes === "number" && project.timeMinutes > 0 && (
+                          <span className="flex items-center gap-1 text-foreground font-medium"><Clock className="h-3.5 w-3.5" />{(project.timeMinutes / 60).toFixed(1)}h total</span>
+                        )}
                         {project.ratingAvg != null && (
                           <span className="flex items-center gap-1 text-amber-600 font-medium" title={`${project.ratingCount} rating${project.ratingCount !== 1 ? "s" : ""}`}>
                             <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />{project.ratingAvg.toFixed(1)}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, LayoutGrid, ArrowRight, Clock, FileText, Star } from "lucide-react";
 import { ProjectNotes } from "@/components/projects/project-notes";
 import { SatisfactionRating } from "@/components/projects/satisfaction-rating";
+import { projectTimeMinutes } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function ProjectHomePage({ params }: { params: { id: string
   if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && project.userId !== user.id) redirect("/projects");
 
   const myRating = project.ratings.find((r) => r.userId === user.id) ?? null;
+  const totalMinutes = await projectTimeMinutes(project.id);
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -45,12 +47,18 @@ export default async function ProjectHomePage({ params }: { params: { id: string
           className="w-4 h-4 rounded-full flex-shrink-0"
           style={{ backgroundColor: project.color }}
         />
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold text-foreground">{project.name}</h1>
           {project.description && (
             <p className="text-muted-foreground mt-1">{project.description}</p>
           )}
         </div>
+        {totalMinutes > 0 && (
+          <div className="text-right">
+            <p className="text-2xl font-bold text-foreground">{(totalMinutes / 60).toFixed(1)}h</p>
+            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end"><Clock className="h-3 w-3" />total time</p>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

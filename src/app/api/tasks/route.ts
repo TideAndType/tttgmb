@@ -17,6 +17,16 @@ const todosInclude = {
   todos: { orderBy: [{ position: "asc" as const }, { createdAt: "asc" as const }] },
 };
 
+const timeInclude = {
+  timeEntries: { select: { minutes: true } },
+};
+
+function mapTask(t: any) {
+  const timeMinutes = (t.timeEntries || []).reduce((s: number, e: any) => s + e.minutes, 0);
+  const { timeEntries, _count, ...rest } = t;
+  return { ...rest, commentCount: _count?.comments ?? 0, timeMinutes };
+}
+
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -32,12 +42,10 @@ export async function GET() {
       // Impersonating — show only that client's tasks
       const tasks = await prisma.task.findMany({
         where: { userId: viewing.value },
-        include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude, ...todosInclude },
+        include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude, ...todosInclude, ...timeInclude },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
       });
-      return NextResponse.json({
-        tasks: tasks.map((t) => ({ ...t, commentCount: t._count.comments })),
-      });
+      return NextResponse.json({ tasks: tasks.map(mapTask) });
     }
 
     // Not impersonating — return all tasks
@@ -48,12 +56,11 @@ export async function GET() {
         links: true,
         ...assigneesInclude,
         ...todosInclude,
+        ...timeInclude,
       },
       orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
     });
-    return NextResponse.json({
-      tasks: tasks.map((t) => ({ ...t, commentCount: t._count.comments })),
-    });
+    return NextResponse.json({ tasks: tasks.map(mapTask) });
   }
 
   // CLIENT: tasks for their company (only visible ones), plus tasks where they are an assignee
@@ -66,13 +73,11 @@ export async function GET() {
         { assignees: { some: { userId: sessionUser.id } }, visibleToClient: true },
       ],
     },
-    include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude, ...todosInclude },
+    include: { _count: { select: { comments: true } }, links: true, ...assigneesInclude, ...todosInclude, ...timeInclude },
     orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],
   });
 
-  return NextResponse.json({
-    tasks: tasks.map((t) => ({ ...t, commentCount: t._count.comments })),
-  });
+  return NextResponse.json({ tasks: tasks.map(mapTask) });
 }
 
 export async function POST(req: NextRequest) {

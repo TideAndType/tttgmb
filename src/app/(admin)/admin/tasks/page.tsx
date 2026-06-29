@@ -34,7 +34,11 @@ interface Task {
   links?: TaskLink[];
   assignees?: Assignee[];
   commentCount?: number;
+  projectId?: string | null;
+  timeMinutes?: number;
 }
+
+interface ProjectOption { id: string; name: string; userId: string; }
 
 interface TeamMember { id: string; name: string; email: string; }
 
@@ -74,6 +78,7 @@ const priorityConfig = {
 
 export default function AdminTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filterClient, setFilterClient] = useState("all");
@@ -97,7 +102,25 @@ export default function AdminTasksPage() {
   const [tagInput, setTagInput] = useState("");
   const [savingTag, setSavingTag] = useState(false);
 
-  useEffect(() => { fetchTasks(); }, []);
+  useEffect(() => { fetchTasks(); fetchProjects(); }, []);
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch("/api/projects");
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : data.projects ?? [];
+      setProjectOptions(list.map((p: any) => ({ id: p.id, name: p.name, userId: p.userId })));
+    } catch { /* ignore */ }
+  };
+
+  const handleSetProject = async (taskId: string, projectId: string) => {
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId: projectId || null }),
+    });
+    setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, projectId: projectId || null } : t));
+  };
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -469,9 +492,22 @@ export default function AdminTasksPage() {
                         )}
                       </div>
 
-                      {/* Time tracking — agency logs time against the task */}
-                      <div className="mt-2 border-t pt-2">
-                        <TimeLogger taskId={task.id} />
+                      {/* Time tracking — agency logs time against the task; rolls up to the project */}
+                      <div className="mt-2 border-t pt-2 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Project:</span>
+                          <select
+                            value={task.projectId || ""}
+                            onChange={(e) => handleSetProject(task.id, e.target.value)}
+                            className="text-xs border border-input rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary max-w-[200px]"
+                          >
+                            <option value="">— No project —</option>
+                            {projectOptions.filter((p) => p.userId === task.userId).map((p) => (
+                              <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <TimeLogger taskId={task.id} projectId={task.projectId || undefined} />
                       </div>
 
                       {/* Comments — shared with the client side so agency sees client replies */}

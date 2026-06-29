@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Clock } from "lucide-react";
 import Link from "next/link";
 
 interface Client {
@@ -66,6 +66,25 @@ export default function NewInvoicePage() {
 
   function addItem() {
     setItems((prev) => [...prev, { name: "", description: "", quantity: 1, price: 0 }]);
+  }
+
+  const [loadingTime, setLoadingTime] = useState(false);
+  async function addLoggedTime() {
+    if (!userId) { setError("Select a client first."); return; }
+    setLoadingTime(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/time/billable?clientId=${userId}`);
+      const data = await res.json();
+      const hours = data.hours ?? 0;
+      if (!hours) { setError("No logged time found for this client."); return; }
+      const rateStr = window.prompt(`This client has ${hours}h logged. Hourly rate?`, "150");
+      if (rateStr === null) return;
+      const rate = parseFloat(rateStr) || 0;
+      setItems((prev) => [...prev, { name: "Time tracked", description: `${hours} hours`, quantity: hours, price: rate }]);
+    } finally {
+      setLoadingTime(false);
+    }
   }
 
   function removeItem(index: number) {
@@ -278,10 +297,16 @@ export default function NewInvoicePage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <CardTitle className="text-base">Line Items</CardTitle>
-            <Button type="button" variant="outline" size="sm" onClick={addItem}>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Add Item
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={addLoggedTime} disabled={loadingTime}>
+                <Clock className="h-4 w-4 mr-1.5" />
+                {loadingTime ? "Loading..." : "Add logged time"}
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add Item
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground mb-1 px-1">
