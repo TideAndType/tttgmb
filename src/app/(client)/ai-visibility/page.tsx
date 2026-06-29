@@ -357,9 +357,12 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
         .filter((t: any) => t.id);
       // De-dupe by id (per-topic summaries can repeat across platforms).
       const seen = new Set<string>();
-      setTopics(mapped.filter((t: any) => (seen.has(t.id) ? false : (seen.add(t.id), true))));
+      const deduped = mapped.filter((t: any) => (seen.has(t.id) ? false : (seen.add(t.id), true)));
+      setTopics(deduped);
+      return deduped;
     } catch {
       setTopics([]);
+      return [];
     }
   }, [projectId]);
 
@@ -447,10 +450,12 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
       }));
       setTrendSeries(series);
       setTrendSummary(data.summary ?? null);
+      return { series, summary: data.summary ?? null };
     } catch {
       // Trends are supplementary — don't surface as a blocking error.
       setTrendSeries([]);
       setTrendSummary(null);
+      return { series: [], summary: null };
     }
   }, [projectId]);
 
@@ -475,30 +480,60 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
       const data = await olFetch("/visibility", "GET", undefined, { projectId, type: "overview" });
       setRawScores(data);
       const arr = Array.isArray(data) ? data : data.scores ?? data.brands ?? data.data ?? [];
-      setScores(withShareOfVoice((Array.isArray(arr) ? arr : []).map(normalizeScore)));
+      const sc = withShareOfVoice((Array.isArray(arr) ? arr : []).map(normalizeScore));
+      setScores(sc);
+      return { scores: sc, raw: data };
     } catch (e: any) {
       setError(e.message);
+      return { scores: [], raw: null };
     } finally {
       setLoading(false);
     }
   }, [projectId]);
 
-  // Loading OpenLens data costs API quota, so it's manual — the user clicks
-  // "Load data" instead of auto-fetching on every page open.
-  const loadAll = useCallback(() => {
-    setLoaded(true);
-    fetchScores();
-    fetchTrends();
-    fetchTopics();
-  }, [fetchScores, fetchTrends, fetchTopics]);
+  const [cachedAt, setCachedAt] = useState<string | null>(null);
 
-  // Auto-select the first topic and load its insight.
+  // Hydrate from our cached snapshot on open — no OpenLens API calls.
   useEffect(() => {
-    if (topics.length > 0 && !selectedTopic) {
-      setSelectedTopic(topics[0].id);
-      fetchInsight(topics[0].id);
-    }
-  }, [topics, selectedTopic, fetchInsight]);
+    (async () => {
+      try {
+        const res = await fetch(`/api/openlens/cache?projectId=${projectId}`);
+        const { data, updatedAt } = await res.json();
+        if (data) {
+          setScores(data.scores || []);
+          setRawScores(data.raw ?? null);
+          setTrendSeries(data.trendSeries || []);
+          setTrendSummary(data.trendSummary ?? null);
+          setTopics(data.topics || []);
+          if (data.topics?.[0]) setSelectedTopic(data.topics[0].id);
+          setCachedAt(updatedAt || null);
+          setLoaded(true);
+        }
+      } catch { /* no cache yet */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // Manual refresh: hit OpenLens, update the view, and save the snapshot.
+  const loadAll = useCallback(async () => {
+    setLoaded(true);
+    const [s, tr, tp] = await Promise.all([fetchScores(), fetchTrends(), fetchTopics()]);
+    try {
+      const res = await fetch("/api/openlens/cache", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, data: { scores: s.scores, raw: s.raw, trendSeries: tr.series, trendSummary: tr.summary, topics: tp } }),
+      });
+      const j = await res.json();
+      if (j.updatedAt) setCachedAt(j.updatedAt);
+    } catch { /* caching is best-effort */ }
+  }, [fetchScores, fetchTrends, fetchTopics, projectId]);
+
+  // Select the first topic for the dropdown, but don't auto-fetch its insight
+  // (that's an API call — it loads when the user picks a topic).
+  useEffect(() => {
+    if (topics.length > 0 && !selectedTopic) setSelectedTopic(topics[0].id);
+  }, [topics, selectedTopic]);
 
   // Poll run status. Anything other than running/pending is terminal.
   useEffect(() => {
@@ -582,7 +617,14 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
         <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 flex items-center gap-1">
           ← All Projects
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {cachedAt && (
+            <span className="text-xs text-gray-400 hidden sm:inline">Cached {new Date(cachedAt).toLocaleDateString()}</span>
+          )}
+          <Button variant="outline" size="sm" onClick={loadAll} disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            <span className="ml-1.5 hidden sm:inline">Refresh</span>
+          </Button>
           <Button variant="outline" size="sm" onClick={downloadPdf} disabled={pdfLoading}>
             {pdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span className="ml-1.5 hidden sm:inline">PDF Report</span>

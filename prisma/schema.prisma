@@ -237,6 +237,13 @@ model CheckInAnswer {
   @@index([checkInId])
 }
 
+model OpenLensCache {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+}
+
 model KbArticle {
   id        String   @id @default(cuid())
   title     String
