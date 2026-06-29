@@ -522,13 +522,30 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }
 
+  // Resolve the latest run id — the PDF report endpoint requires one.
+  async function latestRunId(): Promise<string | null> {
+    if (runStatus?.runId) return runStatus.runId;
+    try {
+      const data = await olFetch("/reports/runs", "GET", undefined, { projectId });
+      const runs: any[] = Array.isArray(data) ? data : data.runs ?? data.data ?? [];
+      // Prefer the most recent completed run; fall back to the most recent of any status.
+      const completed = runs.find((r) => r.status === "completed") ?? runs[0];
+      return completed ? (completed.id ?? completed.runId ?? null) : null;
+    } catch {
+      return null;
+    }
+  }
+
   async function downloadPdf() {
     setPdfLoading(true);
+    setError("");
     try {
+      const runId = await latestRunId();
+      if (!runId) throw new Error("No completed run found to build a report. Run a scan first.");
       const res = await fetch("/api/openlens/proxy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: "/reports/visibility", method: "GET", params: { projectId } }),
+        body: JSON.stringify({ path: "/reports/visibility", method: "GET", params: { projectId, runId } }),
       });
       if (!res.ok) throw new Error("Failed to download report");
       const blob = await res.blob();
