@@ -6,6 +6,7 @@ import { toEmbedUrl } from "@/lib/embed";
 import { sectionWrapper } from "@/lib/section-style";
 import { resolveMergeFields } from "@/lib/merge-fields";
 import { renderExtraBlock } from "@/components/proposals/extra-blocks";
+import { InteractivePricing } from "@/components/proposals/interactive-pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -268,7 +269,7 @@ export default async function AdminProposalPreviewPage({ params }: { params: { i
             switch (section.type) {
               case "cover": return <CoverSection key={section.id} section={section} clientName={clientName} date={date} />;
               case "text": return <TextSection key={section.id} section={section} />;
-              case "pricing": return <PricingSection key={section.id} section={section} currency={proposal.currency} />;
+              case "pricing": return <InteractivePricing key={section.id} section={section} currency={proposal.currency} />;
               case "terms": return <TermsSection key={section.id} section={section} />;
               case "signature": return <SignatureSection key={section.id} section={section} proposal={proposal} />;
               case "hero": return <HeroSection key={section.id} section={section} />;
