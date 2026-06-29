@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { SeoChart } from "@/components/charts/seo-chart";
+import { AiExplain } from "@/components/ai/ai-explain";
 import { Search, TrendingUp, Eye, MousePointerClick } from "lucide-react";
 
 interface SeoData {
@@ -214,6 +215,10 @@ export default function SeoPage() {
                 <p className="text-2xl font-bold">{(data.totals.avgCtr * 100).toFixed(2)}%</p>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="mb-8">
+            <AiExplain reportType="Google Search Console — last 90 days" data={data.totals} />
           </div>
 
           <Card>
