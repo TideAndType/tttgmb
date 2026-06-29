@@ -25,10 +25,11 @@ export default function AdminAnnouncementsPage() {
   const load = async (clientId = filterClient) => {
     const url = clientId ? `/api/announcements?clientId=${clientId}` : "/api/announcements";
     const res = await fetch(url);
+    const d = await res.json().catch(() => ({}));
     if (res.ok) {
-      setAnnouncements((await res.json()).announcements || []);
+      setAnnouncements(d.announcements || []);
+      setError(d.error || "");
     } else {
-      const d = await res.json().catch(() => ({}));
       setError(d.error || `Couldn't load announcements (${res.status}). Has the migration been run?`);
     }
   };
@@ -97,7 +98,7 @@ export default function AdminAnnouncementsPage() {
       </Card>
 
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Posted</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Posted ({announcements.length})</h2>
         <select
           value={filterClient}
           onChange={(e) => setFilterClient(e.target.value)}

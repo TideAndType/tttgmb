@@ -33,8 +33,12 @@ export async function GET(req: NextRequest) {
 
   if (isAdmin(user) && scope !== "client") {
     const where = filterClient ? { userId: filterClient } : {};
-    const announcements = await prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } });
-    return NextResponse.json({ announcements });
+    try {
+      const announcements = await prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } });
+      return NextResponse.json({ announcements });
+    } catch {
+      return NextResponse.json({ announcements: [], error: "Announcements table not found — run the migration SQL in your database." }, { status: 200 });
+    }
   }
 
   // Client (or admin impersonating with scope=client): announcements for the company.
