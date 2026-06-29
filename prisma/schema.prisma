@@ -211,6 +211,26 @@ model ApprovalComment {
   createdAt     DateTime    @default(now())
 }
 
+model Calendar {
+  id        String          @id @default(cuid())
+  name      String
+  color     String          @default("#6366f1")
+  createdAt DateTime        @default(now())
+  events    CalendarEvent[]
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  calendarId  String
+  calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  title       String
+  date        DateTime @db.Date
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@index([calendarId])
+}
+
 model TaskFolder {
   id        String   @id @default(cuid())
   name      String

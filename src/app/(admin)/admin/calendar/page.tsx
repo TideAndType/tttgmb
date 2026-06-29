@@ -158,17 +158,41 @@ function TaskChip({ task, color }: { task: Task; color: { chip: string; dot: str
   );
 }
 
+// ── Calendar layers + events ─────────────────────────────────────────
+
+interface Cal { id: string; name: string; color: string; }
+interface CalEvent { id: string; title: string; date: string; description?: string | null; calendar: Cal; }
+
+function EventChip({ event, onDelete }: { event: CalEvent; onDelete?: (id: string) => void }) {
+  return (
+    <span
+      className="group/ev w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-left text-white"
+      style={{ backgroundColor: event.calendar.color }}
+      title={`[${event.calendar.name}] ${event.title}`}
+    >
+      <span className="truncate flex-1">{event.title}</span>
+      {onDelete && (
+        <button onClick={(e) => { e.stopPropagation(); onDelete(event.id); }} className="opacity-0 group-hover/ev:opacity-100 shrink-0">
+          <X className="h-3 w-3" />
+        </button>
+      )}
+    </span>
+  );
+}
+
 // ── Calendar grid ────────────────────────────────────────────────────
 
 interface CalendarGridProps {
   year: number;
   month: number;
   tasksByDate: Map<string, Task[]>;
+  eventsByDate: Map<string, CalEvent[]>;
   today: Date;
   clientColorMap: Map<string, { chip: string; dot: string }>;
+  onDeleteEvent: (id: string) => void;
 }
 
-function CalendarGrid({ year, month, tasksByDate, today, clientColorMap }: CalendarGridProps) {
+function CalendarGrid({ year, month, tasksByDate, eventsByDate, today, clientColorMap, onDeleteEvent }: CalendarGridProps) {
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
   const daysInPrevMonth = getDaysInMonth(year, month - 1 < 0 ? 11 : month - 1);
@@ -203,6 +227,7 @@ function CalendarGrid({ year, month, tasksByDate, today, clientColorMap }: Calen
       {cells.map((cell, idx) => {
         const key = dateKey(cell.y, cell.m, cell.day);
         const dayTasks = tasksByDate.get(key) ?? [];
+        const dayEvents = eventsByDate.get(key) ?? [];
         const visible = dayTasks.slice(0, 3);
         const overflow = dayTasks.length - 3;
         const isToday = isSameDay(new Date(cell.y, cell.m, cell.day), today);
@@ -225,6 +250,9 @@ function CalendarGrid({ year, month, tasksByDate, today, clientColorMap }: Calen
               {cell.day}
             </span>
             <div className="flex flex-col gap-0.5 flex-1">
+              {dayEvents.map((ev) => (
+                <EventChip key={ev.id} event={ev} onDelete={onDeleteEvent} />
+              ))}
               {visible.map((t) => (
                 <TaskChip
                   key={t.id}
@@ -316,6 +344,90 @@ export default function AdminCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [filterClient, setFilterClient] = useState<string>("all");
   const [isMobile, setIsMobile] = useState(false);
+
+  // Calendar layers + events
+  const [calendars, setCalendars] = useState<Cal[]>([]);
+  const [events, setEvents] = useState<CalEvent[]>([]);
+  const [enabled, setEnabled] = useState<Set<string>>(new Set());
+  const [newCalName, setNewCalName] = useState("");
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [evForm, setEvForm] = useState({ calendarId: "", title: "", date: "" });
+
+  const loadCalendars = useCallback(async () => {
+    const res = await fetch("/api/calendars");
+    if (res.ok) {
+      const data = await res.json();
+      const list: Cal[] = data.calendars || [];
+      setCalendars(list);
+      setEnabled((prev) => prev.size === 0 ? new Set(list.map((c) => c.id)) : prev);
+    }
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    const res = await fetch("/api/calendar-events");
+    if (res.ok) {
+      const data = await res.json();
+      setEvents(data.events || []);
+    }
+  }, []);
+
+  useEffect(() => { loadCalendars(); loadEvents(); }, [loadCalendars, loadEvents]);
+
+  const createCalendar = async () => {
+    const name = newCalName.trim();
+    if (!name) return;
+    const palette = ["#6366f1", "#0ea5e9", "#10b981", "#f43f5e", "#f59e0b", "#d946ef", "#14b8a6", "#f97316"];
+    const color = palette[calendars.length % palette.length];
+    const res = await fetch("/api/calendars", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, color }) });
+    if (res.ok) {
+      const { calendar } = await res.json();
+      setNewCalName("");
+      setEnabled((prev) => new Set(prev).add(calendar.id));
+      loadCalendars();
+    }
+  };
+
+  const deleteCalendar = async (id: string) => {
+    await fetch(`/api/calendars/${id}`, { method: "DELETE" });
+    loadCalendars();
+    loadEvents();
+  };
+
+  const createEvent = async () => {
+    if (!evForm.calendarId || !evForm.title.trim() || !evForm.date) return;
+    const res = await fetch("/api/calendar-events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(evForm) });
+    if (res.ok) {
+      setEvForm({ calendarId: evForm.calendarId, title: "", date: "" });
+      setShowEventForm(false);
+      loadEvents();
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    await fetch(`/api/calendar-events/${id}`, { method: "DELETE" });
+    setEvents((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  const toggleCalendar = (id: string) => {
+    setEnabled((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  };
+
+  // Events grouped by date, filtered to enabled layers.
+  const eventsByDate = (() => {
+    const m = new Map<string, CalEvent[]>();
+    for (const ev of events) {
+      if (!enabled.has(ev.calendar.id)) continue;
+      const d = new Date(ev.date);
+      const k = dateKey(d.getFullYear(), d.getMonth(), d.getDate());
+      if (!m.has(k)) m.set(k, []);
+      m.get(k)!.push(ev);
+    }
+    return m;
+  })();
 
   useEffect(() => {
     function check() { setIsMobile(window.innerWidth < 768); }
@@ -450,6 +562,53 @@ export default function AdminCalendarPage() {
         </div>
       )}
 
+      {/* Calendars (layers) bar */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs font-medium text-muted-foreground">Calendars:</span>
+        {calendars.map((c) => (
+          <span key={c.id} className="inline-flex items-center group">
+            <button
+              onClick={() => toggleCalendar(c.id)}
+              className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
+                enabled.has(c.id) ? "border-transparent text-white" : "border-border text-muted-foreground bg-transparent")}
+              style={enabled.has(c.id) ? { backgroundColor: c.color } : undefined}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: enabled.has(c.id) ? "#fff" : c.color }} />
+              {c.name}
+            </button>
+            <button onClick={() => deleteCalendar(c.id)} title="Delete calendar" className="ml-0.5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity">
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={newCalName}
+          onChange={(e) => setNewCalName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && createCalendar()}
+          placeholder="New calendar"
+          className="h-7 text-xs border border-input rounded px-2 bg-background text-foreground w-32 focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <button onClick={createCalendar} disabled={!newCalName.trim()} className="text-xs px-2 py-1 rounded border border-border hover:bg-muted disabled:opacity-50">+ Add</button>
+        {calendars.length > 0 && (
+          <button onClick={() => { setShowEventForm((s) => !s); setEvForm((f) => ({ ...f, calendarId: f.calendarId || calendars[0].id })); }} className="ml-auto text-xs px-3 py-1 rounded-md bg-primary text-primary-foreground font-medium">
+            + New event
+          </button>
+        )}
+      </div>
+
+      {/* New event form */}
+      {showEventForm && calendars.length > 0 && (
+        <div className="flex flex-wrap items-end gap-2 mb-4 p-3 border border-border rounded-lg bg-muted/30">
+          <select value={evForm.calendarId} onChange={(e) => setEvForm((f) => ({ ...f, calendarId: e.target.value }))} className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground">
+            {calendars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <input value={evForm.title} onChange={(e) => setEvForm((f) => ({ ...f, title: e.target.value }))} placeholder="Event title" className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground flex-1 min-w-[160px]" />
+          <input type="date" value={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, date: e.target.value }))} className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground" />
+          <button onClick={createEvent} disabled={!evForm.title.trim() || !evForm.date} className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-50">Add event</button>
+          <button onClick={() => setShowEventForm(false)} className="text-sm px-3 py-1.5 rounded-md border border-border">Cancel</button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex-1 flex items-center justify-center text-muted-foreground">
           Loading calendar…
@@ -458,7 +617,7 @@ export default function AdminCalendarPage() {
         <MobileListView year={year} month={month} tasksByDate={map} clientColorMap={clientColorMap} />
       ) : (
         <div className="flex-1 overflow-auto rounded-lg border border-border">
-          <CalendarGrid year={year} month={month} tasksByDate={map} today={today} clientColorMap={clientColorMap} />
+          <CalendarGrid year={year} month={month} tasksByDate={map} eventsByDate={eventsByDate} today={today} clientColorMap={clientColorMap} onDeleteEvent={deleteEvent} />
         </div>
       )}
     </div>

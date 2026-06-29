@@ -1,10 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
 
 export const dynamic = "force-dynamic";
+
+function isAdmin(session: any) {
+  const r = session?.user?.role;
+  return r === "ADMIN" || r === "SUPER_ADMIN";
+}
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -44,5 +49,25 @@ export async function GET() {
     }),
   ]);
 
-  return NextResponse.json({ tasks, cards });
+  // Stored calendar events (with their calendar/layer).
+  const events = await prisma.calendarEvent.findMany({
+    orderBy: { date: "asc" },
+    include: { calendar: { select: { id: true, name: true, color: true } } },
+  });
+
+  return NextResponse.json({ tasks, cards, events });
+}
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!isAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const { calendarId, title, date, description } = await req.json();
+  if (!calendarId || !title || !date) {
+    return NextResponse.json({ error: "calendarId, title and date are required" }, { status: 400 });
+  }
+  const event = await prisma.calendarEvent.create({
+    data: { calendarId, title: String(title).trim(), date: new Date(date), description: description || null },
+    include: { calendar: { select: { id: true, name: true, color: true } } },
+  });
+  return NextResponse.json({ event }, { status: 201 });
 }
