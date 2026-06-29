@@ -130,11 +130,17 @@ export default function KeywordsPage() {
   const createFolder = async () => {
     const name = newFolderName.trim();
     if (!name) return;
-    await fetch("/api/keywords/folders", {
+    setError("");
+    const res = await fetch("/api/keywords/folders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name }),
     });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError(d.error || "Couldn't create folder. The folders table may not exist yet — run the KeywordFolder migration SQL in Neon.");
+      return;
+    }
     setNewFolderName("");
     loadFolders();
   };
