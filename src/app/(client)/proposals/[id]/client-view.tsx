@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle } from "lucide-react";
 import { SignaturePad } from "@/components/proposals/signature-pad";
 import { toEmbedUrl } from "@/lib/embed";
+import { sectionWrapper } from "@/lib/section-style";
 
 type Section = { id: string; type: string; [key: string]: any };
 type Brand = { primaryColor?: string; accentColor?: string; font?: string; logoUrl?: string };
@@ -409,6 +410,9 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
         {brand.logoUrl && <div className="px-12 py-4 border-b border-gray-100 flex items-center"><img src={brand.logoUrl} alt="Company logo" className="h-8 object-contain" /></div>}
         <div className="px-12 py-2">
           {proposal.sections.map((section: Section) => {
+            if ((section as any).settings?.hidden) return null;
+            const w = sectionWrapper((section as any).settings);
+            const node = (() => {
             switch (section.type) {
               case "cover": return <CoverSection key={section.id} section={section} clientName={clientName} date={date} />;
               case "text": return <TextSection key={section.id} section={section} />;
@@ -425,6 +429,13 @@ export function ClientProposalView({ proposal: initialProposal }: { proposal: Pr
               case "video": return <VideoSection key={section.id} section={section} />;
               default: return null;
             }
+            })();
+            if (!node) return null;
+            return (
+              <div key={section.id} style={w.style} className={w.alignClass}>
+                {w.hasInner ? <div className={w.innerClass}>{node}</div> : node}
+              </div>
+            );
           })}
         </div>
         {!hasSignatureSection && <BottomAcceptUI proposal={proposal} onAccept={handleAccept} onDecline={handleDecline} />}

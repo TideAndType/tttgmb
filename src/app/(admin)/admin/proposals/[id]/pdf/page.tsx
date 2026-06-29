@@ -251,6 +251,7 @@ export default function ProposalPdfPage() {
         )}
         <div className="px-12 py-2">
           {sections.map((section: Section) => {
+            if (section.settings?.hidden) return null;
             switch (section.type) {
               case "cover": return <CoverSection key={section.id} section={section} clientName={clientName} date={date} />;
               case "text": return <TextSection key={section.id} section={section} />;

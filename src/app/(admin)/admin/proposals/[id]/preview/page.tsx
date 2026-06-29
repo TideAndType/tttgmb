@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import { toEmbedUrl } from "@/lib/embed";
+import { sectionWrapper } from "@/lib/section-style";
 
 export const dynamic = "force-dynamic";
 
@@ -252,6 +253,9 @@ export default async function AdminProposalPreviewPage({ params }: { params: { i
         {brand.logoUrl && <div className="px-12 py-4 border-b border-gray-100 flex items-center"><img src={brand.logoUrl} alt="Company logo" className="h-8 object-contain" /></div>}
         <div className="px-12 py-2">
           {sections.map((section: Section) => {
+            if (section.settings?.hidden) return null;
+            const w = sectionWrapper(section.settings);
+            const node = (() => {
             switch (section.type) {
               case "cover": return <CoverSection key={section.id} section={section} clientName={clientName} date={date} />;
               case "text": return <TextSection key={section.id} section={section} />;
@@ -286,6 +290,13 @@ export default async function AdminProposalPreviewPage({ params }: { params: { i
               }
               default: return null;
             }
+            })();
+            if (!node) return null;
+            return (
+              <div key={section.id} style={w.style} className={w.alignClass}>
+                {w.hasInner ? <div className={w.innerClass}>{node}</div> : node}
+              </div>
+            );
           })}
         </div>
       </div>

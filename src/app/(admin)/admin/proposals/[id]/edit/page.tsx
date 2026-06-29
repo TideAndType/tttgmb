@@ -32,6 +32,7 @@ import { PropertiesBar } from "./properties-bar";
 import { AiAssistPanel } from "@/components/ai-assist-panel";
 import { SectionAiPanel } from "@/components/proposals/section-ai-panel";
 import { toEmbedUrl } from "@/lib/embed";
+import { sectionWrapper, type SectionSettings } from "@/lib/section-style";
 
 type PricingRow = { id: string; service: string; description: string; qty: number; unitPrice: number };
 type ServiceItem = { id: string; icon: string; name: string; description: string };
@@ -39,7 +40,7 @@ type TestimonialItem = { id: string; quote: string; name: string; role: string; 
 type FaqItem = { id: string; question: string; answer: string };
 type TimelineStep = { id: string; title: string; description: string };
 
-type Section =
+type Section = (
   | { id: string; type: "cover"; title: string; subtitle: string }
   | { id: string; type: "text"; heading: string; body: string }
   | { id: string; type: "pricing"; heading: string; rows: PricingRow[] }
@@ -53,7 +54,8 @@ type Section =
   | { id: string; type: "timeline"; heading: string; steps: TimelineStep[] }
   | { id: string; type: "image"; url: string; caption: string }
   | { id: string; type: "video"; url: string; caption: string }
-  | LayoutSection;
+  | LayoutSection
+) & { settings?: SectionSettings };
 
 type Brand = { primaryColor: string; accentColor: string; font: string; logoUrl: string };
 
@@ -516,6 +518,60 @@ function WysiwygVideo({ section, onChange }: { section: Extract<Section, { type:
   );
 }
 
+function SectionInspector({ section, onChange, onClose }: { section: Section; onChange: (s: Section) => void; onClose: () => void }) {
+  const s = section.settings || {};
+  const set = (patch: Partial<SectionSettings>) => onChange({ ...section, settings: { ...s, ...patch } } as Section);
+  const row = "space-y-1";
+  const lbl = "text-xs font-medium text-muted-foreground uppercase tracking-wide block";
+  return (
+    <div className="w-64 shrink-0 border-l border-border bg-card overflow-y-auto">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <span className="text-sm font-semibold">Section settings</span>
+        <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+      </div>
+      <div className="p-4 space-y-4">
+        <div className={row}>
+          <label className={lbl}>Background color</label>
+          <div className="flex items-center gap-2">
+            <input type="color" value={s.bgColor || "#ffffff"} onChange={(e) => set({ bgColor: e.target.value })} className="h-8 w-12 rounded border border-border cursor-pointer" />
+            <input type="text" value={s.bgColor || ""} onChange={(e) => set({ bgColor: e.target.value })} placeholder="none" className="flex-1 text-sm border border-border rounded px-2 py-1.5 font-mono bg-background" />
+            {s.bgColor && <button onClick={() => set({ bgColor: undefined })} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5" /></button>}
+          </div>
+        </div>
+        <div className={row}>
+          <label className={lbl}>Background image URL</label>
+          <input type="text" value={s.bgImage || ""} onChange={(e) => set({ bgImage: e.target.value || undefined })} placeholder="https://…" className="w-full text-sm border border-border rounded px-2 py-1.5 bg-background" />
+        </div>
+        <div className={row}>
+          <label className={lbl}>Vertical padding (px)</label>
+          <input type="number" min="0" step="8" value={s.paddingY ?? ""} onChange={(e) => set({ paddingY: e.target.value === "" ? undefined : Number(e.target.value) })} placeholder="default" className="w-full text-sm border border-border rounded px-2 py-1.5 bg-background" />
+        </div>
+        <div className={row}>
+          <label className={lbl}>Max width</label>
+          <select value={s.maxWidth || "normal"} onChange={(e) => set({ maxWidth: e.target.value as SectionSettings["maxWidth"] })} className="w-full text-sm border border-border rounded px-2 py-1.5 bg-background">
+            <option value="normal">Default</option>
+            <option value="narrow">Narrow</option>
+            <option value="wide">Wide</option>
+            <option value="full">Full width</option>
+          </select>
+        </div>
+        <div className={row}>
+          <label className={lbl}>Text alignment</label>
+          <div className="flex gap-1">
+            {(["left", "center", "right"] as const).map((a) => (
+              <button key={a} onClick={() => set({ align: a })} className={`flex-1 text-xs py-1.5 rounded border capitalize ${(s.align || "left") === a ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:bg-accent"}`}>{a}</button>
+            ))}
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" checked={!!s.hidden} onChange={(e) => set({ hidden: e.target.checked })} className="h-4 w-4 accent-primary" />
+          Hidden (won&apos;t show to client)
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function BrandPanel({ brand, onChange }: { brand: Brand; onChange: (b: Brand) => void }) {
   return (
     <div className="p-4 space-y-4">
@@ -819,9 +875,13 @@ export default function ProposalEditPage() {
                   <p className="text-xs text-blue-600">Click any text to edit directly · Changes save automatically · Drag sections in sidebar to reorder</p>
                 </div>
                 <div className="px-12 py-2">
-                  {sections.map((section) => (
-                    <div key={section.id} ref={(el) => { sectionRefs.current[section.id] = el; }} onClick={() => { setSelectedId(section.id); if (section.type !== "layout") setLayoutSelection(null); }} className={`relative group/canvas transition-all rounded-sm ${selectedId === section.id ? "ring-2 ring-blue-200 ring-offset-4" : ""}`}>
+                  {sections.map((section) => {
+                    const w = sectionWrapper(section.settings);
+                    return (
+                    <div key={section.id} ref={(el) => { sectionRefs.current[section.id] = el; }} onClick={() => { setSelectedId(section.id); if (section.type !== "layout") setLayoutSelection(null); }} style={w.style} className={`relative group/canvas transition-all rounded-sm ${w.alignClass} ${section.settings?.hidden ? "opacity-40" : ""} ${selectedId === section.id ? "ring-2 ring-blue-200 ring-offset-4" : ""}`}>
                       <SectionHoverToolbar onDuplicate={() => duplicateSection(section.id)} onDelete={() => deleteSection(section.id)} />
+                      {section.settings?.hidden && <span className="absolute top-2 left-2 z-10 text-[10px] font-semibold uppercase tracking-wide bg-gray-800 text-white px-1.5 py-0.5 rounded">Hidden</span>}
+                      <div className={w.hasInner ? w.innerClass : ""}>
                       {section.type === "cover" && <WysiwygCover section={section} clientName={clientName} date={proposalDate} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "text" && <WysiwygText section={section} onChange={updateSection} onAiClick={() => setAiTarget(section)} />}
                       {section.type === "pricing" && <WysiwygPricing section={section} currency={currency} onChange={updateSection} />}
@@ -843,13 +903,21 @@ export default function ProposalEditPage() {
                           onUpdate={(updated) => updateSection(updated)}
                         />
                       )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
         </div>
+        {(() => {
+          const sel = sections.find((s) => s.id === selectedId);
+          // Layout sections use the PropertiesBar; everything else uses this inspector.
+          if (!sel || sel.type === "layout") return null;
+          return <SectionInspector section={sel} onChange={updateSection} onClose={() => setSelectedId(null)} />;
+        })()}
       </div>
       <AiAssistPanel
         open={aiPanelOpen}
