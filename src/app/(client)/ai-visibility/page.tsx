@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Eye, RefreshCw, Download, Plus, ChevronRight, Key, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Eye, RefreshCw, Download, Plus, ChevronRight, Key, Check, AlertCircle, Loader2, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -301,6 +302,25 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
   const [rawScores, setRawScores] = useState<any>(null);
   const [showRaw, setShowRaw] = useState(false);
 
+  const [trendSeries, setTrendSeries] = useState<any[]>([]);
+  const [trendSummary, setTrendSummary] = useState<{ currentScore: number; previousScore: number; changePercent: number; trend: string } | null>(null);
+
+  const fetchTrends = useCallback(async () => {
+    try {
+      const data = await olFetch("/visibility/trends", "GET", undefined, { projectId, days: "30" });
+      const series = (data.series ?? []).map((p: any) => ({
+        date: p.date,
+        score: typeof p.visibilityScore === "number" ? p.visibilityScore : null,
+      }));
+      setTrendSeries(series);
+      setTrendSummary(data.summary ?? null);
+    } catch {
+      // Trends are supplementary — don't surface as a blocking error.
+      setTrendSeries([]);
+      setTrendSummary(null);
+    }
+  }, [projectId]);
+
   const fetchResults = useCallback(async () => {
     setResultsLoading(true);
     setResultsError("");
@@ -330,7 +350,7 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }, [projectId]);
 
-  useEffect(() => { fetchScores(); }, [fetchScores]);
+  useEffect(() => { fetchScores(); fetchTrends(); }, [fetchScores, fetchTrends]);
 
   // Poll run status
   useEffect(() => {
@@ -342,11 +362,12 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
         if (data.status === "completed") {
           clearInterval(t);
           fetchScores();
+          fetchTrends();
         }
       } catch {}
     }, 15000);
     return () => clearInterval(t);
-  }, [runStatus, projectId, fetchScores]);
+  }, [runStatus, projectId, fetchScores, fetchTrends]);
 
   async function startScan() {
     setRunLoading(true);
@@ -449,6 +470,42 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
                 </Card>
               ))}
             </div>
+          )}
+
+          {/* Visibility trend over time */}
+          {trendSeries.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Visibility Trend</CardTitle>
+                  <CardDescription className="text-xs">Visibility score over the last 30 days</CardDescription>
+                </div>
+                {trendSummary && (
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {trendSummary.currentScore != null ? `${trendSummary.currentScore.toFixed(1)}%` : "—"}
+                    </p>
+                    <p className={`text-xs font-medium inline-flex items-center gap-1 ${
+                      trendSummary.trend === "up" ? "text-green-600" : trendSummary.trend === "down" ? "text-red-600" : "text-gray-400"
+                    }`}>
+                      {trendSummary.trend === "up" ? <TrendingUp className="w-3.5 h-3.5" /> : trendSummary.trend === "down" ? <TrendingDown className="w-3.5 h-3.5" /> : <Minus className="w-3.5 h-3.5" />}
+                      {trendSummary.changePercent != null ? `${trendSummary.changePercent > 0 ? "+" : ""}${trendSummary.changePercent.toFixed(1)}%` : ""}
+                    </p>
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={trendSeries}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} unit="%" />
+                    <Tooltip formatter={(v: any) => (typeof v === "number" ? `${v.toFixed(1)}%` : v)} />
+                    <Line type="monotone" dataKey="score" stroke="#7c3aed" strokeWidth={2} dot={false} name="Visibility" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           )}
 
           {/* Competitor comparison table */}
