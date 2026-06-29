@@ -261,6 +261,25 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
   const [pdfLoading, setPdfLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [results, setResults] = useState<any[]>([]);
+  const [resultsLoading, setResultsLoading] = useState(false);
+  const [resultsError, setResultsError] = useState("");
+  const [showSearches, setShowSearches] = useState(false);
+
+  const fetchResults = useCallback(async () => {
+    setResultsLoading(true);
+    setResultsError("");
+    try {
+      const data = await olFetch("/prompts/results", "GET", undefined, { projectId });
+      const arr = Array.isArray(data) ? data : data.results ?? data.prompts ?? data.data ?? [];
+      setResults(Array.isArray(arr) ? arr : []);
+    } catch (e: any) {
+      setResultsError(e.message);
+    } finally {
+      setResultsLoading(false);
+    }
+  }, [projectId]);
+
   const fetchScores = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -445,6 +464,73 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
           )}
         </div>
       )}
+
+      {/* Searches & rankings — the actual prompts run against each AI platform */}
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Searches &amp; Rankings</CardTitle>
+            <CardDescription className="text-xs">The prompts run against each AI platform and how your brand ranked</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { const next = !showSearches; setShowSearches(next); if (next && results.length === 0) fetchResults(); }}
+          >
+            {showSearches ? "Hide" : "View searches"}
+          </Button>
+        </CardHeader>
+        {showSearches && (
+          <CardContent>
+            {resultsLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400 text-sm gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading searches…
+              </div>
+            ) : resultsError ? (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {resultsError}
+              </div>
+            ) : results.length === 0 ? (
+              <p className="text-sm text-gray-400 py-6 text-center">No search results yet. Run a scan first.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-gray-400 border-b border-gray-100 dark:border-gray-800">
+                      <th className="py-2 pr-3 font-medium">Search / Prompt</th>
+                      <th className="py-2 px-3 font-medium">Platform</th>
+                      <th className="py-2 px-3 font-medium text-center">Mentioned</th>
+                      <th className="py-2 pl-3 font-medium text-right">Rank</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r: any, i: number) => {
+                      const prompt = r.prompt ?? r.query ?? r.text ?? r.promptText ?? "—";
+                      const platform = (r.platform ?? r.engine ?? r.platformId ?? "—").toString().replace("_app", "");
+                      const rank = r.rank ?? r.position ?? r.brandRank ?? null;
+                      const mentioned = r.mentioned ?? r.brandMentioned ?? (rank != null && rank > 0);
+                      return (
+                        <tr key={i} className="border-b border-gray-50 dark:border-gray-800/50 align-top">
+                          <td className="py-2 pr-3 text-gray-800 dark:text-gray-200 max-w-md">{prompt}</td>
+                          <td className="py-2 px-3 text-gray-500 capitalize whitespace-nowrap">{platform}</td>
+                          <td className="py-2 px-3 text-center">
+                            {mentioned
+                              ? <Check className="w-4 h-4 text-green-600 inline" />
+                              : <span className="text-gray-300">—</span>}
+                          </td>
+                          <td className="py-2 pl-3 text-right font-medium text-gray-700 dark:text-gray-300">
+                            {rank != null && rank > 0 ? `#${rank}` : "—"}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 }
@@ -460,6 +546,7 @@ export default function AiVisibilityPage() {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [onboarding, setOnboarding] = useState(false);
   const [changingKey, setChangingKey] = useState(false);
+  const [projectsError, setProjectsError] = useState("");
 
   async function checkKey() {
     const res = await fetch("/api/profile/openlens");
@@ -470,11 +557,13 @@ export default function AiVisibilityPage() {
 
   async function fetchProjects() {
     setProjectsLoading(true);
+    setProjectsError("");
     try {
       const data = await olFetch("/projects", "GET");
       setProjects(Array.isArray(data) ? data : data.projects ?? []);
-    } catch {
+    } catch (e: any) {
       setProjects([]);
+      setProjectsError(e.message || "Couldn't load projects from OpenLens.");
     } finally {
       setProjectsLoading(false);
     }
@@ -527,6 +616,12 @@ export default function AiVisibilityPage() {
         <span>API Key: <span className="font-mono">{maskedKey}</span></span>
         <button onClick={() => setChangingKey(true)} className="text-violet-600 hover:underline">Change key</button>
       </div>
+
+      {projectsError && (
+        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+          <AlertCircle className="w-4 h-4 shrink-0" /> {projectsError}
+        </div>
+      )}
 
       {/* Projects list */}
       {projectsLoading ? (
