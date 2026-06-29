@@ -395,6 +395,25 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
     }
   }, [projectId]);
 
+  const [sources, setSources] = useState<any[]>([]);
+  const [sourcesLoading, setSourcesLoading] = useState(false);
+  const [sourcesError, setSourcesError] = useState("");
+  const [showSources, setShowSources] = useState(false);
+
+  const fetchSources = useCallback(async () => {
+    setSourcesLoading(true);
+    setSourcesError("");
+    try {
+      const data = await olFetch("/sources", "GET", undefined, { projectId, limit: "20", urlsPerDomain: "10" });
+      const arr = Array.isArray(data) ? data : data.sources ?? data.domains ?? data.data ?? [];
+      setSources(Array.isArray(arr) ? arr : []);
+    } catch (e: any) {
+      setSourcesError(e.message);
+    } finally {
+      setSourcesLoading(false);
+    }
+  }, [projectId]);
+
   const [engines, setEngines] = useState<any>(null);
   const [enginesLoading, setEnginesLoading] = useState(false);
   const [enginesError, setEnginesError] = useState("");
@@ -857,6 +876,81 @@ function VisibilityPanel({ projectId, onBack }: { projectId: string; onBack: () 
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Top cited domains for the latest run */}
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Top Cited Domains</CardTitle>
+            <CardDescription className="text-xs">Sources the AI platforms cited most in this run</CardDescription>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { const next = !showSources; setShowSources(next); if (next && sources.length === 0) fetchSources(); }}
+          >
+            {showSources ? "Hide" : "View sources"}
+          </Button>
+        </CardHeader>
+        {showSources && (
+          <CardContent>
+            {sourcesLoading ? (
+              <div className="flex items-center justify-center py-10 text-gray-400 text-sm gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Loading sources…
+              </div>
+            ) : sourcesError ? (
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 dark:bg-red-900/20 rounded-lg px-3 py-2">
+                <AlertCircle className="w-4 h-4 shrink-0" /> {sourcesError}
+              </div>
+            ) : sources.length === 0 ? (
+              <p className="text-sm text-gray-400 py-6 text-center">No citation sources yet. Run a scan first.</p>
+            ) : (
+              <div className="space-y-3">
+                {sources.map((s: any, i: number) => {
+                  const domain = s.domain ?? s.name ?? s.host ?? "—";
+                  const count = s.count ?? s.citations ?? s.citationCount ?? s.total;
+                  const category = s.category ?? s.type;
+                  const urls = s.urls ?? s.pages ?? s.links ?? [];
+                  return (
+                    <div key={domain + i} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{domain}</span>
+                          {category && (
+                            <span className="px-1.5 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-[11px] text-violet-700 dark:text-violet-300 capitalize shrink-0">
+                              {String(category).replace(/_/g, " ")}
+                            </span>
+                          )}
+                        </div>
+                        {count != null && (
+                          <span className="text-xs text-gray-500 shrink-0"><span className="font-semibold text-gray-800 dark:text-gray-200">{count}</span> citations</span>
+                        )}
+                      </div>
+                      {Array.isArray(urls) && urls.length > 0 && (
+                        <ul className="space-y-1 mt-2">
+                          {urls.map((u: any, j: number) => {
+                            const href = typeof u === "string" ? u : u.url ?? u.link;
+                            const title = typeof u === "string" ? u : u.title || href;
+                            const uCount = typeof u === "object" ? u.count : undefined;
+                            return (
+                              <li key={j} className="flex items-center justify-between gap-3 text-xs">
+                                <a href={href} target="_blank" rel="noopener noreferrer" className="text-violet-600 hover:underline truncate" title={href}>
+                                  {title}
+                                </a>
+                                {uCount != null && uCount > 1 && <span className="text-gray-400 shrink-0">{uCount}×</span>}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </CardContent>
