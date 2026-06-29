@@ -28,6 +28,7 @@ import {
   CalendarDays,
   GanttChart,
   Paperclip,
+  LifeBuoy,
   Eye,
   Video,
   Activity,
@@ -81,6 +82,7 @@ const navGroups: {
       { href: "/brand-book", label: "Brand Book", icon: BookOpen },
       { href: "/files", label: "Files", icon: Paperclip },
       { href: "/forms", label: "Forms", icon: ClipboardList },
+      { href: "/support", label: "Help & Support", icon: LifeBuoy },
     ],
   },
 ];

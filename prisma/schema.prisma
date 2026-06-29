@@ -237,6 +237,31 @@ model CheckInAnswer {
   @@index([checkInId])
 }
 
+model SupportTicket {
+  id        String          @id @default(cuid())
+  userId    String          // creator (client or team member)
+  subject   String
+  status    String          @default("open") // open | pending | closed
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  messages  TicketMessage[]
+
+  @@index([userId])
+}
+
+model TicketMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId     String
+  authorName String
+  body       String        @db.Text
+  isStaff    Boolean       @default(false)
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId])
+}
+
 model Milestone {
   id        String   @id @default(cuid())
   projectId String
