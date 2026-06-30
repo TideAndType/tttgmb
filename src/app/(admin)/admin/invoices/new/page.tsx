@@ -69,6 +69,7 @@ export default function NewInvoicePage() {
   }
 
   const [loadingTime, setLoadingTime] = useState(false);
+  const [billTime, setBillTime] = useState(false);
   async function addLoggedTime() {
     if (!userId) { setError("Select a client first."); return; }
     setLoadingTime(true);
@@ -82,6 +83,7 @@ export default function NewInvoicePage() {
       if (rateStr === null) return;
       const rate = parseFloat(rateStr) || 0;
       setItems((prev) => [...prev, { name: "Time tracked", description: `${hours} hours`, quantity: hours, price: rate }]);
+      setBillTime(true);
     } finally {
       setLoadingTime(false);
     }
@@ -140,6 +142,7 @@ export default function NewInvoicePage() {
       dueDate: dueDate || undefined,
       notes: notes || undefined,
       recurrence: recurrence || undefined,
+      billTime: billTime || undefined,
     };
 
     if (taxValue && taxName) {

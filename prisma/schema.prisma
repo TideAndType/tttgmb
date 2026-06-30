@@ -672,6 +672,8 @@ model TimeEntry {
   description String?
   minutes     Int
   date        DateTime @default(now())
+  billedAt    DateTime?
+  invoiceId   String?
   createdAt   DateTime @default(now())
 }
 

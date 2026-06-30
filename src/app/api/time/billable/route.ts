@@ -32,7 +32,8 @@ export async function GET(req: NextRequest) {
   if (taskIds.length) or.push({ taskId: { in: taskIds } });
   if (or.length === 0) return NextResponse.json({ minutes: 0, hours: 0 });
 
-  const agg = await prisma.timeEntry.aggregate({ _sum: { minutes: true }, where: { OR: or } });
+  // Only unbilled time is "new" time available to bill.
+  const agg = await prisma.timeEntry.aggregate({ _sum: { minutes: true }, where: { billedAt: null, OR: or } });
   const minutes = agg._sum.minutes ?? 0;
   return NextResponse.json({ minutes, hours: Number((minutes / 60).toFixed(2)) });
 }

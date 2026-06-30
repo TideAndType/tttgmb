@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { userId, items, currency, dueDate, invoiceDate, number, notes, taxes, discount, status, recurrence } = body;
+  const { userId, items, currency, dueDate, invoiceDate, number, notes, taxes, discount, status, recurrence, billTime } = body;
 
   if (!userId || !items || !Array.isArray(items) || items.length === 0) {
     return NextResponse.json({ error: "userId and items are required" }, { status: 400 });
@@ -48,6 +48,25 @@ export async function POST(req: NextRequest) {
   const invoice = await generateInvoice({
     userId, items, currency, dueDate, invoiceDate, number, notes, taxes, discount, status,
   });
+
+  // If this invoice billed the client's logged time, mark those entries as
+  // billed so the task/project shows "Billed" vs "New" time going forward.
+  if (billTime) {
+    const companyUserIds = await getCompanyUserIds(userId);
+    const [projects, tasks] = await Promise.all([
+      prisma.project.findMany({ where: { userId: { in: companyUserIds } }, select: { id: true } }),
+      prisma.task.findMany({ where: { userId: { in: companyUserIds } }, select: { id: true } }),
+    ]);
+    const or: any[] = [];
+    if (projects.length) or.push({ projectId: { in: projects.map((p) => p.id) } });
+    if (tasks.length) or.push({ taskId: { in: tasks.map((t) => t.id) } });
+    if (or.length) {
+      await prisma.timeEntry.updateMany({
+        where: { billedAt: null, OR: or },
+        data: { billedAt: new Date(), invoiceId: (invoice as any).id },
+      });
+    }
+  }
 
   // If marked recurring, persist a schedule that the cron will run going forward.
   if (recurrence && ["weekly", "monthly", "quarterly"].includes(recurrence)) {

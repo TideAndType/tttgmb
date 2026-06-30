@@ -18,6 +18,7 @@ function hhmmss(totalSec: number) {
 // counting across navigation/refresh.
 export function TimeLogger({ taskId, projectId }: { taskId?: string; projectId?: string }) {
   const [totalMinutes, setTotalMinutes] = useState<number | null>(null);
+  const [billedMinutes, setBilledMinutes] = useState(0);
   const [open, setOpen] = useState(false);
   const [hours, setHours] = useState("");
   const [note, setNote] = useState("");
@@ -36,8 +37,9 @@ export function TimeLogger({ taskId, projectId }: { taskId?: string; projectId?:
       const res = await fetch(`/api/time?${query}&days=0`);
       if (res.ok) {
         const data = await res.json();
-        const mins = (data.entries || []).reduce((s: number, e: any) => s + (e.minutes || 0), 0);
-        setTotalMinutes(mins);
+        const entries = data.entries || [];
+        setTotalMinutes(entries.reduce((s: number, e: any) => s + (e.minutes || 0), 0));
+        setBilledMinutes(entries.reduce((s: number, e: any) => s + (e.billedAt ? (e.minutes || 0) : 0), 0));
       }
     } catch { /* ignore */ }
   }, [query]);
@@ -112,14 +114,23 @@ export function TimeLogger({ taskId, projectId }: { taskId?: string; projectId?:
     }
   };
 
-  const totalLabel = totalMinutes != null ? `${(totalMinutes / 60).toFixed(1)}h logged` : "—";
+  const newMinutes = (totalMinutes ?? 0) - billedMinutes;
   const elapsedSec = startedAt ? (now - startedAt) / 1000 : 0;
 
   return (
     <div>
       <div className="flex items-center gap-3 flex-wrap">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" /> {totalLabel}
+          <Clock className="h-3 w-3" />
+          {totalMinutes == null ? "—" : billedMinutes > 0 ? (
+            <>
+              <span className="text-muted-foreground">Billed {(billedMinutes / 60).toFixed(1)}h</span>
+              <span className="text-muted-foreground/50">/</span>
+              <span className="font-medium text-foreground">New {(newMinutes / 60).toFixed(1)}h</span>
+            </>
+          ) : (
+            <span>{(newMinutes / 60).toFixed(1)}h logged</span>
+          )}
         </span>
 
         {startedAt ? (
