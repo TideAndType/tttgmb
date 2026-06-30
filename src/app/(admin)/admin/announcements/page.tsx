@@ -69,6 +69,11 @@ export default function AdminAnnouncementsPage() {
     return c ? (c.companyName || c.name) : "Client";
   };
 
+  // Recipients that actually have announcements — used for the filter dropdown.
+  const recipientOptions = Array.from(new Set(announcements.map((a) => a.userId)))
+    .map((id) => ({ id, name: clientName(id) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
@@ -113,7 +118,7 @@ export default function AdminAnnouncementsPage() {
           className="rounded-md border border-input bg-background px-2 py-1 text-xs"
         >
           <option value="">All clients</option>
-          {clients.map((c) => <option key={c.id} value={c.id}>{c.companyName || c.name}</option>)}
+          {recipientOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
       {visible.length === 0 ? (
