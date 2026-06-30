@@ -34,6 +34,14 @@ export async function POST(req: Request) {
     body: body ? JSON.stringify(body) : undefined,
   });
 
+  // Friendly message when OpenLens billing/quota blocks the request.
+  if (upstream.status === 402) {
+    return NextResponse.json({ error: "OpenLens quota reached (HTTP 402). Check your OpenLens plan or billing to run more." }, { status: 402 });
+  }
+  if (upstream.status === 429) {
+    return NextResponse.json({ error: "OpenLens rate limit hit (HTTP 429). Try again shortly." }, { status: 429 });
+  }
+
   // PDF passthrough
   if (upstream.headers.get("content-type")?.includes("application/pdf")) {
     const buf = await upstream.arrayBuffer();
