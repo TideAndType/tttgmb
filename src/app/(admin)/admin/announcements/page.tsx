@@ -30,7 +30,7 @@ export default function AdminAnnouncementsPage() {
     if (res.ok) {
       setAnnouncements(d.announcements || []);
       setError(d.error || "");
-      setDiag(d.you ? `Signed in as ${d.you.role}${d.you.impersonating ? " · impersonating a client" : ""}` : "");
+      setDiag(d.you ? `Signed in as ${d.you.role}${d.you.impersonating ? " · impersonating" : ""} · ${d.you.total ?? 0} total in database` : "");
     } else {
       setError(d.error || `Couldn't load announcements (${res.status}). Has the migration been run?`);
     }

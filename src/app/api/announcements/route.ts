@@ -34,8 +34,11 @@ export async function GET(req: NextRequest) {
   if (isAdmin(user) && scope !== "client") {
     const where = filterClient ? { userId: filterClient } : {};
     try {
-      const announcements = await prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } });
-      return NextResponse.json({ announcements, you: { role: user.role, impersonating: !!viewing } });
+      const [announcements, total] = await Promise.all([
+        prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } }),
+        prisma.announcement.count(),
+      ]);
+      return NextResponse.json({ announcements, you: { role: user.role, impersonating: !!viewing, total } });
     } catch {
       return NextResponse.json({ announcements: [], error: "Announcements table not found — run the migration SQL in your database." }, { status: 200 });
     }
