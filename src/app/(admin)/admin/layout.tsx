@@ -1,6 +1,7 @@
 import { AdminSidebar } from "@/components/nav/admin-sidebar";
 import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationsSidebar } from "@/components/notifications/notifications-sidebar";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
         <main className="flex-1 p-4 lg:p-8">{children}</main>
       </div>
+      <NotificationsSidebar />
     </div>
   );
 }

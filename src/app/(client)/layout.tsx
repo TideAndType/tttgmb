@@ -8,6 +8,7 @@ import { ExitImpersonationButton } from "@/components/nav/exit-impersonation-but
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationsSidebar } from "@/components/notifications/notifications-sidebar";
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
@@ -50,6 +51,7 @@ export default async function ClientLayout({ children }: { children: React.React
           <main className="flex-1 p-4 lg:p-8">{children}</main>
           <OnboardingWizard />
         </div>
+        <NotificationsSidebar />
       </div>
     </BrandProvider>
   );
