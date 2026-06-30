@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     const where = filterClient ? { userId: filterClient } : {};
     try {
       const announcements = await prisma.announcement.findMany({ where, orderBy: { createdAt: "desc" } });
-      return NextResponse.json({ announcements });
+      return NextResponse.json({ announcements, you: { role: user.role, impersonating: !!viewing } });
     } catch {
       return NextResponse.json({ announcements: [], error: "Announcements table not found — run the migration SQL in your database." }, { status: 200 });
     }
