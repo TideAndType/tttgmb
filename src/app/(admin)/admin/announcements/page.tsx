@@ -22,25 +22,28 @@ export default function AdminAnnouncementsPage() {
   const [error, setError] = useState("");
   const [filterClient, setFilterClient] = useState("");
 
-  const [diag, setDiag] = useState("");
-  const load = async (clientId = filterClient) => {
-    const url = clientId ? `/api/announcements?clientId=${clientId}` : "/api/announcements";
-    const res = await fetch(url);
-    const d = await res.json().catch(() => ({}));
-    if (res.ok) {
-      setAnnouncements(d.announcements || []);
+  const [diag, setDiag] = useState("Loading…");
+  // Always fetch ALL announcements from the dedicated admin endpoint; filter
+  // client-side. This avoids any scoping/impersonation ambiguity.
+  const load = async () => {
+    try {
+      const res = await fetch("/api/announcements/all", { cache: "no-store" });
+      const d = await res.json().catch(() => ({}));
+      setAnnouncements(Array.isArray(d.announcements) ? d.announcements : []);
       setError(d.error || "");
-      setDiag(d.you ? `Signed in as ${d.you.role}${d.you.impersonating ? " · impersonating" : ""} · ${d.you.total ?? 0} total in database` : "");
-    } else {
-      setError(d.error || `Couldn't load announcements (${res.status}). Has the migration been run?`);
+      setDiag(`${d.role ? `Signed in as ${d.role}` : "Not signed in as admin"} · ${d.total ?? (d.announcements?.length ?? 0)} in database`);
+    } catch (e: any) {
+      setError(`Request failed: ${e?.message || "network error"}`);
+      setDiag("");
     }
   };
 
   useEffect(() => {
-    fetch("/api/admin/clients").then((r) => r.json()).then((d) => setClients(Array.isArray(d) ? d : []));
+    fetch("/api/admin/clients").then((r) => r.json()).then((d) => setClients(Array.isArray(d) ? d : [])).catch(() => {});
+    load();
   }, []);
 
-  useEffect(() => { load(filterClient); }, [filterClient]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visible = filterClient ? announcements.filter((a) => a.userId === filterClient) : announcements;
 
   const post = async () => {
     setError("");
@@ -101,7 +104,7 @@ export default function AdminAnnouncementsPage() {
 
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
         <div>
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Posted ({announcements.length})</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Posted ({visible.length})</h2>
           {diag && <p className="text-[11px] text-muted-foreground">{diag}</p>}
         </div>
         <select
@@ -113,11 +116,11 @@ export default function AdminAnnouncementsPage() {
           {clients.map((c) => <option key={c.id} value={c.id}>{c.companyName || c.name}</option>)}
         </select>
       </div>
-      {announcements.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="text-sm text-muted-foreground">{filterClient ? "No announcements for this client." : "No announcements yet."}</p>
       ) : (
         <div className="space-y-3">
-          {announcements.map((a) => (
+          {visible.map((a) => (
             <Card key={a.id}>
               <CardContent className="py-4 flex items-start justify-between gap-3">
                 <div className="min-w-0">
