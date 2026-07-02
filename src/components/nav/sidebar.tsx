@@ -38,6 +38,7 @@ import {
   Target,
   Swords,
   Star,
+  Workflow,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -64,6 +65,7 @@ const navGroups: {
       { href: "/marketing/tasks", label: "Task Engine", icon: Target },
       { href: "/marketing/competitors", label: "Competitors", icon: Swords },
       { href: "/marketing/reputation", label: "Reputation", icon: Star },
+      { href: "/marketing/automations", label: "Automations", icon: Workflow },
     ],
   },
   {

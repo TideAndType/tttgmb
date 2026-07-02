@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { effectiveMarketingUserId } from "@/lib/marketing-ai";
 import { computeScores } from "@/lib/marketing-scores";
+import { runAutomations } from "@/lib/automations";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +30,10 @@ export async function POST() {
   const previous = await prisma.marketingScore.findFirst({
     where: { userId, id: { not: snapshot.id } }, orderBy: { createdAt: "desc" },
   });
+
+  // Fire automations if overall marketing health dropped meaningfully.
+  if (previous && snapshot.overall < previous.overall - 4) {
+    await runAutomations(userId, "score_drop", { detail: `Marketing health dropped from ${previous.overall} to ${snapshot.overall}` });
+  }
   return NextResponse.json({ latest: snapshot, previous });
 }

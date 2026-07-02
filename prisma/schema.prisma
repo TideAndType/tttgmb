@@ -124,6 +124,25 @@ model User {
   marketingDocs         MarketingKnowledgeDoc[]
   competitors           MarketingCompetitor[]
   reviews               MarketingReview[]
+  automations           Automation[]
+}
+
+// A "when X happens → do Y" marketing workflow.
+model Automation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  trigger   String   // content_published | review_received | score_drop | manual
+  action    String   // notify | create_task | generate_social | draft_review_response
+  config    Json?    // action params (e.g. task title, notify message)
+  enabled   Boolean  @default(true)
+  lastRunAt DateTime?
+  runCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 // A customer review the client is tracking (manual entry now; a GBP/Facebook

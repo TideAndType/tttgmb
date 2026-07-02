@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { effectiveMarketingUserId } from "@/lib/marketing-ai";
+import { runAutomations } from "@/lib/automations";
 
 export const dynamic = "force-dynamic";
 
@@ -32,5 +33,6 @@ export async function POST(req: NextRequest) {
       reviewedAt: reviewedAt ? new Date(reviewedAt) : new Date(),
     },
   });
+  await runAutomations(userId, "review_received", { reviewId: review.id, author: review.author, rating: review.rating, detail: `New ${review.rating}-star review from ${review.author}` });
   return NextResponse.json({ review });
 }

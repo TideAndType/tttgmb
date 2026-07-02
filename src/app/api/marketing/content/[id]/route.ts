@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { effectiveMarketingUserId } from "@/lib/marketing-ai";
+import { runAutomations } from "@/lib/automations";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (body.scheduledAt !== undefined) data.scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
 
   const content = await prisma.marketingContent.update({ where: { id: params.id }, data });
+
+  // Fire automations when content transitions to published.
+  if (data.status === "published" && existing.status !== "published") {
+    await runAutomations(userId, "content_published", { contentId: content.id, title: content.title, type: content.type });
+  }
   return NextResponse.json({ content });
 }
 
