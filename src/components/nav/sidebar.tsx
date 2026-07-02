@@ -47,7 +47,7 @@ const navGroups: {
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/my-bar", label: "My Bar", icon: Bookmark },
-      { href: "/activity", label: "Activity", icon: Activity },
+      { href: "/activity", label: "Everything", icon: Activity },
     ],
   },
   {

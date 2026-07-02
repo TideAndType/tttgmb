@@ -6,12 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Activity as ActivityIcon, CheckSquare, FileText, Receipt, CheckCircle,
-  MessageSquare, Clock, ThumbsUp, ThumbsDown,
+  MessageSquare, Clock, ThumbsUp, ThumbsDown, MessageCircle, Paperclip,
 } from "lucide-react";
 
 interface Event {
   id: string;
   type: string;
+  category: string;
   description: string;
   timestamp: string;
   href?: string;
@@ -28,8 +29,21 @@ const ICONS: Record<string, { icon: React.ElementType; className: string }> = {
   approval_approved: { icon: ThumbsUp, className: "text-green-500" },
   approval_changes: { icon: CheckCircle, className: "text-amber-500" },
   message_posted: { icon: MessageSquare, className: "text-indigo-500" },
+  chat_posted: { icon: MessageSquare, className: "text-indigo-500" },
+  comment_posted: { icon: MessageCircle, className: "text-pink-500" },
+  file_uploaded: { icon: Paperclip, className: "text-cyan-500" },
   time_logged: { icon: Clock, className: "text-teal-500" },
 };
+
+const FILTERS: { key: string; label: string }[] = [
+  { key: "all", label: "Everything" },
+  { key: "messages", label: "Messages" },
+  { key: "comments", label: "Comments" },
+  { key: "files", label: "Files" },
+  { key: "tasks", label: "Tasks" },
+  { key: "approvals", label: "Approvals" },
+  { key: "billing", label: "Billing" },
+];
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -58,6 +72,7 @@ function groupLabel(iso: string): string {
 export default function ActivityPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
 
   useEffect(() => {
     fetch("/api/activity")
@@ -66,8 +81,13 @@ export default function ActivityPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Only show filter chips for categories that actually have events.
+  const presentCategories = new Set(events.map((e) => e.category));
+  const availableFilters = FILTERS.filter((f) => f.key === "all" || presentCategories.has(f.key));
+  const filtered = filter === "all" ? events : events.filter((e) => e.category === filter);
+
   const groups: { label: string; items: Event[] }[] = [];
-  for (const e of events) {
+  for (const e of filtered) {
     const label = groupLabel(e.timestamp);
     let g = groups.find((x) => x.label === label);
     if (!g) { g = { label, items: [] }; groups.push(g); }
@@ -79,10 +99,28 @@ export default function ActivityPage() {
       <div className="mb-8 flex items-center gap-3">
         <ActivityIcon className="h-7 w-7 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Activity</h1>
-          <p className="text-muted-foreground mt-1">A history of everything happening on your account</p>
+          <h1 className="text-3xl font-bold text-foreground">Everything</h1>
+          <p className="text-muted-foreground mt-1">Messages, comments, files, and activity across your account</p>
         </div>
       </div>
+
+      {!loading && events.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {availableFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                filter === f.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
