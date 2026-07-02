@@ -33,6 +33,7 @@ import {
   Video,
   Activity,
   ClipboardList,
+  Bookmark,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -45,7 +46,8 @@ const navGroups: {
     title: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/activity", label: "Activity", icon: Activity },
+      { href: "/my-bar", label: "My Bar", icon: Bookmark },
+      { href: "/activity", label: "Everything", icon: Activity },
     ],
   },
   {

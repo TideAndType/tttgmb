@@ -1,6 +1,21 @@
 import { AdminSidebar } from "@/components/nav/admin-sidebar";
 import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationsSidebar } from "@/components/notifications/notifications-sidebar";
+import { KeyboardShortcuts } from "@/components/keyboard/keyboard-shortcuts";
+import { PageTransition } from "@/components/ui/page-transition";
+
+const ADMIN_NAV_SHORTCUTS = [
+  { key: "d", label: "Dashboard", href: "/admin" },
+  { key: "p", label: "Projects", href: "/admin/projects" },
+  { key: "t", label: "Tasks", href: "/admin/tasks" },
+  { key: "c", label: "Calendar", href: "/admin/calendar" },
+  { key: "a", label: "Approvals", href: "/admin/approvals" },
+  { key: "r", label: "Proposals", href: "/admin/proposals" },
+  { key: "i", label: "Invoices", href: "/admin/invoices" },
+  { key: "m", label: "Messages", href: "/admin/messages" },
+  { key: "s", label: "Support", href: "/admin/support" },
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -11,8 +26,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1"><GlobalSearch /></div>
           <NotificationBell />
         </div>
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 lg:p-8"><PageTransition>{children}</PageTransition></main>
       </div>
+      <NotificationsSidebar />
+      <KeyboardShortcuts navShortcuts={ADMIN_NAV_SHORTCUTS} />
     </div>
   );
 }

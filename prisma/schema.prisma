@@ -95,6 +95,7 @@ model User {
   notifyWeeklyDigest    Boolean @default(true)
   totpSecret       String?
   totpEnabled      Boolean @default(false)
+  icalToken        String? @unique
   openLensApiKey   String?
   image            String?  @db.Text
   dashboardLayout  Json?
@@ -113,6 +114,18 @@ model User {
   meetings        Meeting[]
   trackedKeywords TrackedKeyword[]
   keywordFolders  KeywordFolder[]
+  bookmarks       Bookmark[]
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model KeywordFolder {
@@ -336,6 +349,8 @@ model CalendarEvent {
   calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   title       String
   date        DateTime @db.Date
+  endDate     DateTime? @db.Date
+  recurrence  String?   // null | "weekly" | "monthly"
   description String?
   createdAt   DateTime @default(now())
 

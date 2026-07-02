@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, Trash2, ExternalLink } from "lucide-react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextContent } from "@/components/ui/rich-text-content";
 
 interface Comment {
   id: string;
@@ -132,7 +134,7 @@ export default function MessagePage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <p className="text-foreground whitespace-pre-wrap">{message.body}</p>
+          <RichTextContent text={message.body} className="text-foreground text-base" />
           {message.links && message.links.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-4">
               {message.links.map((link) => (
@@ -176,7 +178,7 @@ export default function MessagePage() {
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
-                <p className="text-sm text-foreground whitespace-pre-wrap">{comment.body}</p>
+                <RichTextContent text={comment.body} className="text-foreground" />
               </div>
             </div>
           ))}
@@ -188,13 +190,11 @@ export default function MessagePage() {
         <CardContent className="pt-6">
           <form onSubmit={submitComment} className="space-y-3">
             <h3 className="font-medium text-foreground">Add a Comment</h3>
-            <textarea
+            <RichTextEditor
               value={commentBody}
-              onChange={(e) => setCommentBody(e.target.value)}
-              placeholder="Write a comment..."
+              onChange={setCommentBody}
+              placeholder="Write a comment…"
               rows={4}
-              required
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
             />
             <Button type="submit" disabled={submitting || !commentBody.trim()} size="sm">
               {submitting ? "Posting..." : "Post Comment"}

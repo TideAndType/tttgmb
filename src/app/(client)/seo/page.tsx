@@ -8,7 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { SeoChart } from "@/components/charts/seo-chart";
 import { AiExplain } from "@/components/ai/ai-explain";
-import { Search, TrendingUp, Eye, MousePointerClick } from "lucide-react";
+import { Search, TrendingUp, TrendingDown, Eye, MousePointerClick, Minus } from "lucide-react";
+
+interface Totals {
+  clicks: number;
+  impressions: number;
+  avgPosition: number;
+  avgCtr: number;
+}
 
 interface SeoData {
   rows: Array<{
@@ -18,12 +25,41 @@ interface SeoData {
     position: number;
     ctr: number;
   }>;
-  totals: {
-    clicks: number;
-    impressions: number;
-    avgPosition: number;
-    avgCtr: number;
-  };
+  totals: Totals;
+  prevTotals?: Totals;
+  rangeLabel?: string;
+}
+
+type RangeKey = "30d" | "90d" | "120d" | "thisYear" | "lastYear" | "custom";
+
+const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "120d", label: "Last 120 days" },
+  { value: "thisYear", label: "This year" },
+  { value: "lastYear", label: "Last year" },
+  { value: "custom", label: "Custom range" },
+];
+
+// Period-over-period delta. `lowerIsBetter` flips the color for avg position
+// (a smaller number is a better rank).
+function Delta({ current, previous, lowerIsBetter = false, percent = false }: { current: number; previous?: number; lowerIsBetter?: boolean; percent?: boolean }) {
+  if (previous === undefined || previous === 0) return null;
+  const diff = current - previous;
+  if (Math.abs(diff) < 0.0001) {
+    return <span className="inline-flex items-center gap-1 text-muted-foreground text-xs"><Minus className="h-3 w-3" />0%</span>;
+  }
+  const improved = lowerIsBetter ? diff < 0 : diff > 0;
+  const pct = ((diff / previous) * 100);
+  const label = percent
+    ? `${diff > 0 ? "+" : ""}${(diff * 100).toFixed(2)}pts`
+    : `${diff > 0 ? "+" : ""}${pct.toFixed(1)}%`;
+  const Icon = diff > 0 ? TrendingUp : TrendingDown;
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-medium ${improved ? "text-green-600" : "text-red-600"}`}>
+      <Icon className="h-3 w-3" />{label}
+    </span>
+  );
 }
 
 export default function SeoPage() {
@@ -35,15 +71,27 @@ export default function SeoPage() {
   const [savingSite, setSavingSite] = useState(false);
   const [error, setError] = useState("");
 
+  const [range, setRange] = useState<RangeKey>("90d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
   useEffect(() => {
+    // Custom range waits for the Apply button.
+    if (range === "custom" && (!customStart || !customEnd)) return;
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
 
   const fetchData = async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/gsc/data");
+      const params = new URLSearchParams({ range });
+      if (range === "custom" && customStart && customEnd) {
+        params.set("start", customStart);
+        params.set("end", customEnd);
+      }
+      const res = await fetch(`/api/gsc/data?${params.toString()}`);
       if (res.ok) {
         const json = await res.json();
         setData(json);
@@ -111,10 +159,10 @@ export default function SeoPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-3xl font-bold text-foreground">SEO Overview</h1>
-          <p className="text-muted-foreground mt-1">Last 90 days performance from Google Search Console</p>
+          <p className="text-muted-foreground mt-1">{data?.rangeLabel ? `Performance for ${data.rangeLabel}` : "Performance"} from Google Search Console</p>
         </div>
         {!gscConnected && (
           <Button onClick={handleConnect}>
@@ -126,6 +174,29 @@ export default function SeoPage() {
           <ConnectionBadge service="gsc" label="Google Search Console" onDisconnected={fetchData} />
         )}
       </div>
+
+      {gscConnected && propertySet && (
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <select
+            value={range}
+            onChange={(e) => setRange(e.target.value as RangeKey)}
+            className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground h-9"
+          >
+            {RANGE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {range === "custom" && (
+            <div className="flex items-center gap-1">
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="border border-input rounded-md px-2 py-1.5 text-sm bg-background text-foreground h-9" />
+              <span className="text-muted-foreground text-sm">–</span>
+              <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="border border-input rounded-md px-2 py-1.5 text-sm bg-background text-foreground h-9" />
+              <Button size="sm" className="h-9" onClick={fetchData} disabled={!customStart || !customEnd}>Apply</Button>
+            </div>
+          )}
+          <span className="text-xs text-muted-foreground">vs. previous period</span>
+        </div>
+      )}
 
       {error && <Alert variant="destructive" className="mb-6">{error}</Alert>}
 
@@ -181,6 +252,7 @@ export default function SeoPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{data.totals.clicks.toLocaleString()}</p>
+                <Delta current={data.totals.clicks} previous={data.prevTotals?.clicks} />
               </CardContent>
             </Card>
             <Card>
@@ -192,6 +264,7 @@ export default function SeoPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{data.totals.impressions.toLocaleString()}</p>
+                <Delta current={data.totals.impressions} previous={data.prevTotals?.impressions} />
               </CardContent>
             </Card>
             <Card>
@@ -203,6 +276,7 @@ export default function SeoPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{data.totals.avgPosition.toFixed(1)}</p>
+                <Delta current={data.totals.avgPosition} previous={data.prevTotals?.avgPosition} lowerIsBetter />
               </CardContent>
             </Card>
             <Card>
@@ -213,18 +287,19 @@ export default function SeoPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold">{(data.totals.avgCtr * 100).toFixed(2)}%</p>
+                <Delta current={data.totals.avgCtr} previous={data.prevTotals?.avgCtr} percent />
               </CardContent>
             </Card>
           </div>
 
           <div className="mb-8">
-            <AiExplain reportType="Google Search Console — last 90 days" data={data.totals} />
+            <AiExplain reportType={`Google Search Console — ${data.rangeLabel || "last 90 days"}`} data={data.totals} />
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle>Performance Over Time</CardTitle>
-              <CardDescription>Clicks, impressions, and average position over the last 90 days</CardDescription>
+              <CardDescription>Clicks, impressions, and average position over {data.rangeLabel || "the last 90 days"}</CardDescription>
             </CardHeader>
             <CardContent>
               <SeoChart data={data.rows} />

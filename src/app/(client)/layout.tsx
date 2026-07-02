@@ -8,6 +8,21 @@ import { ExitImpersonationButton } from "@/components/nav/exit-impersonation-but
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { NotificationsSidebar } from "@/components/notifications/notifications-sidebar";
+import { KeyboardShortcuts } from "@/components/keyboard/keyboard-shortcuts";
+import { PageTransition } from "@/components/ui/page-transition";
+
+const CLIENT_NAV_SHORTCUTS = [
+  { key: "d", label: "Dashboard", href: "/dashboard" },
+  { key: "b", label: "My Bar", href: "/my-bar" },
+  { key: "p", label: "Projects", href: "/projects" },
+  { key: "t", label: "Tasks", href: "/tasks" },
+  { key: "c", label: "Calendar", href: "/calendar" },
+  { key: "k", label: "Keywords", href: "/keywords" },
+  { key: "r", label: "Reports", href: "/reports" },
+  { key: "m", label: "Messages", href: "/messages" },
+  { key: "i", label: "Invoices", href: "/invoices" },
+];
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = cookies();
@@ -47,9 +62,11 @@ export default async function ClientLayout({ children }: { children: React.React
             <div className="flex-1"><GlobalSearch /></div>
             <NotificationBell />
           </div>
-          <main className="flex-1 p-4 lg:p-8">{children}</main>
+          <main className="flex-1 p-4 lg:p-8"><PageTransition>{children}</PageTransition></main>
           <OnboardingWizard />
         </div>
+        <NotificationsSidebar />
+        <KeyboardShortcuts navShortcuts={CLIENT_NAV_SHORTCUTS} />
       </div>
     </BrandProvider>
   );

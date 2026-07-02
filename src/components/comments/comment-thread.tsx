@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextContent } from "@/components/ui/rich-text-content";
 
 interface Comment {
   id: string;
@@ -101,7 +103,7 @@ export function CommentThread({ commentsUrl, initialCount = 0 }: CommentThreadPr
                         })}
                       </span>
                     </div>
-                    <p className="text-sm text-foreground/80">{c.body}</p>
+                    <RichTextContent text={c.body} className="text-foreground/80" />
                   </div>
                 </div>
               ))}
@@ -109,12 +111,11 @@ export function CommentThread({ commentsUrl, initialCount = 0 }: CommentThreadPr
           )}
 
           <div className="space-y-2">
-            <textarea
+            <RichTextEditor
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={setNewComment}
               placeholder="Add a comment..."
               rows={3}
-              className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground resize-none"
             />
             <Button
               size="sm"

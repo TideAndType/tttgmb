@@ -27,6 +27,8 @@ import { AiVisibilityWidget } from "@/components/dashboard-ai-visibility";
 import { UserAvatar } from "@/components/ui/avatar";
 import { CheckInsWidget } from "@/components/checkins/checkins-widget";
 import { AnnouncementBanners } from "@/components/announcements/announcement-banners";
+import { RecentlyVisited } from "@/components/dashboard/recently-visited";
+import { QuickActions } from "@/components/dashboard/quick-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -271,6 +273,12 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Quick actions */}
+      <QuickActions />
+
+      {/* Recently visited projects (client-side, hidden when empty) */}
+      <RecentlyVisited />
 
       {/* Announcements from your agency (dismissible) */}
       <AnnouncementBanners items={announcements.map((a) => ({ id: a.id, title: a.title, body: a.body, createdAt: new Date(a.createdAt).toISOString() }))} />

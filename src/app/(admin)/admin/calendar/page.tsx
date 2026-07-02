@@ -351,7 +351,7 @@ export default function AdminCalendarPage() {
   const [enabled, setEnabled] = useState<Set<string>>(new Set());
   const [newCalName, setNewCalName] = useState("");
   const [showEventForm, setShowEventForm] = useState(false);
-  const [evForm, setEvForm] = useState({ calendarId: "", title: "", date: "" });
+  const [evForm, setEvForm] = useState({ calendarId: "", title: "", date: "", endDate: "", recurrence: "" });
 
   const loadCalendars = useCallback(async () => {
     const res = await fetch("/api/calendars");
@@ -397,7 +397,7 @@ export default function AdminCalendarPage() {
     if (!evForm.calendarId || !evForm.title.trim() || !evForm.date) return;
     const res = await fetch("/api/calendar-events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(evForm) });
     if (res.ok) {
-      setEvForm({ calendarId: evForm.calendarId, title: "", date: "" });
+      setEvForm({ calendarId: evForm.calendarId, title: "", date: "", endDate: "", recurrence: "" });
       setShowEventForm(false);
       loadEvents();
     }
@@ -603,7 +603,19 @@ export default function AdminCalendarPage() {
             {calendars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           <input value={evForm.title} onChange={(e) => setEvForm((f) => ({ ...f, title: e.target.value }))} placeholder="Event title" className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground flex-1 min-w-[160px]" />
-          <input type="date" value={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, date: e.target.value }))} className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground" />
+          <label className="flex flex-col text-[10px] text-muted-foreground">Start
+            <input type="date" value={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, date: e.target.value }))} className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground" />
+          </label>
+          <label className="flex flex-col text-[10px] text-muted-foreground">End (optional)
+            <input type="date" value={evForm.endDate} min={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, endDate: e.target.value }))} className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground" />
+          </label>
+          <label className="flex flex-col text-[10px] text-muted-foreground">Repeat
+            <select value={evForm.recurrence} onChange={(e) => setEvForm((f) => ({ ...f, recurrence: e.target.value }))} className="text-sm border border-input rounded px-2 py-1.5 bg-background text-foreground">
+              <option value="">Does not repeat</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
           <button onClick={createEvent} disabled={!evForm.title.trim() || !evForm.date} className="text-sm px-3 py-1.5 rounded-md bg-primary text-primary-foreground font-medium disabled:opacity-50">Add event</button>
           <button onClick={() => setShowEventForm(false)} className="text-sm px-3 py-1.5 rounded-md border border-border">Cancel</button>
         </div>
