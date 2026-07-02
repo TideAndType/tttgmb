@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CheckSquare, Square, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckSquare, Square, Plus, X, ChevronRight, ChevronDown } from "lucide-react";
 
 interface Todo {
   id: string;
@@ -22,8 +22,29 @@ export function TaskTodoList({ taskId, initialTodos, canAdd = false }: TaskTodoL
   const [saving, setSaving] = useState(false);
   const [toggling, setToggling] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const done = todos.filter((t) => t.done).length;
+  const allDone = todos.length > 0 && done === todos.length;
+
+  // Restore collapse state; default to collapsed once everything is done so
+  // completed checklists stay out of the way.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`taskTodosCollapsed-${taskId}`);
+      if (saved !== null) setCollapsed(saved === "1");
+      else if (allDone) setCollapsed(true);
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskId]);
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      try { localStorage.setItem(`taskTodosCollapsed-${taskId}`, next ? "1" : "0"); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   async function handleToggle(todo: Todo) {
     setToggling(todo.id);
@@ -68,21 +89,22 @@ export function TaskTodoList({ taskId, initialTodos, canAdd = false }: TaskTodoL
   return (
     <div className="mt-3 border-t pt-3">
       {todos.length > 0 && (
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-xs text-muted-foreground font-medium">
-            To-dos ({done}/{todos.length})
+        <button onClick={toggleCollapsed} className="w-full flex items-center gap-2 mb-2 group/collapse">
+          {collapsed ? <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+          <span className="text-xs text-muted-foreground font-medium group-hover/collapse:text-foreground transition-colors whitespace-nowrap">
+            Subtasks ({done}/{todos.length})
           </span>
-          {todos.length > 0 && (
-            <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-              <div
-                className="h-full bg-green-500 rounded-full transition-all"
-                style={{ width: `${todos.length ? (done / todos.length) * 100 : 0}%` }}
-              />
-            </div>
-          )}
-        </div>
+          <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${allDone ? "bg-green-500" : "bg-primary"}`}
+              style={{ width: `${todos.length ? (done / todos.length) * 100 : 0}%` }}
+            />
+          </div>
+        </button>
       )}
 
+      {!collapsed && (
+      <>
       <div className="space-y-1">
         {todos.map((todo) => (
           <div key={todo.id} className="flex items-start gap-2 group">
@@ -124,7 +146,7 @@ export function TaskTodoList({ taskId, initialTodos, canAdd = false }: TaskTodoL
                 if (e.key === "Enter") handleAdd();
                 if (e.key === "Escape") { setAdding(false); setNewText(""); }
               }}
-              placeholder="Add a to-do item..."
+              placeholder="Add a subtask..."
               autoFocus
               className="flex-1 text-xs border border-input rounded px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -148,9 +170,11 @@ export function TaskTodoList({ taskId, initialTodos, canAdd = false }: TaskTodoL
             className="mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             <Plus className="h-3 w-3" />
-            Add to-do
+            Add subtask
           </button>
         )
+      )}
+      </>
       )}
     </div>
   );
