@@ -35,6 +35,7 @@ import {
   ChevronRight,
   Megaphone,
   LifeBuoy,
+  Sparkles,
   BookOpen,
 } from "lucide-react";
 
@@ -46,6 +47,7 @@ const navGroups: {
     title: "Overview",
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/marketing", label: "Marketing OS", icon: Sparkles },
       { href: "/admin/activity", label: "Activity", icon: Activity },
       { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
     ],
