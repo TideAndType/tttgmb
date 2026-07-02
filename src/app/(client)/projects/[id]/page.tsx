@@ -10,6 +10,7 @@ import { ProjectNotes } from "@/components/projects/project-notes";
 import { SatisfactionRating } from "@/components/projects/satisfaction-rating";
 import { ProjectChat } from "@/components/projects/project-chat";
 import { ProjectMilestones } from "@/components/projects/project-milestones";
+import { RecordProjectVisit } from "@/components/dashboard/record-project-visit";
 import { projectTimeMinutes } from "@/lib/time";
 import { MessageCircle, Flag } from "lucide-react";
 
@@ -45,6 +46,7 @@ export default async function ProjectHomePage({ params }: { params: { id: string
 
   return (
     <div className="max-w-5xl mx-auto">
+      <RecordProjectVisit id={project.id} name={project.name} />
       <div className="mb-8 flex items-center gap-3">
         <div
           className="w-4 h-4 rounded-full flex-shrink-0"
