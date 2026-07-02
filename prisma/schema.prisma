@@ -122,6 +122,37 @@ model User {
   marketingContent      MarketingContent[]
   assistantConversations AssistantConversation[]
   marketingDocs         MarketingKnowledgeDoc[]
+  competitors           MarketingCompetitor[]
+}
+
+// A competitor the client wants to keep an eye on.
+model MarketingCompetitor {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  website   String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  insights  CompetitorInsight[]
+
+  @@index([userId])
+}
+
+// A dated AI assessment of a competitor: what they likely do well, gaps, and
+// what the client should do. (A future crawler can populate the same shape.)
+model CompetitorInsight {
+  id            String   @id @default(cuid())
+  competitorId  String
+  competitor    MarketingCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  summary       String   @db.Text
+  strengths     Json?    // string[]
+  gaps          Json?    // string[]
+  recommendations Json?  // string[]
+  createdAt     DateTime @default(now())
+
+  @@index([competitorId])
 }
 
 // ── AI Marketing Operating System (additive module) ───────────────────────

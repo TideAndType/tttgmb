@@ -36,6 +36,7 @@ import {
   Bookmark,
   Sparkles,
   Target,
+  Swords,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -59,6 +60,7 @@ const navGroups: {
       { href: "/marketing/assistant", label: "AI Assistant", icon: MessageCircle },
       { href: "/marketing/content", label: "Content Studio", icon: FileText },
       { href: "/marketing/tasks", label: "Task Engine", icon: Target },
+      { href: "/marketing/competitors", label: "Competitors", icon: Swords },
     ],
   },
   {
