@@ -123,6 +123,25 @@ model User {
   assistantConversations AssistantConversation[]
   marketingDocs         MarketingKnowledgeDoc[]
   competitors           MarketingCompetitor[]
+  reviews               MarketingReview[]
+}
+
+// A customer review the client is tracking (manual entry now; a GBP/Facebook
+// import can populate the same shape later).
+model MarketingReview {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  author      String
+  rating      Int      @default(5)
+  text        String?  @db.Text
+  source      String   @default("manual") // google | facebook | yelp | manual
+  response    String?  @db.Text
+  respondedAt DateTime?
+  reviewedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
 
 // A competitor the client wants to keep an eye on.
