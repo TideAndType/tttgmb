@@ -95,6 +95,7 @@ model User {
   notifyWeeklyDigest    Boolean @default(true)
   totpSecret       String?
   totpEnabled      Boolean @default(false)
+  icalToken        String? @unique
   openLensApiKey   String?
   image            String?  @db.Text
   dashboardLayout  Json?
@@ -348,6 +349,8 @@ model CalendarEvent {
   calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   title       String
   date        DateTime @db.Date
+  endDate     DateTime? @db.Date
+  recurrence  String?   // null | "weekly" | "monthly"
   description String?
   createdAt   DateTime @default(now())
 
