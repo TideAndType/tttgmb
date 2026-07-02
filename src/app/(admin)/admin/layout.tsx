@@ -3,6 +3,7 @@ import { GlobalSearch } from "@/components/search/global-search";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { NotificationsSidebar } from "@/components/notifications/notifications-sidebar";
 import { KeyboardShortcuts } from "@/components/keyboard/keyboard-shortcuts";
+import { PageTransition } from "@/components/ui/page-transition";
 
 const ADMIN_NAV_SHORTCUTS = [
   { key: "d", label: "Dashboard", href: "/admin" },
@@ -25,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex-1"><GlobalSearch /></div>
           <NotificationBell />
         </div>
-        <main className="flex-1 p-4 lg:p-8">{children}</main>
+        <main className="flex-1 p-4 lg:p-8"><PageTransition>{children}</PageTransition></main>
       </div>
       <NotificationsSidebar />
       <KeyboardShortcuts navShortcuts={ADMIN_NAV_SHORTCUTS} />
