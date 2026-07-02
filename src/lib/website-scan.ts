@@ -15,6 +15,7 @@ export interface PageSnapshot {
   links: number;
   hasViewport: boolean;
   hasSchema: boolean;
+  hrefs: string[];
   text: string;
 }
 
@@ -69,6 +70,20 @@ export async function fetchPageSnapshot(rawUrl: string): Promise<PageSnapshot> {
   const links = (html.match(/<a[^>]+href=/gi) || []).length;
   const hasViewport = /<meta[^>]+name=["']viewport["']/i.test(html);
   const hasSchema = /application\/ld\+json/i.test(html) || /itemscope/i.test(html);
+
+  // Resolve internal links to absolute URLs (deduped, capped).
+  const origin = new URL(url).origin;
+  const rawHrefs = matchAll(/<a[^>]+href=["']([^"'#]+)["']/gi, html);
+  const hrefSet = new Set<string>();
+  for (const h of rawHrefs) {
+    if (/^(mailto:|tel:|javascript:|data:)/i.test(h)) continue;
+    try {
+      const abs = new URL(h, url).toString();
+      if (abs.startsWith(origin)) hrefSet.add(abs.split("#")[0]);
+    } catch { /* skip */ }
+    if (hrefSet.size >= 40) break;
+  }
+
   const text = stripTags(html).slice(0, 4000);
 
   return {
@@ -80,6 +95,24 @@ export async function fetchPageSnapshot(rawUrl: string): Promise<PageSnapshot> {
     imagesMissingAlt,
     links,
     hasViewport, hasSchema,
+    hrefs: Array.from(hrefSet),
     text,
   };
+}
+
+// Check a sample of links for broken responses (>=400 or network error).
+export async function checkLinks(hrefs: string[], limit = 10): Promise<{ url: string; status: number | null }[]> {
+  const sample = hrefs.slice(0, limit);
+  return Promise.all(sample.map(async (u) => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+      const res = await fetch(u, { method: "GET", signal: controller.signal, headers: { "User-Agent": "HarborHQ-SEO/1.0" }, redirect: "follow" });
+      return { url: u, status: res.status };
+    } catch {
+      return { url: u, status: null };
+    } finally {
+      clearTimeout(timer);
+    }
+  }));
 }

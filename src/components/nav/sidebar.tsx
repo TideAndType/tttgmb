@@ -67,6 +67,7 @@ const navGroups: {
       { href: "/marketing/competitors", label: "Competitors", icon: Swords },
       { href: "/marketing/reputation", label: "Reputation", icon: Star },
       { href: "/marketing/website", label: "Website Advisor", icon: Globe },
+      { href: "/marketing/seo-scan", label: "SEO & Local Scan", icon: Search },
       { href: "/marketing/automations", label: "Automations", icon: Workflow },
       { href: "/marketing/knowledge", label: "Knowledge Base", icon: BookOpen },
     ],
