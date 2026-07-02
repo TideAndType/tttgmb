@@ -4,12 +4,13 @@ import { redirect } from "next/navigation";
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
+  const user = session?.user as { role?: string } | undefined;
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
-  if (((session.user as any).role === "ADMIN" || (session.user as any).role === "SUPER_ADMIN")) {
+  if (user.role === "ADMIN" || user.role === "SUPER_ADMIN") {
     redirect("/admin");
   }
 

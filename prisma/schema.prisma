@@ -126,6 +126,20 @@ model User {
   reviews               MarketingReview[]
   automations           Automation[]
   websiteRecs           WebsiteRecommendation[]
+  marketingReports      MarketingReport[]
+}
+
+// An AI-generated, plain-English marketing report.
+model MarketingReport {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  summary   String   @db.Text
+  sections  Json?    // { improved:[], declined:[], whyItMatters, impact, nextSteps:[], priorities:[] }
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 // A single AI recommendation from a website scan.
