@@ -25,6 +25,17 @@ import {
   Navigation,
 } from "lucide-react";
 
+type RangeKey = "30d" | "90d" | "120d" | "thisYear" | "lastYear" | "custom";
+
+const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "120d", label: "Last 120 days" },
+  { value: "thisYear", label: "This year" },
+  { value: "lastYear", label: "Last year" },
+  { value: "custom", label: "Custom range" },
+];
+
 interface GaMetrics {
   sessions: number;
   users: number;
@@ -90,8 +101,26 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [range, setRange] = useState<RangeKey>("30d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
+  const rangeParams = () => {
+    const p = new URLSearchParams({ range });
+    if (range === "custom" && customStart && customEnd) {
+      p.set("start", customStart);
+      p.set("end", customEnd);
+    }
+    return p.toString();
+  };
+
   useEffect(() => {
+    if (range === "custom" && (!customStart || !customEnd)) return;
     loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("ga_connected") === "true") {
       loadGaProperties();
@@ -105,7 +134,7 @@ export default function ReportsPage() {
   };
 
   const loadGaData = async () => {
-    const res = await fetch("/api/ga/data");
+    const res = await fetch(`/api/ga/data?${rangeParams()}`);
     if (res.status === 400) {
       const d = await res.json();
       if (d.error === "GA not connected") {
@@ -128,7 +157,7 @@ export default function ReportsPage() {
   };
 
   const loadGscData = async () => {
-    const res = await fetch("/api/gsc/data");
+    const res = await fetch(`/api/gsc/data?${rangeParams()}`);
     if (!res.ok) {
       setGscConnected(false);
       return;
@@ -199,7 +228,7 @@ export default function ReportsPage() {
     gaTimeSeries.forEach((row) => {
       map[row.date] = { ...map[row.date], date: row.date, gaSessions: row.sessions };
     });
-    gscRows.slice(-30).forEach((row) => {
+    gscRows.forEach((row) => {
       map[row.date] = { ...map[row.date], date: row.date, gscClicks: row.clicks };
     });
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
@@ -216,16 +245,37 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Reports</h1>
-        <p className="text-muted-foreground mt-1">Live stats from Google Analytics &amp; Search Console — last 30 days</p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Reports</h1>
+          <p className="text-muted-foreground mt-1">Live stats from Google Analytics &amp; Search Console</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={range}
+            onChange={(e) => setRange(e.target.value as RangeKey)}
+            className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground h-9"
+          >
+            {RANGE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {range === "custom" && (
+            <div className="flex items-center gap-1">
+              <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="border border-input rounded-md px-2 py-1.5 text-sm bg-background text-foreground h-9" />
+              <span className="text-muted-foreground text-sm">–</span>
+              <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="border border-input rounded-md px-2 py-1.5 text-sm bg-background text-foreground h-9" />
+              <Button size="sm" className="h-9" onClick={loadAll} disabled={!customStart || !customEnd}>Apply</Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {error && <Alert variant="destructive" className="mb-6">{error}</Alert>}
 
       {(gaMetrics || gscTotals || gmbMetrics) && (
         <div className="mb-8">
-          <AiExplain reportType="Combined marketing report (Analytics, Search Console, Business Profile) — last 30 days" data={{ analytics: gaMetrics, searchConsole: gscTotals, businessProfile: gmbMetrics }} />
+          <AiExplain reportType={`Combined marketing report (Analytics, Search Console, Business Profile) — ${RANGE_OPTIONS.find((o) => o.value === range)?.label ?? "last 30 days"}`} data={{ analytics: gaMetrics, searchConsole: gscTotals, businessProfile: gmbMetrics }} />
         </div>
       )}
 

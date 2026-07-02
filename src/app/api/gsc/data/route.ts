@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
+import { resolveRange, previousPeriod } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
@@ -43,55 +44,17 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type");
   const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-  // Resolve the requested reporting window. Supports preset ranges plus a
-  // custom start/end. Defaults to the last 90 days.
-  function resolveRange(): { startDate: Date; endDate: Date; label: string } {
-    const range = searchParams.get("range") || "90d";
-    const now = new Date();
-    const end = new Date(now);
-    const start = new Date(now);
-
-    switch (range) {
-      case "30d":
-        start.setDate(start.getDate() - 30);
-        return { startDate: start, endDate: end, label: "last 30 days" };
-      case "120d":
-        start.setDate(start.getDate() - 120);
-        return { startDate: start, endDate: end, label: "last 120 days" };
-      case "thisYear":
-        return { startDate: new Date(now.getFullYear(), 0, 1), endDate: end, label: "this year" };
-      case "lastYear":
-        return {
-          startDate: new Date(now.getFullYear() - 1, 0, 1),
-          endDate: new Date(now.getFullYear() - 1, 11, 31),
-          label: "last year",
-        };
-      case "custom": {
-        const s = searchParams.get("start");
-        const e = searchParams.get("end");
-        if (s && e) return { startDate: new Date(s), endDate: new Date(e), label: "custom range" };
-        start.setDate(start.getDate() - 90);
-        return { startDate: start, endDate: end, label: "last 90 days" };
-      }
-      case "90d":
-      default:
-        start.setDate(start.getDate() - 90);
-        return { startDate: start, endDate: end, label: "last 90 days" };
-    }
-  }
-
   try {
     const auth = getOAuth2Client(user.gscAccessToken, user.gscRefreshToken);
     const searchconsole = google.searchconsole({ version: "v1", auth });
 
-    const { startDate, endDate, label: rangeLabel } = resolveRange();
+    const resolved = resolveRange(searchParams);
+    const { startDate, endDate, label: rangeLabel } = resolved;
 
     if (type === "keywords") {
-      // Preceding period of equal length, ending the day before the current
-      // window, so we can show previous vs current position per keyword.
-      const spanMs = endDate.getTime() - startDate.getTime();
-      const prevEnd = new Date(startDate.getTime() - 24 * 60 * 60 * 1000);
-      const prevStart = new Date(prevEnd.getTime() - spanMs);
+      // Preceding period of equal length so we can show previous vs current
+      // position per keyword.
+      const { startDate: prevStart, endDate: prevEnd } = previousPeriod(resolved);
 
       const queryFor = (s: Date, e: Date) =>
         (searchconsole.searchanalytics.query({
@@ -133,16 +96,25 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ keywords, rangeLabel });
     }
 
-    // Default: date-based chart data
-    const response = await (searchconsole.searchanalytics.query({
-      siteUrl: user.gscProperty,
-      requestBody: {
-        startDate: formatDate(startDate),
-        endDate: formatDate(endDate),
-        dimensions: ["date"],
-        rowLimit: 500,
-      },
-    }) as any);
+    // Default: date-based chart data, with a preceding equal-length period so
+    // the overview can show period-over-period deltas.
+    const queryDates = (s: Date, e: Date) =>
+      (searchconsole.searchanalytics.query({
+        siteUrl: user.gscProperty!,
+        requestBody: {
+          startDate: formatDate(s),
+          endDate: formatDate(e),
+          dimensions: ["date"],
+          rowLimit: 500,
+        },
+      }) as any);
+
+    const { startDate: prevStart, endDate: prevEnd } = previousPeriod(resolved);
+
+    const [response, prevResponse] = await Promise.all([
+      queryDates(startDate, endDate),
+      queryDates(prevStart, prevEnd),
+    ]);
 
     const rows = ((response.data?.rows || response.rows) || []).map((row: any) => ({
       date: row.keys[0],
@@ -152,22 +124,28 @@ export async function GET(req: NextRequest) {
       ctr: row.ctr,
     }));
 
-    const totals = rows.reduce(
-      (acc: any, row: any) => ({
-        clicks: acc.clicks + row.clicks,
-        impressions: acc.impressions + row.impressions,
-        avgPosition: acc.avgPosition + row.position,
-        avgCtr: acc.avgCtr + row.ctr,
-      }),
-      { clicks: 0, impressions: 0, avgPosition: 0, avgCtr: 0 }
-    );
+    const sumTotals = (rws: any[]) => {
+      const t = rws.reduce(
+        (acc: any, row: any) => ({
+          clicks: acc.clicks + row.clicks,
+          impressions: acc.impressions + row.impressions,
+          avgPosition: acc.avgPosition + row.position,
+          avgCtr: acc.avgCtr + row.ctr,
+        }),
+        { clicks: 0, impressions: 0, avgPosition: 0, avgCtr: 0 }
+      );
+      if (rws.length > 0) {
+        t.avgPosition = t.avgPosition / rws.length;
+        t.avgCtr = t.avgCtr / rws.length;
+      }
+      return t;
+    };
 
-    if (rows.length > 0) {
-      totals.avgPosition = totals.avgPosition / rows.length;
-      totals.avgCtr = totals.avgCtr / rows.length;
-    }
+    const totals = sumTotals(rows);
+    const prevRows = (prevResponse.data?.rows || prevResponse.rows) || [];
+    const prevTotals = sumTotals(prevRows);
 
-    return NextResponse.json({ rows, totals });
+    return NextResponse.json({ rows, totals, prevTotals, rangeLabel });
   } catch (error: any) {
     console.error("GSC data error:", error);
     return NextResponse.json({ error: "Failed to fetch GSC data" }, { status: 500 });
