@@ -13,6 +13,7 @@ export interface PermissionDef {
 
 export const PERMISSIONS: PermissionDef[] = [
   { key: "dashboard", label: "Dashboard", paths: ["/dashboard"] },
+  { key: "marketing", label: "Marketing OS", paths: ["/marketing"] },
   { key: "proposals", label: "Proposals", paths: ["/proposals"] },
   { key: "projects", label: "Projects", paths: ["/projects"] },
   { key: "tasks", label: "Tasks", paths: ["/tasks"] },

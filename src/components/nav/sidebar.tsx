@@ -34,6 +34,8 @@ import {
   Activity,
   ClipboardList,
   Bookmark,
+  Sparkles,
+  Target,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -48,6 +50,15 @@ const navGroups: {
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/my-bar", label: "My Bar", icon: Bookmark },
       { href: "/activity", label: "Everything", icon: Activity },
+    ],
+  },
+  {
+    title: "Marketing OS",
+    items: [
+      { href: "/marketing", label: "Workspace", icon: Sparkles },
+      { href: "/marketing/assistant", label: "AI Assistant", icon: MessageCircle },
+      { href: "/marketing/content", label: "Content Studio", icon: FileText },
+      { href: "/marketing/tasks", label: "Task Engine", icon: Target },
     ],
   },
   {

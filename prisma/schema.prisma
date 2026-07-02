@@ -115,6 +115,143 @@ model User {
   trackedKeywords TrackedKeyword[]
   keywordFolders  KeywordFolder[]
   bookmarks       Bookmark[]
+  marketingProfile      MarketingProfile?
+  marketingScores       MarketingScore[]
+  marketingTasks        MarketingTask[]
+  marketingBriefings    MarketingBriefing[]
+  marketingContent      MarketingContent[]
+  assistantConversations AssistantConversation[]
+  marketingDocs         MarketingKnowledgeDoc[]
+}
+
+// ── AI Marketing Operating System (additive module) ───────────────────────
+// Per-client business context the AI uses across the module.
+model MarketingProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String?
+  website        String?
+  industry       String?
+  services       String?  @db.Text
+  locations      String?  @db.Text
+  targetAudience String?  @db.Text
+  brandVoice     String?  @db.Text
+  competitors    String?  @db.Text   // newline/comma separated
+  socialAccounts String?  @db.Text
+  goals          String?  @db.Text
+  faqs           String?  @db.Text
+  extraNotes     String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// A dated snapshot of the marketing health scores for a client.
+model MarketingScore {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  overall       Int      @default(0)
+  seo           Int      @default(0)
+  local         Int      @default(0)
+  social        Int      @default(0)
+  reputation    Int      @default(0)
+  website       Int      @default(0)
+  aiVisibility  Int      @default(0)
+  leadGen       Int      @default(0)
+  breakdown     Json?    // raw signals used to compute the scores
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// AI-generated actionable marketing task.
+model MarketingTask {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  category     String   @default("general") // seo | local | social | content | reputation | website | leadgen
+  priority     String   @default("medium")  // high | medium | low
+  impact       String   @default("medium")  // high | medium | low
+  estMinutes   Int      @default(30)
+  instructions String?  @db.Text
+  status       String   @default("open")    // open | in_progress | done | dismissed
+  source       String   @default("ai")      // ai | manual
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+// The daily AI briefing (focus / opportunities / risks), one per client per day.
+model MarketingBriefing {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  summary   String   @db.Text
+  focus     Json?    // string[]
+  opportunities Json? // string[]
+  risks     Json?    // string[]
+  wins      Json?    // string[]
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// AI-generated content (blog, social, email, landing page, etc.).
+model MarketingContent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // blog | facebook | instagram | linkedin | gbp | email | landing | service | faq | video
+  title       String
+  body        String   @db.Text
+  status      String   @default("draft") // draft | approved | scheduled | published
+  scheduledAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+// Persistent AI assistant conversation + messages.
+model AssistantConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @default("New conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  AssistantMessage[]
+
+  @@index([userId])
+}
+
+model AssistantMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String   // user | assistant
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId])
+}
+
+// Knowledge base document the AI can draw on when generating content.
+model MarketingKnowledgeDoc {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Bookmark {
