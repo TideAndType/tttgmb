@@ -125,6 +125,25 @@ model User {
   competitors           MarketingCompetitor[]
   reviews               MarketingReview[]
   automations           Automation[]
+  websiteRecs           WebsiteRecommendation[]
+}
+
+// A single AI recommendation from a website scan.
+model WebsiteRecommendation {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   String   // seo | ux | conversion | cta | accessibility | content | newpage | performance
+  title      String
+  impact     String   @default("medium") // high | medium | low
+  difficulty String   @default("medium") // easy | medium | hard
+  reason     String   @db.Text
+  solution   String   @db.Text
+  status     String   @default("open")   // open | done | dismissed
+  scanUrl    String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, status])
 }
 
 // A "when X happens → do Y" marketing workflow.
