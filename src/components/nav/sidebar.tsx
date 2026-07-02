@@ -40,6 +40,7 @@ import {
   Star,
   Workflow,
   Globe,
+  Plug,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -227,6 +228,19 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <User className="h-4 w-4 flex-shrink-0" />
           Profile
+        </Link>
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Plug className="h-4 w-4 flex-shrink-0" />
+          Settings
         </Link>
         <div className="flex items-center justify-between">
           <button
