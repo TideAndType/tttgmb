@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/agency";
+import { addVercelDomain, removeVercelDomain, vercelConfigured } from "@/lib/vercel";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export async function PATCH(req: NextRequest) {
     if (clash) return NextResponse.json({ error: "That subdomain is taken." }, { status: 409 });
     data.slug = slug;
   }
+  let domainWarning: string | undefined;
+  let domainChanged: string | null | undefined;
   if ("customDomain" in body) {
     const domain = body.customDomain ? String(body.customDomain).trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "") : null;
     if (domain) {
@@ -60,8 +63,23 @@ export async function PATCH(req: NextRequest) {
       if (clash) return NextResponse.json({ error: "That domain is already in use." }, { status: 409 });
     }
     data.customDomain = domain;
+    domainChanged = domain;
   }
 
   const updated = await prisma.agency.update({ where: { id: agency.id }, data });
-  return NextResponse.json({ agency: updated });
+
+  // Self-provision the custom domain on Vercel (attach new / detach old).
+  if (domainChanged !== undefined && vercelConfigured()) {
+    if (agency.customDomain && agency.customDomain !== domainChanged) {
+      await removeVercelDomain(agency.customDomain).catch(() => {});
+    }
+    if (domainChanged) {
+      const r = await addVercelDomain(domainChanged);
+      if (!r.ok) domainWarning = `Domain saved, but couldn't attach it automatically: ${r.error}. It may already be in use elsewhere.`;
+    }
+  } else if (domainChanged && !vercelConfigured()) {
+    domainWarning = "Domain saved. Automatic provisioning isn't configured — an admin must add this domain to the hosting project manually.";
+  }
+
+  return NextResponse.json({ agency: updated, domainWarning });
 }

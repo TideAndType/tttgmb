@@ -41,10 +41,16 @@ export default function AgencyBrandingPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [rootDomain, setRootDomain] = useState("");
+  const [domainStatus, setDomainStatus] = useState<{ verified: boolean; misconfigured: boolean; configured: boolean; records: { type: string; name: string; value: string }[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadDomainStatus = () => {
+    fetch("/api/agency/domain-status").then((r) => r.json()).then((d) => setDomainStatus(d.status)).catch(() => {});
+  };
 
   useEffect(() => {
     fetch("/api/agency").then((r) => r.json()).then((d) => { setA(d.agency); });
+    loadDomainStatus();
     if (typeof window !== "undefined") setRootDomain(window.location.host.replace(/^[^.]+\./, ""));
   }, []);
 
@@ -68,6 +74,8 @@ export default function AgencyBrandingPage() {
     setSaving(false);
     if (!r.ok) { setError(d.error || "Couldn't save."); return; }
     setA(d.agency); setSaved(true); setTimeout(() => setSaved(false), 2500);
+    if (d.domainWarning) setError(d.domainWarning);
+    loadDomainStatus();
   };
 
   if (!a) return <div className="max-w-2xl mx-auto"><p className="text-muted-foreground">Loading…</p></div>;
@@ -128,7 +136,35 @@ export default function AgencyBrandingPage() {
           <div className="space-y-1">
             <Label className="flex items-center gap-1.5"><Globe className="h-3.5 w-3.5" /> Custom domain (optional)</Label>
             <Input value={a.customDomain ?? ""} onChange={(e) => set({ customDomain: e.target.value })} placeholder="portal.youragency.com" />
-            <p className="text-xs text-muted-foreground">Point a CNAME record for this host at <code className="bg-muted px-1 rounded">{rootDomain}</code>, then add it in your hosting/domain settings. Once DNS resolves, clients can use it to reach their branded login.</p>
+            <p className="text-xs text-muted-foreground">Save a domain and we&apos;ll attach it automatically. Then add the DNS record below at your domain registrar — TLS is issued once it resolves.</p>
+            {a.customDomain && domainStatus && (
+              <div className="mt-2 rounded-md border border-border p-3 space-y-2">
+                {domainStatus.verified && !domainStatus.misconfigured ? (
+                  <p className="text-sm text-green-600 flex items-center gap-1.5"><Check className="h-4 w-4" /> Domain is live and verified.</p>
+                ) : (
+                  <>
+                    <p className="text-sm text-amber-600">Waiting for DNS. Add this record at your registrar:</p>
+                    <div className="text-xs font-mono bg-muted rounded p-2 overflow-x-auto">
+                      <div>Type: CNAME</div>
+                      <div>Name: {a.customDomain}</div>
+                      <div>Value: cname.vercel-dns.com</div>
+                    </div>
+                    {domainStatus.records.length > 0 && (
+                      <div className="text-xs">
+                        <p className="text-muted-foreground mb-1">Verification record(s):</p>
+                        {domainStatus.records.map((rec, i) => (
+                          <div key={i} className="font-mono bg-muted rounded p-2 mb-1 overflow-x-auto">{rec.type} · {rec.name} · {rec.value}</div>
+                        ))}
+                      </div>
+                    )}
+                    <button onClick={loadDomainStatus} className="text-xs text-primary hover:underline">Re-check status</button>
+                  </>
+                )}
+              </div>
+            )}
+            {a.customDomain && domainStatus && !domainStatus.configured && (
+              <p className="text-xs text-amber-600 mt-1">Automatic provisioning isn&apos;t configured on the server — this domain must be added to the hosting project manually.</p>
+            )}
           </div>
           <div className="space-y-1"><Label>Login headline</Label><Input value={a.loginHeadline ?? ""} onChange={(e) => set({ loginHeadline: e.target.value })} placeholder="Welcome back" /></div>
           <div className="space-y-1"><Label>Login subtext</Label><Textarea value={a.loginSubtext ?? ""} onChange={(e) => set({ loginSubtext: e.target.value })} rows={2} placeholder="Sign in to your marketing portal." /></div>
