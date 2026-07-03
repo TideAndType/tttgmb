@@ -66,6 +66,26 @@ model Company {
   users     User[]
 }
 
+// A white-label agency tenant. Owned by an ADMIN; its branding applies to the
+// client side of every client linked to it, and to its white-label login page
+// (reachable via {slug}.<root domain> or a custom CNAME domain).
+model Agency {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique              // subdomain label
+  customDomain  String?  @unique              // full host, e.g. portal.acme.com
+  ownerId       String?                        // the ADMIN who owns this agency
+  appName       String   @default("Client Portal")
+  logoData      String?  @db.Text             // data URL
+  primaryColor  String   @default("#2dd4bf")
+  accentColor   String   @default("#6366f1")
+  loginHeadline String?
+  loginSubtext  String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  members       User[]   @relation("AgencyMembers")
+}
+
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
@@ -76,6 +96,8 @@ model User {
   companyName     String?
   companyId       String?
   company         Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  agencyId        String?
+  agency          Agency?      @relation("AgencyMembers", fields: [agencyId], references: [id], onDelete: SetNull)
   gscProperty     String?
   gscAccessToken  String?
   gscRefreshToken String?

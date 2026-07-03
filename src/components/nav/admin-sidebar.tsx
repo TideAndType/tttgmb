@@ -36,6 +36,7 @@ import {
   Megaphone,
   LifeBuoy,
   Sparkles,
+  Palette,
   BookOpen,
 } from "lucide-react";
 
@@ -88,6 +89,7 @@ const navGroups: {
       { href: "/admin/forms", label: "Intake Forms", icon: ClipboardList },
       { href: "/admin/support", label: "Support", icon: LifeBuoy },
       { href: "/admin/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+      { href: "/admin/branding", label: "Branding & White-label", icon: Palette },
       { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
     ],
   },

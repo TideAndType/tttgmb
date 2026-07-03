@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -8,15 +8,30 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
+import { hexToHsl } from "@/lib/utils";
 
 interface Props {
   appName: string;
   logoFilename: string | null;
   primaryColor: string;
+  logoUrl?: string | null;
+  headline?: string | null;
+  subtext?: string | null;
 }
 
-export default function LoginForm({ appName, logoFilename, primaryColor }: Props) {
+export default function LoginForm({ appName, logoFilename, primaryColor, logoUrl, headline, subtext }: Props) {
   const router = useRouter();
+
+  // Apply the agency's primary color so the login page matches their brand.
+  useEffect(() => {
+    if (!primaryColor) return;
+    try {
+      const hsl = hexToHsl(primaryColor);
+      document.documentElement.style.setProperty("--primary", hsl);
+      document.documentElement.style.setProperty("--ring", hsl);
+    } catch { /* ignore */ }
+  }, [primaryColor]);
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [totp, setTotp] = useState("");
@@ -71,17 +86,17 @@ export default function LoginForm({ appName, logoFilename, primaryColor }: Props
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          {logoFilename && (
+          {(logoUrl || logoFilename) && (
             <div className="flex justify-center mb-4">
               <img
-                src={`/api/uploads/${logoFilename}`}
+                src={logoUrl || `/api/uploads/${logoFilename}`}
                 alt={appName}
                 style={{ maxHeight: "64px", width: "auto", objectFit: "contain" }}
               />
             </div>
           )}
-          <h1 className="text-3xl font-bold text-foreground">{appName}</h1>
-          <p className="text-muted-foreground mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-foreground">{headline || appName}</h1>
+          <p className="text-muted-foreground mt-2">{subtext || "Sign in to your account"}</p>
         </div>
         <Card>
           <CardHeader>

@@ -52,6 +52,12 @@ export async function POST(req: NextRequest) {
 
   const company = await prisma.company.create({ data: { name: companyName || name } });
 
+  // Link the new client to the creating admin's agency so agency branding
+  // (logo/colors, white-label login) flows to this client's portal.
+  const creator = await prisma.user.findUnique({ where: { id: (session.user as any).id }, select: { agencyId: true } });
+  const ownedAgency = creator?.agencyId ? null : await prisma.agency.findFirst({ where: { ownerId: (session.user as any).id }, select: { id: true } });
+  const agencyId = creator?.agencyId ?? ownedAgency?.id ?? null;
+
   const user = await prisma.user.create({
     data: {
       name,
@@ -60,6 +66,7 @@ export async function POST(req: NextRequest) {
       companyName: companyName || null,
       role: "CLIENT",
       companyId: company.id,
+      agencyId,
     },
   });
 
