@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAgencyScope } from "@/lib/agency-scope";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,14 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Scope clients to the admin's agency (super admin sees all).
+  const scope = await getAgencyScope(session);
+  const where: any = scope.clientUserIds === null
+    ? { role: { in: ["CLIENT", "ADMIN"] } }
+    : { id: { in: scope.clientUserIds } };
+
   const clients = await prisma.user.findMany({
-    where: { role: { in: ["CLIENT", "ADMIN"] } },
+    where,
     select: {
       id: true,
       name: true,

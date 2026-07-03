@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!isAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const scope = await getAgencyScope(session);
   const clients = await prisma.user.findMany({
-    where: { role: "CLIENT" },
+    where: scope.clientUserIds === null ? { role: "CLIENT" } : { id: { in: scope.clientUserIds } },
     select: { id: true, name: true, companyName: true, image: true },
     orderBy: { createdAt: "desc" },
   });
