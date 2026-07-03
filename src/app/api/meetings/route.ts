@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,14 @@ export async function GET(req: Request) {
   if (user.role === "CLIENT") {
     const ids = await getCompanyUserIds(user.id);
     where.userId = { in: ids };
-  } else if (searchParams.get("userId")) {
-    where.userId = searchParams.get("userId");
+  } else {
+    const scope = await getAgencyScope(session);
+    const filterUserId = searchParams.get("userId");
+    if (scope.clientUserIds !== null) {
+      where.userId = filterUserId && scope.clientUserIds.includes(filterUserId) ? filterUserId : { in: scope.clientUserIds };
+    } else if (filterUserId) {
+      where.userId = filterUserId;
+    }
   }
 
   const meetings = await prisma.meeting.findMany({ where, orderBy: { startAt: "asc" }, take: limit });

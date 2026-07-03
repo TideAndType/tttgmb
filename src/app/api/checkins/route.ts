@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +28,12 @@ export async function GET(req: NextRequest) {
   // Admin (not impersonating) managing the list, optionally per client.
   if (isAdmin(user) && !viewing) {
     const clientId = req.nextUrl.searchParams.get("clientId");
-    const checkIns = await prisma.checkIn.findMany({
-      where: clientId ? { userId: clientId } : {},
-      orderBy: { createdAt: "desc" },
-    });
+    const scope = await getAgencyScope(session);
+    let where: any = clientId ? { userId: clientId } : {};
+    if (scope.clientUserIds !== null) {
+      where = clientId && scope.clientUserIds.includes(clientId) ? { userId: clientId } : { userId: { in: scope.clientUserIds } };
+    }
+    const checkIns = await prisma.checkIn.findMany({ where, orderBy: { createdAt: "desc" } });
     return NextResponse.json({ checkIns });
   }
 

@@ -6,6 +6,7 @@ import { sendTaskCreatedEmail } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
 import { cookies } from "next/headers";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -48,8 +49,10 @@ export async function GET() {
       return NextResponse.json({ tasks: tasks.map(mapTask) });
     }
 
-    // Not impersonating — return all tasks
+    // Not impersonating — return all tasks in the admin's agency.
+    const scope = await getAgencyScope(session);
     const tasks = await prisma.task.findMany({
+      where: scope.clientUserIds === null ? {} : { userId: { in: scope.clientUserIds } },
       include: {
         user: { select: { id: true, name: true, companyName: true } },
         _count: { select: { comments: true } },

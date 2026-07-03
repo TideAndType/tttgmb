@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 import { generateInvoice, advanceInvoiceDate } from "@/lib/generate-invoice";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,9 @@ export async function GET() {
   const user = session.user as any;
 
   if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+    const scope = await getAgencyScope(session);
     const invoices = await prisma.invoice.findMany({
+      where: scope.clientUserIds === null ? {} : { userId: { in: scope.clientUserIds } },
       include: {
         user: { select: { id: true, name: true, companyName: true, email: true } },
       },
