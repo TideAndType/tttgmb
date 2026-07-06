@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/agency";
-import { maskIntegration } from "@/lib/agency-integrations";
+import { maskIntegration, getAgencyIntegration } from "@/lib/agency-integrations";
+import { encryptSecret } from "@/lib/crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export async function GET() {
   if (!isAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const u = session!.user as any;
   const agencyId = await ownAgencyId(u.id, u.companyName || u.name || "My Agency");
-  const integration = await prisma.agencyIntegration.findUnique({ where: { agencyId } });
+  const integration = await getAgencyIntegration(agencyId);
   return NextResponse.json({ integrations: maskIntegration(integration) });
 }
 
@@ -45,10 +46,11 @@ export async function PATCH(req: NextRequest) {
   const b = await req.json().catch(() => ({}));
 
   const str = (v: unknown) => (v === undefined ? undefined : v ? String(v) : null);
+  const SECRETS = new Set(["stripeSecretKey", "twilioAccountSid", "twilioAuthToken", "sendgridApiKey", "smtpPass"]);
   const data: Record<string, unknown> = {};
   for (const f of ["stripeSecretKey", "stripePublishableKey", "twilioAccountSid", "twilioAuthToken", "twilioFromNumber", "sendgridApiKey", "smtpHost", "smtpUser", "smtpPass", "fromEmail", "fromName"]) {
     const v = str(b[f]);
-    if (v !== undefined) data[f] = v;
+    if (v !== undefined) data[f] = SECRETS.has(f) ? encryptSecret(v) : v;
   }
   if (b.emailProvider && ["none", "sendgrid", "smtp"].includes(b.emailProvider)) data.emailProvider = b.emailProvider;
   if (b.smtpPort !== undefined) data.smtpPort = b.smtpPort ? Number(b.smtpPort) : null;

@@ -1,10 +1,18 @@
 import { prisma } from "@/lib/prisma";
+import { decryptSecret } from "@/lib/crypto";
 
-// Server-side accessor for an agency's provider credentials (raw). Used by the
-// agency's email/SMS/payment features — never expose the result to the client.
+const SECRET_FIELDS = ["stripeSecretKey", "twilioAuthToken", "sendgridApiKey", "smtpPass", "twilioAccountSid"] as const;
+
+// Server-side accessor for an agency's provider credentials, with secret fields
+// decrypted. Used by the agency's email/SMS/payment features — never expose the
+// result to the client.
 export async function getAgencyIntegration(agencyId: string | null | undefined) {
   if (!agencyId) return null;
-  return prisma.agencyIntegration.findUnique({ where: { agencyId } });
+  const i = await prisma.agencyIntegration.findUnique({ where: { agencyId } });
+  if (!i) return null;
+  const out: any = { ...i };
+  for (const f of SECRET_FIELDS) out[f] = decryptSecret(i[f] as string | null);
+  return out as typeof i;
 }
 
 // Resolve the agency integration for a given client/member user id (walks up to

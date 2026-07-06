@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { stripe } from "@/lib/stripe";
+import { stripeForUser } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -27,8 +27,18 @@ export async function POST(
   if (invoice.status === "Paid") {
     return NextResponse.json({ error: "Already paid" }, { status: 400 });
   }
+  if (!invoice.totalAmount || invoice.totalAmount <= 0) {
+    return NextResponse.json({ error: "This invoice has no amount to charge." }, { status: 400 });
+  }
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  // Use the invoice owner's agency Stripe key (BYOK); falls back to platform key.
+  const client = await stripeForUser(invoice.userId);
+  if (!client) {
+    return NextResponse.json({ error: "Online payments aren't enabled yet. Ask your provider to connect Stripe." }, { status: 400 });
+  }
+
+  const base = process.env.NEXTAUTH_URL || "";
+  const checkoutSession = await client.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
     line_items: [
@@ -44,8 +54,10 @@ export async function POST(
         quantity: 1,
       },
     ],
-    success_url: `${process.env.NEXTAUTH_URL}/invoices?paid=1`,
-    cancel_url: `${process.env.NEXTAUTH_URL}/invoices`,
+    // Return with the session id so we can verify + mark paid without relying on
+    // a per-agency webhook secret.
+    success_url: `${base}/invoices?inv=${invoice.id}&session={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${base}/invoices`,
     metadata: { invoiceId: invoice.id },
     customer_email: user.email ?? undefined,
   });

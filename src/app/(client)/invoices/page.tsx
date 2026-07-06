@@ -53,21 +53,26 @@ export default function InvoicesPage() {
   const [paidNotice, setPaidNotice] = useState(false);
   const searchParams = useSearchParams();
 
+  const loadInvoices = () => fetch("/api/invoices").then((r) => r.json()).then((data) => setInvoices(Array.isArray(data) ? data : [])).catch(() => setInvoices([])).finally(() => setLoading(false));
+
   useEffect(() => {
+    // Legacy return path.
     if (searchParams.get("paid") === "1") {
       setPaidNotice(true);
-      const t = setTimeout(() => setPaidNotice(false), 5000);
-      return () => clearTimeout(t);
+      setTimeout(() => setPaidNotice(false), 5000);
+    }
+    // BYOK return path: verify the Checkout session, then mark paid.
+    const inv = searchParams.get("inv");
+    const sessionId = searchParams.get("session");
+    if (inv && sessionId) {
+      fetch(`/api/invoices/${inv}/verify-payment?session=${encodeURIComponent(sessionId)}`)
+        .then((r) => r.json())
+        .then((d) => { if (d.paid) { setPaidNotice(true); setTimeout(() => setPaidNotice(false), 5000); } loadInvoices(); })
+        .catch(() => {});
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    fetch("/api/invoices")
-      .then((r) => r.json())
-      .then((data) => setInvoices(Array.isArray(data) ? data : []))
-      .catch(() => setInvoices([]))
-      .finally(() => setLoading(false));
-  }, []);
+  useEffect(() => { loadInvoices(); }, []);
 
   async function handlePay(id: string) {
     setPaying(id);
