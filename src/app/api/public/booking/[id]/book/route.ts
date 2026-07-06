@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { slotToDate } from "@/lib/booking-slots";
+import { createNotification } from "@/lib/notifications";
+import { sendBookingConfirmationEmail, sendBookingNotificationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       notes: notes || null, startAt, endAt,
     },
   });
+
+  // Confirmation to the booker + notification to the business.
+  const base = process.env.NEXTAUTH_URL || "";
+  const whenLabel = `${startAt.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "UTC" })} (${cal.timezone})`;
+  const owner = await prisma.user.findUnique({ where: { id: cal.userId }, select: { email: true, companyName: true, name: true } });
+  const businessName = owner?.companyName || owner?.name || cal.name;
+  await sendBookingConfirmationEmail(booking.email, booking.name, businessName, whenLabel).catch(() => {});
+  await createNotification(cal.userId, "booking", "New booking", `${booking.name} · ${whenLabel}`, "/crm/booking");
+  if (owner?.email) await sendBookingNotificationEmail(owner.email, booking.name, booking.email, whenLabel, `${base}/crm/booking`).catch(() => {});
 
   return NextResponse.json({ success: true, message: cal.successMessage, booking: { id: booking.id } });
 }

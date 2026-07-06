@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
+import { sendLeadNotificationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       },
     });
     contactId = contact.id;
+
+    // Notify the business (in-app + email) that a lead arrived.
+    const base = process.env.NEXTAUTH_URL || "";
+    await createNotification(form.userId, "lead", "New lead captured", `${contact.name} via ${form.name}`, "/crm/contacts");
+    const owner = await prisma.user.findUnique({ where: { id: form.userId }, select: { email: true } });
+    if (owner?.email) {
+      await sendLeadNotificationEmail(owner.email, contact.name, contact.email, contact.phone, form.name, `${base}/crm/contacts/${contact.id}`);
+    }
   }
 
   await prisma.formSubmission.create({ data: { formId: form.id, data, contactId } });
