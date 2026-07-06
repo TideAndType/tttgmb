@@ -37,6 +37,7 @@ import {
   LifeBuoy,
   Sparkles,
   Palette,
+  Plug,
   BookOpen,
 } from "lucide-react";
 
@@ -90,6 +91,7 @@ const navGroups: {
       { href: "/admin/support", label: "Support", icon: LifeBuoy },
       { href: "/admin/knowledge-base", label: "Knowledge Base", icon: BookOpen },
       { href: "/admin/branding", label: "Branding & White-label", icon: Palette },
+      { href: "/admin/integrations", label: "Integrations", icon: Plug },
       { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
     ],
   },
