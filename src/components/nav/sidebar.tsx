@@ -45,6 +45,7 @@ import {
   Users,
   FileInput,
   CalendarClock,
+  Mail,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -85,6 +86,7 @@ const navGroups: {
       { href: "/crm/contacts", label: "Contacts", icon: Users },
       { href: "/crm/forms", label: "Forms", icon: FileInput },
       { href: "/crm/booking", label: "Booking", icon: CalendarClock },
+      { href: "/crm/campaigns", label: "Email Campaigns", icon: Mail },
     ],
   },
   {

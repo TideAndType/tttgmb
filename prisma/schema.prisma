@@ -187,6 +187,28 @@ model User {
   leadForms             LeadForm[]
   bookingCalendars      BookingCalendar[]
   bookings              Booking[]
+  emailCampaigns        EmailCampaign[]
+}
+
+// A one-off email broadcast to CRM contacts, sent via the agency's own email
+// provider (BYOK).
+model EmailCampaign {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  subject        String
+  body           String   @db.Text   // markdown
+  audienceStatus String?  // null = all; else lead|qualified|customer|lost
+  audienceTag    String?
+  status         String   @default("draft") // draft | sent
+  recipientCount Int      @default(0)
+  sentCount      Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+  sentAt         DateTime?
+
+  @@index([userId])
 }
 
 // ── Embeddable Forms ───────────────────────────────────────────────────────
