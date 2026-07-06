@@ -282,8 +282,27 @@ model Contact {
   updatedAt DateTime @updatedAt
   activities    ContactActivity[]
   opportunities Opportunity[]
+  smsMessages   SmsMessage[]
 
   @@index([userId])
+}
+
+// A text message to/from a contact (via the agency's Twilio number).
+model SmsMessage {
+  id         String   @id @default(cuid())
+  userId     String   // the client account that owns the conversation
+  contactId  String?
+  contact    Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  direction  String   // outbound | inbound
+  fromNumber String
+  toNumber   String
+  body       String   @db.Text
+  status     String   @default("sent")
+  twilioSid  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([contactId])
 }
 
 // A logged interaction on a contact's timeline.

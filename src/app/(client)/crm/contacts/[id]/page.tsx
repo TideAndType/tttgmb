@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Trash2, Phone, Mail, StickyNote, CalendarClock } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Phone, Mail, StickyNote, CalendarClock, MessageSquare, Send } from "lucide-react";
 
 interface Activity { id: string; type: string; body: string; authorName: string | null; createdAt: string; }
 interface Opp { id: string; title: string; value: number; status: string; pipeline: { name: string }; stage: { name: string; color: string }; }
@@ -26,12 +26,28 @@ export default function ContactDetailPage() {
   const [saved, setSaved] = useState(false);
   const [logType, setLogType] = useState("note");
   const [logBody, setLogBody] = useState("");
+  const [sms, setSms] = useState<{ id: string; direction: string; body: string; createdAt: string }[]>([]);
+  const [smsBody, setSmsBody] = useState("");
+  const [smsErr, setSmsErr] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const loadSms = () => fetch(`/api/crm/contacts/${id}/sms`).then((r) => r.json()).then((d) => setSms(d.messages ?? [])).catch(() => {});
 
   const load = async () => {
     const r = await fetch(`/api/crm/contacts/${id}`);
     if (r.ok) setC((await r.json()).contact);
   };
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { load(); loadSms(); /* eslint-disable-next-line */ }, [id]);
+
+  const sendSmsMsg = async () => {
+    if (!smsBody.trim()) return;
+    setSending(true); setSmsErr("");
+    const r = await fetch(`/api/crm/contacts/${id}/sms`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body: smsBody }) });
+    const d = await r.json();
+    setSending(false);
+    if (!r.ok) { setSmsErr(d.error || "Couldn't send."); return; }
+    setSmsBody(""); loadSms();
+  };
 
   const set = (p: Partial<Contact>) => setC((prev) => prev ? { ...prev, ...p } : prev);
 
@@ -107,6 +123,33 @@ export default function ContactDetailPage() {
               </div>
               <Textarea value={logBody} onChange={(e) => setLogBody(e.target.value)} rows={2} placeholder={`Log a ${logType}…`} />
               <Button size="sm" onClick={log} disabled={!logBody.trim()}>Log</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><MessageSquare className="h-4 w-4 text-primary" /> Text messages</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {!c.phone ? (
+                <p className="text-sm text-muted-foreground">Add a phone number to text this contact.</p>
+              ) : (
+                <>
+                  <div className="max-h-56 overflow-y-auto space-y-1.5">
+                    {sms.length === 0 ? <p className="text-sm text-muted-foreground">No messages yet.</p> : sms.map((m) => (
+                      <div key={m.id} className={`flex ${m.direction === "outbound" ? "justify-end" : "justify-start"}`}>
+                        <div className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-sm ${m.direction === "outbound" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                          <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                          <p className={`text-[10px] mt-0.5 ${m.direction === "outbound" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{new Date(m.createdAt).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {smsErr && <p className="text-xs text-destructive">{smsErr}</p>}
+                  <div className="flex gap-2">
+                    <Textarea value={smsBody} onChange={(e) => setSmsBody(e.target.value)} rows={1} placeholder="Type a text…" className="resize-none" onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendSmsMsg(); } }} />
+                    <Button size="sm" onClick={sendSmsMsg} disabled={sending || !smsBody.trim()} className="shrink-0 self-end"><Send className="h-4 w-4" /></Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
