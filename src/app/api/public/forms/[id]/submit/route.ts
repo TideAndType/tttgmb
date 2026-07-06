@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications";
 import { sendLeadNotificationEmail } from "@/lib/email";
+import { triggerWorkflows } from "@/lib/workflow-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (owner?.email) {
       await sendLeadNotificationEmail(owner.email, contact.name, contact.email, contact.phone, form.name, `${base}/crm/contacts/${contact.id}`);
     }
+    await triggerWorkflows(form.userId, "contact_created", contact.id).catch(() => {});
+    await triggerWorkflows(form.userId, "form_submitted", contact.id, { formId: form.id }).catch(() => {});
   }
 
   await prisma.formSubmission.create({ data: { formId: form.id, data, contactId } });

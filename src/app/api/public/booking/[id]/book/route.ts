@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { slotToDate } from "@/lib/booking-slots";
 import { createNotification } from "@/lib/notifications";
 import { sendBookingConfirmationEmail, sendBookingNotificationEmail } from "@/lib/email";
+import { triggerWorkflows } from "@/lib/workflow-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await sendBookingConfirmationEmail(booking.email, booking.name, businessName, whenLabel).catch(() => {});
   await createNotification(cal.userId, "booking", "New booking", `${booking.name} · ${whenLabel}`, "/crm/booking");
   if (owner?.email) await sendBookingNotificationEmail(owner.email, booking.name, booking.email, whenLabel, `${base}/crm/booking`).catch(() => {});
+  await triggerWorkflows(cal.userId, "contact_created", contact.id).catch(() => {});
+  await triggerWorkflows(cal.userId, "booking_created", contact.id).catch(() => {});
 
   return NextResponse.json({ success: true, message: cal.successMessage, booking: { id: booking.id } });
 }

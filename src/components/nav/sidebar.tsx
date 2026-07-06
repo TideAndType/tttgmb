@@ -87,6 +87,7 @@ const navGroups: {
       { href: "/crm/forms", label: "Forms", icon: FileInput },
       { href: "/crm/booking", label: "Booking", icon: CalendarClock },
       { href: "/crm/campaigns", label: "Email Campaigns", icon: Mail },
+      { href: "/crm/workflows", label: "Workflows", icon: Workflow },
     ],
   },
   {

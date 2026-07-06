@@ -188,6 +188,52 @@ model User {
   bookingCalendars      BookingCalendar[]
   bookings              Booking[]
   emailCampaigns        EmailCampaign[]
+  workflows             Workflow[]
+}
+
+// ── Workflow builder ───────────────────────────────────────────────────────
+// A multi-step automation: a trigger enrolls a contact, who advances through
+// ordered steps (email/SMS/wait/task/tag/notify). Enables drip sequences.
+model Workflow {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  trigger       String   // contact_created | form_submitted | booking_created | manual
+  triggerConfig Json?    // e.g. { formId } for form_submitted
+  enabled       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  steps         WorkflowStep[]
+  enrollments   WorkflowEnrollment[]
+
+  @@index([userId])
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  position   Int      @default(0)
+  type       String   // send_email | send_sms | wait | create_task | add_tag | notify
+  config     Json     // per-type: { subject, body } | { body } | { minutes } | { title } | { tag } | { message }
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId])
+}
+
+model WorkflowEnrollment {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contactId   String
+  currentStep Int      @default(0)
+  status      String   @default("active") // active | done | cancelled
+  nextRunAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([status, nextRunAt])
+  @@index([workflowId])
 }
 
 // A one-off email broadcast to CRM contacts, sent via the agency's own email

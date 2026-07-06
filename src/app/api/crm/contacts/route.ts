@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { effectiveUserId } from "@/lib/effective-user";
+import { triggerWorkflows } from "@/lib/workflow-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -45,5 +46,6 @@ export async function POST(req: NextRequest) {
       notes: b.notes || null,
     },
   });
+  await triggerWorkflows(userId, "contact_created", contact.id).catch(() => {});
   return NextResponse.json({ contact });
 }
