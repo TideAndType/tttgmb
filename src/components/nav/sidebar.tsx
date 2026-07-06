@@ -41,6 +41,8 @@ import {
   Workflow,
   Globe,
   Plug,
+  KanbanSquare,
+  Users,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -72,6 +74,13 @@ const navGroups: {
       { href: "/marketing/reports", label: "Reports", icon: BarChart2 },
       { href: "/marketing/automations", label: "Automations", icon: Workflow },
       { href: "/marketing/knowledge", label: "Knowledge Base", icon: BookOpen },
+    ],
+  },
+  {
+    title: "CRM",
+    items: [
+      { href: "/crm", label: "Pipeline", icon: KanbanSquare },
+      { href: "/crm/contacts", label: "Contacts", icon: Users },
     ],
   },
   {

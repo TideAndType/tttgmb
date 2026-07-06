@@ -149,6 +149,94 @@ model User {
   automations           Automation[]
   websiteRecs           WebsiteRecommendation[]
   marketingReports      MarketingReport[]
+  contacts              Contact[]
+  crmPipelines          CrmPipeline[]
+  opportunities         Opportunity[]
+}
+
+// ── CRM & Pipelines ────────────────────────────────────────────────────────
+// A contact/lead in a client's CRM (scoped per client account; managed by the
+// agency admin via impersonation).
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  source    String?  // where the lead came from
+  status    String   @default("lead") // lead | qualified | customer | lost
+  tags      String[] @default([])
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activities    ContactActivity[]
+  opportunities Opportunity[]
+
+  @@index([userId])
+}
+
+// A logged interaction on a contact's timeline.
+model ContactActivity {
+  id         String   @id @default(cuid())
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type       String   @default("note") // note | call | email | meeting | stage_change
+  body       String   @db.Text
+  authorName String?
+  createdAt  DateTime @default(now())
+
+  @@index([contactId])
+}
+
+// A sales pipeline with ordered stages.
+model CrmPipeline {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int        @default(0)
+  createdAt DateTime   @default(now())
+  stages    CrmStage[]
+  opportunities Opportunity[]
+
+  @@index([userId])
+}
+
+model CrmStage {
+  id         String   @id @default(cuid())
+  pipelineId String
+  pipeline   CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name       String
+  position   Int      @default(0)
+  color      String   @default("#6366f1")
+  createdAt  DateTime @default(now())
+  opportunities Opportunity[]
+
+  @@index([pipelineId])
+}
+
+// A deal moving through a pipeline.
+model Opportunity {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pipelineId String
+  pipeline   CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stageId    String
+  stage      CrmStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  contactId  String?
+  contact    Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  title      String
+  value      Float    @default(0)
+  status     String   @default("open") // open | won | lost
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([pipelineId, stageId])
 }
 
 // An AI-generated, plain-English marketing report.
