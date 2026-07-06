@@ -152,6 +152,83 @@ model User {
   contacts              Contact[]
   crmPipelines          CrmPipeline[]
   opportunities         Opportunity[]
+  leadForms             LeadForm[]
+  bookingCalendars      BookingCalendar[]
+  bookings              Booking[]
+}
+
+// ── Embeddable Forms ───────────────────────────────────────────────────────
+// A lead-capture form that can be embedded on an external website; submissions
+// create Contacts in this client's CRM.
+model LeadForm {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  fields         Json     // [{ id, label, type, required, options?, mapTo? }]
+  submitLabel    String   @default("Submit")
+  successMessage String   @default("Thanks! We'll be in touch shortly.")
+  redirectUrl    String?
+  accentColor    String   @default("#0d9488")
+  createContact  Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  submissions    FormSubmission[]
+
+  @@index([userId])
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  form      LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  data      Json     // { fieldId: value }
+  contactId String?
+  createdAt DateTime @default(now())
+
+  @@index([formId])
+}
+
+// ── Booking Calendar ───────────────────────────────────────────────────────
+// An embeddable scheduling calendar; bookings create Contacts + Bookings.
+model BookingCalendar {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?  @db.Text
+  durationMin    Int      @default(30)
+  bufferMin      Int      @default(0)
+  timezone       String   @default("America/New_York")
+  availability   Json     // { mon:[{start:"09:00",end:"17:00"}], ... } weekday keys
+  leadDays       Int      @default(14)  // how far ahead bookable
+  accentColor    String   @default("#0d9488")
+  successMessage String   @default("Your booking is confirmed. Check your email for details.")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  bookings       Booking[]
+
+  @@index([userId])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  calendarId String
+  calendar   BookingCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactId  String?
+  name       String
+  email      String
+  phone      String?
+  notes      String?  @db.Text
+  startAt    DateTime
+  endAt      DateTime
+  status     String   @default("confirmed") // confirmed | cancelled
+  createdAt  DateTime @default(now())
+
+  @@index([calendarId, startAt])
+  @@index([userId])
 }
 
 // ── CRM & Pipelines ────────────────────────────────────────────────────────

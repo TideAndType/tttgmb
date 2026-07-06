@@ -43,6 +43,8 @@ import {
   Plug,
   KanbanSquare,
   Users,
+  FileInput,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -81,6 +83,8 @@ const navGroups: {
     items: [
       { href: "/crm", label: "Pipeline", icon: KanbanSquare },
       { href: "/crm/contacts", label: "Contacts", icon: Users },
+      { href: "/crm/forms", label: "Forms", icon: FileInput },
+      { href: "/crm/booking", label: "Booking", icon: CalendarClock },
     ],
   },
   {
