@@ -35,6 +35,9 @@ import {
   ChevronRight,
   Megaphone,
   LifeBuoy,
+  Sparkles,
+  Palette,
+  Plug,
   BookOpen,
 } from "lucide-react";
 
@@ -46,6 +49,7 @@ const navGroups: {
     title: "Overview",
     items: [
       { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { href: "/admin/marketing", label: "Marketing OS", icon: Sparkles },
       { href: "/admin/activity", label: "Activity", icon: Activity },
       { href: "/admin/overdue", label: "Overdue", icon: AlertCircle },
     ],
@@ -86,6 +90,8 @@ const navGroups: {
       { href: "/admin/forms", label: "Intake Forms", icon: ClipboardList },
       { href: "/admin/support", label: "Support", icon: LifeBuoy },
       { href: "/admin/knowledge-base", label: "Knowledge Base", icon: BookOpen },
+      { href: "/admin/branding", label: "Branding & White-label", icon: Palette },
+      { href: "/admin/integrations", label: "Integrations", icon: Plug },
       { href: "/admin/webhooks", label: "Webhooks", icon: Webhook },
     ],
   },

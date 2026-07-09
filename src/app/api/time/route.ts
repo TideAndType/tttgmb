@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,13 @@ export async function GET(req: NextRequest) {
   if (since) where.date = { gte: since };
 
   if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
-    if (filterUserId) where.userId = filterUserId;
+    const scope = await getAgencyScope(session);
+    if (scope.clientUserIds !== null) {
+      // Restrict to agency clients; honor a specific client filter only if in scope.
+      where.userId = filterUserId && scope.clientUserIds.includes(filterUserId) ? filterUserId : { in: scope.clientUserIds };
+    } else if (filterUserId) {
+      where.userId = filterUserId;
+    }
     if (filterProjectId) where.projectId = filterProjectId;
     if (filterTaskId) where.taskId = filterTaskId;
   } else {

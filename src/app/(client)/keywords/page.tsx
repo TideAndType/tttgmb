@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +15,21 @@ interface KeywordRow {
   clicks: number;
   impressions: number;
   position: number;
+  prevPosition: number | null;
+  positionChange: number | null;
   ctr: number;
 }
+
+type RangeKey = "30d" | "90d" | "120d" | "thisYear" | "lastYear" | "custom";
+
+const RANGE_OPTIONS: { value: RangeKey; label: string }[] = [
+  { value: "30d", label: "Last 30 days" },
+  { value: "90d", label: "Last 90 days" },
+  { value: "120d", label: "Last 120 days" },
+  { value: "thisYear", label: "This year" },
+  { value: "lastYear", label: "Last year" },
+  { value: "custom", label: "Custom range" },
+];
 
 interface TrackedKeyword {
   id: string;
@@ -109,9 +122,15 @@ export default function KeywordsPage() {
     }
   };
 
-  type DiscKey = "query" | "clicks" | "impressions" | "ctr" | "position";
+  type DiscKey = "query" | "clicks" | "impressions" | "ctr" | "position" | "positionChange";
   const [discSortKey, setDiscSortKey] = useState<DiscKey | null>(null);
   const [discSortDir, setDiscSortDir] = useState<"asc" | "desc">("asc");
+
+  // Reporting window for the "From Search Console" list.
+  const [range, setRange] = useState<RangeKey>("90d");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const [rangeLabel, setRangeLabel] = useState("last 90 days");
 
   const toggleDiscSort = (key: DiscKey) => {
     if (discSortKey === key) {
@@ -189,7 +208,12 @@ export default function KeywordsPage() {
 
   const loadDiscovered = async () => {
     try {
-      const res = await fetch("/api/gsc/data?type=keywords");
+      const params = new URLSearchParams({ type: "keywords", range });
+      if (range === "custom" && customStart && customEnd) {
+        params.set("start", customStart);
+        params.set("end", customEnd);
+      }
+      const res = await fetch(`/api/gsc/data?${params.toString()}`);
       if (res.status === 400 || res.status === 401) {
         setGscConnected(false);
         return;
@@ -201,6 +225,7 @@ export default function KeywordsPage() {
       }
       const data = await res.json();
       setDiscovered(data.keywords || []);
+      if (data.rangeLabel) setRangeLabel(data.rangeLabel);
     } catch {
       setError("Failed to load keyword data");
     }
@@ -264,10 +289,26 @@ export default function KeywordsPage() {
   const sortedDiscovered = [...discovered].sort((a, b) => {
     if (!discSortKey) return 0;
     const dir = discSortDir === "asc" ? 1 : -1;
-    const cmp =
-      discSortKey === "query" ? a.query.localeCompare(b.query) : a[discSortKey] - b[discSortKey];
+    let cmp: number;
+    if (discSortKey === "query") {
+      cmp = a.query.localeCompare(b.query);
+    } else if (discSortKey === "positionChange") {
+      // Unknown change sorts to the bottom regardless of direction.
+      cmp = (a.positionChange ?? -Infinity) - (b.positionChange ?? -Infinity);
+    } else {
+      cmp = a[discSortKey] - b[discSortKey];
+    }
     return cmp * dir;
   });
+
+  // Reload the GSC list when a preset range is chosen (custom waits for Apply).
+  // Skip the first run — init() already loads the default range.
+  const rangeMounted = useRef(false);
+  useEffect(() => {
+    if (!rangeMounted.current) { rangeMounted.current = true; return; }
+    if (range !== "custom") loadDiscovered();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [range]);
 
   const DiscSortHead = ({ column, label, className }: { column: DiscKey; label: string; className?: string }) => (
     <button
@@ -553,8 +594,31 @@ export default function KeywordsPage() {
       {/* Discovered keywords from GSC */}
       <Card>
         <CardHeader>
-          <CardTitle>From Search Console</CardTitle>
-          <CardDescription>Your top queries (last 90 days) — click Track to start monitoring</CardDescription>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <CardTitle>From Search Console</CardTitle>
+              <CardDescription>Your top queries ({rangeLabel}) with position vs. the prior period — click Track to start monitoring</CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value as RangeKey)}
+                className="border border-input rounded-md px-3 py-2 text-sm bg-background text-foreground h-9"
+              >
+                {RANGE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              {range === "custom" && (
+                <div className="flex items-center gap-1">
+                  <Input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className="h-9 w-[140px] text-sm" />
+                  <span className="text-muted-foreground text-sm">–</span>
+                  <Input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className="h-9 w-[140px] text-sm" />
+                  <Button size="sm" className="h-9" onClick={loadDiscovered} disabled={!customStart || !customEnd}>Apply</Button>
+                </div>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {discovered.length === 0 ? (
@@ -567,7 +631,9 @@ export default function KeywordsPage() {
                   <TableHead className="text-right"><DiscSortHead column="clicks" label="Clicks" className="justify-end" /></TableHead>
                   <TableHead className="text-right"><DiscSortHead column="impressions" label="Impressions" className="justify-end" /></TableHead>
                   <TableHead className="text-right"><DiscSortHead column="ctr" label="CTR" className="justify-end" /></TableHead>
-                  <TableHead className="text-right"><DiscSortHead column="position" label="Position" className="justify-end" /></TableHead>
+                  <TableHead className="text-right">Previous</TableHead>
+                  <TableHead className="text-right"><DiscSortHead column="position" label="Current" className="justify-end" /></TableHead>
+                  <TableHead className="text-right"><DiscSortHead column="positionChange" label="Change" className="justify-end" /></TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -580,7 +646,11 @@ export default function KeywordsPage() {
                       <TableCell className="text-right">{kw.clicks.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{kw.impressions.toLocaleString()}</TableCell>
                       <TableCell className="text-right">{(kw.ctr * 100).toFixed(2)}%</TableCell>
+                      <TableCell className="text-right">
+                        {kw.prevPosition !== null ? <span className="text-muted-foreground text-sm">#{kw.prevPosition.toFixed(1)}</span> : <span className="text-muted-foreground text-xs">—</span>}
+                      </TableCell>
                       <TableCell className="text-right"><PositionBadge pos={kw.position} /></TableCell>
+                      <TableCell className="text-right"><Change change={kw.positionChange} /></TableCell>
                       <TableCell className="text-right">
                         {isTracked ? (
                           <Badge variant="secondary" className="text-xs">Tracking</Badge>

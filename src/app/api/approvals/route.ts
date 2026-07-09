@@ -8,6 +8,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +25,10 @@ export async function GET(req: NextRequest) {
   const statusFilter = searchParams.get("status");
 
   if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+    const scope = await getAgencyScope(session);
     const where: any = {};
     if (statusFilter) where.status = statusFilter;
+    if (scope.clientUserIds !== null) where.userId = { in: scope.clientUserIds };
     const deliverables = await prisma.deliverable.findMany({
       where,
       include: {

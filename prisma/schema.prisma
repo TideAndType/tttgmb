@@ -66,6 +66,58 @@ model Company {
   users     User[]
 }
 
+// A white-label agency tenant. Owned by an ADMIN; its branding applies to the
+// client side of every client linked to it, and to its white-label login page
+// (reachable via {slug}.<root domain> or a custom CNAME domain).
+model Agency {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique              // subdomain label
+  customDomain  String?  @unique              // full host, e.g. portal.acme.com
+  ownerId       String?                        // the ADMIN who owns this agency
+  appName       String   @default("Client Portal")
+  logoData      String?  @db.Text             // data URL
+  primaryColor  String   @default("#2dd4bf")
+  accentColor   String   @default("#6366f1")
+  loginHeadline String?
+  loginSubtext  String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  members       User[]   @relation("AgencyMembers")
+  integrations  AgencyIntegration?
+}
+
+// Per-agency provider credentials ("bring your own keys"). Secrets are never
+// returned to the client — only configured/masked status. Used by the agency's
+// own email, SMS, and payment features.
+model AgencyIntegration {
+  id                    String   @id @default(cuid())
+  agencyId              String   @unique
+  agency                Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  // Payments — Stripe
+  stripeSecretKey       String?
+  stripePublishableKey  String?
+
+  // SMS — Twilio
+  twilioAccountSid      String?
+  twilioAuthToken       String?
+  twilioFromNumber      String?
+
+  // Email — SendGrid or SMTP
+  emailProvider         String   @default("none") // none | sendgrid | smtp
+  sendgridApiKey        String?
+  smtpHost              String?
+  smtpPort              Int?
+  smtpUser              String?
+  smtpPass              String?
+  fromEmail             String?
+  fromName              String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
@@ -76,6 +128,8 @@ model User {
   companyName     String?
   companyId       String?
   company         Company?     @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  agencyId        String?
+  agency          Agency?      @relation("AgencyMembers", fields: [agencyId], references: [id], onDelete: SetNull)
   gscProperty     String?
   gscAccessToken  String?
   gscRefreshToken String?
@@ -95,6 +149,7 @@ model User {
   notifyWeeklyDigest    Boolean @default(true)
   totpSecret       String?
   totpEnabled      Boolean @default(false)
+  icalToken        String? @unique
   openLensApiKey   String?
   image            String?  @db.Text
   dashboardLayout  Json?
@@ -113,6 +168,509 @@ model User {
   meetings        Meeting[]
   trackedKeywords TrackedKeyword[]
   keywordFolders  KeywordFolder[]
+  bookmarks       Bookmark[]
+  marketingProfile      MarketingProfile?
+  marketingScores       MarketingScore[]
+  marketingTasks        MarketingTask[]
+  marketingBriefings    MarketingBriefing[]
+  marketingContent      MarketingContent[]
+  assistantConversations AssistantConversation[]
+  marketingDocs         MarketingKnowledgeDoc[]
+  competitors           MarketingCompetitor[]
+  reviews               MarketingReview[]
+  automations           Automation[]
+  websiteRecs           WebsiteRecommendation[]
+  marketingReports      MarketingReport[]
+  contacts              Contact[]
+  crmPipelines          CrmPipeline[]
+  opportunities         Opportunity[]
+  leadForms             LeadForm[]
+  bookingCalendars      BookingCalendar[]
+  bookings              Booking[]
+  emailCampaigns        EmailCampaign[]
+  workflows             Workflow[]
+}
+
+// ── Workflow builder ───────────────────────────────────────────────────────
+// A multi-step automation: a trigger enrolls a contact, who advances through
+// ordered steps (email/SMS/wait/task/tag/notify). Enables drip sequences.
+model Workflow {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  trigger       String   // contact_created | form_submitted | booking_created | manual
+  triggerConfig Json?    // e.g. { formId } for form_submitted
+  enabled       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  steps         WorkflowStep[]
+  enrollments   WorkflowEnrollment[]
+
+  @@index([userId])
+}
+
+model WorkflowStep {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  position   Int      @default(0)
+  type       String   // send_email | send_sms | wait | create_task | add_tag | notify
+  config     Json     // per-type: { subject, body } | { body } | { minutes } | { title } | { tag } | { message }
+  createdAt  DateTime @default(now())
+
+  @@index([workflowId])
+}
+
+model WorkflowEnrollment {
+  id          String   @id @default(cuid())
+  workflowId  String
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  contactId   String
+  currentStep Int      @default(0)
+  status      String   @default("active") // active | done | cancelled
+  nextRunAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([status, nextRunAt])
+  @@index([workflowId])
+}
+
+// A one-off email broadcast to CRM contacts, sent via the agency's own email
+// provider (BYOK).
+model EmailCampaign {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  subject        String
+  body           String   @db.Text   // markdown
+  audienceStatus String?  // null = all; else lead|qualified|customer|lost
+  audienceTag    String?
+  status         String   @default("draft") // draft | sent
+  recipientCount Int      @default(0)
+  sentCount      Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+  sentAt         DateTime?
+
+  @@index([userId])
+}
+
+// ── Embeddable Forms ───────────────────────────────────────────────────────
+// A lead-capture form that can be embedded on an external website; submissions
+// create Contacts in this client's CRM.
+model LeadForm {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  fields         Json     // [{ id, label, type, required, options?, mapTo? }]
+  submitLabel    String   @default("Submit")
+  successMessage String   @default("Thanks! We'll be in touch shortly.")
+  redirectUrl    String?
+  accentColor    String   @default("#0d9488")
+  createContact  Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  submissions    FormSubmission[]
+
+  @@index([userId])
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  form      LeadForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  data      Json     // { fieldId: value }
+  contactId String?
+  createdAt DateTime @default(now())
+
+  @@index([formId])
+}
+
+// ── Booking Calendar ───────────────────────────────────────────────────────
+// An embeddable scheduling calendar; bookings create Contacts + Bookings.
+model BookingCalendar {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?  @db.Text
+  durationMin    Int      @default(30)
+  bufferMin      Int      @default(0)
+  timezone       String   @default("America/New_York")
+  availability   Json     // { mon:[{start:"09:00",end:"17:00"}], ... } weekday keys
+  leadDays       Int      @default(14)  // how far ahead bookable
+  accentColor    String   @default("#0d9488")
+  successMessage String   @default("Your booking is confirmed. Check your email for details.")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  bookings       Booking[]
+
+  @@index([userId])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  calendarId String
+  calendar   BookingCalendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contactId  String?
+  name       String
+  email      String
+  phone      String?
+  notes      String?  @db.Text
+  startAt    DateTime
+  endAt      DateTime
+  status     String   @default("confirmed") // confirmed | cancelled
+  createdAt  DateTime @default(now())
+
+  @@index([calendarId, startAt])
+  @@index([userId])
+}
+
+// ── CRM & Pipelines ────────────────────────────────────────────────────────
+// A contact/lead in a client's CRM (scoped per client account; managed by the
+// agency admin via impersonation).
+model Contact {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  company   String?
+  source    String?  // where the lead came from
+  status    String   @default("lead") // lead | qualified | customer | lost
+  tags      String[] @default([])
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activities    ContactActivity[]
+  opportunities Opportunity[]
+  smsMessages   SmsMessage[]
+
+  @@index([userId])
+}
+
+// A text message to/from a contact (via the agency's Twilio number).
+model SmsMessage {
+  id         String   @id @default(cuid())
+  userId     String   // the client account that owns the conversation
+  contactId  String?
+  contact    Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  direction  String   // outbound | inbound
+  fromNumber String
+  toNumber   String
+  body       String   @db.Text
+  status     String   @default("sent")
+  twilioSid  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([contactId])
+}
+
+// A logged interaction on a contact's timeline.
+model ContactActivity {
+  id         String   @id @default(cuid())
+  contactId  String
+  contact    Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type       String   @default("note") // note | call | email | meeting | stage_change
+  body       String   @db.Text
+  authorName String?
+  createdAt  DateTime @default(now())
+
+  @@index([contactId])
+}
+
+// A sales pipeline with ordered stages.
+model CrmPipeline {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  position  Int        @default(0)
+  createdAt DateTime   @default(now())
+  stages    CrmStage[]
+  opportunities Opportunity[]
+
+  @@index([userId])
+}
+
+model CrmStage {
+  id         String   @id @default(cuid())
+  pipelineId String
+  pipeline   CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name       String
+  position   Int      @default(0)
+  color      String   @default("#6366f1")
+  createdAt  DateTime @default(now())
+  opportunities Opportunity[]
+
+  @@index([pipelineId])
+}
+
+// A deal moving through a pipeline.
+model Opportunity {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pipelineId String
+  pipeline   CrmPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  stageId    String
+  stage      CrmStage @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  contactId  String?
+  contact    Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  title      String
+  value      Float    @default(0)
+  status     String   @default("open") // open | won | lost
+  position   Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([pipelineId, stageId])
+}
+
+// An AI-generated, plain-English marketing report.
+model MarketingReport {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  summary   String   @db.Text
+  sections  Json?    // { improved:[], declined:[], whyItMatters, impact, nextSteps:[], priorities:[] }
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// A single AI recommendation from a website scan.
+model WebsiteRecommendation {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   String   // seo | ux | conversion | cta | accessibility | content | newpage | performance
+  title      String
+  impact     String   @default("medium") // high | medium | low
+  difficulty String   @default("medium") // easy | medium | hard
+  reason     String   @db.Text
+  solution   String   @db.Text
+  status     String   @default("open")   // open | done | dismissed
+  scanUrl    String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, status])
+}
+
+// A "when X happens → do Y" marketing workflow.
+model Automation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  trigger   String   // content_published | review_received | score_drop | manual
+  action    String   // notify | create_task | generate_social | draft_review_response
+  config    Json?    // action params (e.g. task title, notify message)
+  enabled   Boolean  @default(true)
+  lastRunAt DateTime?
+  runCount  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// A customer review the client is tracking (manual entry now; a GBP/Facebook
+// import can populate the same shape later).
+model MarketingReview {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  author      String
+  rating      Int      @default(5)
+  text        String?  @db.Text
+  source      String   @default("manual") // google | facebook | yelp | manual
+  response    String?  @db.Text
+  respondedAt DateTime?
+  reviewedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+// A competitor the client wants to keep an eye on.
+model MarketingCompetitor {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  website   String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  insights  CompetitorInsight[]
+
+  @@index([userId])
+}
+
+// A dated AI assessment of a competitor: what they likely do well, gaps, and
+// what the client should do. (A future crawler can populate the same shape.)
+model CompetitorInsight {
+  id            String   @id @default(cuid())
+  competitorId  String
+  competitor    MarketingCompetitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  summary       String   @db.Text
+  strengths     Json?    // string[]
+  gaps          Json?    // string[]
+  recommendations Json?  // string[]
+  createdAt     DateTime @default(now())
+
+  @@index([competitorId])
+}
+
+// ── AI Marketing Operating System (additive module) ───────────────────────
+// Per-client business context the AI uses across the module.
+model MarketingProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String?
+  website        String?
+  industry       String?
+  services       String?  @db.Text
+  locations      String?  @db.Text
+  targetAudience String?  @db.Text
+  brandVoice     String?  @db.Text
+  competitors    String?  @db.Text   // newline/comma separated
+  socialAccounts String?  @db.Text
+  goals          String?  @db.Text
+  faqs           String?  @db.Text
+  extraNotes     String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// A dated snapshot of the marketing health scores for a client.
+model MarketingScore {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  overall       Int      @default(0)
+  seo           Int      @default(0)
+  local         Int      @default(0)
+  social        Int      @default(0)
+  reputation    Int      @default(0)
+  website       Int      @default(0)
+  aiVisibility  Int      @default(0)
+  leadGen       Int      @default(0)
+  breakdown     Json?    // raw signals used to compute the scores
+  createdAt     DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// AI-generated actionable marketing task.
+model MarketingTask {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  category     String   @default("general") // seo | local | social | content | reputation | website | leadgen
+  priority     String   @default("medium")  // high | medium | low
+  impact       String   @default("medium")  // high | medium | low
+  estMinutes   Int      @default(30)
+  instructions String?  @db.Text
+  status       String   @default("open")    // open | in_progress | done | dismissed
+  source       String   @default("ai")      // ai | manual
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+// The daily AI briefing (focus / opportunities / risks), one per client per day.
+model MarketingBriefing {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  summary   String   @db.Text
+  focus     Json?    // string[]
+  opportunities Json? // string[]
+  risks     Json?    // string[]
+  wins      Json?    // string[]
+  createdAt DateTime @default(now())
+
+  @@unique([userId, date])
+  @@index([userId])
+}
+
+// AI-generated content (blog, social, email, landing page, etc.).
+model MarketingContent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // blog | facebook | instagram | linkedin | gbp | email | landing | service | faq | video
+  title       String
+  body        String   @db.Text
+  status      String   @default("draft") // draft | approved | scheduled | published
+  scheduledAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, status])
+}
+
+// Persistent AI assistant conversation + messages.
+model AssistantConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String   @default("New conversation")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  messages  AssistantMessage[]
+
+  @@index([userId])
+}
+
+model AssistantMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           String   // user | assistant
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId])
+}
+
+// Knowledge base document the AI can draw on when generating content.
+model MarketingKnowledgeDoc {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String
+  url       String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model KeywordFolder {
@@ -336,6 +894,8 @@ model CalendarEvent {
   calendar    Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
   title       String
   date        DateTime @db.Date
+  endDate     DateTime? @db.Date
+  recurrence  String?   // null | "weekly" | "monthly"
   description String?
   createdAt   DateTime @default(now())
 

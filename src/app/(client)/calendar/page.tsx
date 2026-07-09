@@ -20,9 +20,21 @@ interface ProjectCard {
   project: { id: string; name: string; color: string };
 }
 
-type CalendarEvent =
-  | { type: "task"; data: Task }
-  | { type: "card"; data: ProjectCard };
+interface CalEvent {
+  id: string;
+  title: string;
+  date: string;
+  endDate: string | null;
+  recurrence: string | null;
+  description: string | null;
+  calendar: { id: string; name: string; color: string };
+}
+
+interface CalendarLayer {
+  id: string;
+  name: string;
+  color: string;
+}
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month + 1, 0).getDate();
@@ -185,6 +197,56 @@ function CardChip({ card }: { card: ProjectCard }) {
   );
 }
 
+function EventPopover({ event, anchorRef, onClose }: {
+  event: CalEvent;
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  onClose: () => void;
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+  useClickOutside([popoverRef, anchorRef], onClose);
+  const recLabel = event.recurrence === "weekly" ? "Repeats weekly" : event.recurrence === "monthly" ? "Repeats monthly" : null;
+  return (
+    <div
+      ref={popoverRef}
+      className="absolute z-50 w-64 bg-white dark:bg-card border border-border rounded-lg shadow-lg p-3 text-sm"
+      style={{ top: "calc(100% + 4px)", left: 0 }}
+    >
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="font-semibold text-foreground leading-snug">{event.title}</p>
+        <button onClick={onClose} className="shrink-0 text-muted-foreground hover:text-foreground">
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium mb-2" style={{ backgroundColor: event.calendar.color + "20", color: event.calendar.color }}>
+        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: event.calendar.color }} />
+        {event.calendar.name}
+      </span>
+      {recLabel && <p className="text-xs text-muted-foreground">{recLabel}</p>}
+      {event.description && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{event.description}</p>}
+    </div>
+  );
+}
+
+function EventChip({ event }: { event: CalEvent }) {
+  const [open, setOpen] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  return (
+    <div className="relative">
+      <button
+        ref={btnRef}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        className="w-full flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-left truncate border"
+        style={{ backgroundColor: event.calendar.color + "20", borderColor: event.calendar.color + "60", color: event.calendar.color }}
+        title={`${event.title} · ${event.calendar.name}`}
+      >
+        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: event.calendar.color }} />
+        <span className="truncate">{event.title}</span>
+      </button>
+      {open && <EventPopover event={event} anchorRef={btnRef} onClose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
 // ── Calendar grid ─────────────────────────────────────────────────────
 
 function dateKey(y: number, m: number, d: number): string {
@@ -194,6 +256,7 @@ function dateKey(y: number, m: number, d: number): string {
 interface DayEvents {
   tasks: Task[];
   cards: ProjectCard[];
+  events: CalEvent[];
 }
 
 function CalendarGrid({ year, month, eventsByDate, today }: {
@@ -231,11 +294,12 @@ function CalendarGrid({ year, month, eventsByDate, today }: {
       ))}
       {cells.map((cell, idx) => {
         const key = dateKey(cell.y, cell.m, cell.day);
-        const { tasks = [], cards = [] } = eventsByDate.get(key) ?? {};
-        const allCount = tasks.length + cards.length;
-        const visibleTasks = tasks.slice(0, 2);
-        const visibleCards = cards.slice(0, Math.max(0, 3 - visibleTasks.length));
-        const overflow = allCount - visibleTasks.length - visibleCards.length;
+        const { tasks = [], cards = [], events = [] } = eventsByDate.get(key) ?? {};
+        const allCount = tasks.length + cards.length + events.length;
+        const visibleEvents = events.slice(0, 2);
+        const visibleTasks = tasks.slice(0, Math.max(0, 3 - visibleEvents.length));
+        const visibleCards = cards.slice(0, Math.max(0, 3 - visibleEvents.length - visibleTasks.length));
+        const overflow = allCount - visibleEvents.length - visibleTasks.length - visibleCards.length;
         const isToday = isSameDay(new Date(cell.y, cell.m, cell.day), today);
 
         return (
@@ -251,6 +315,7 @@ function CalendarGrid({ year, month, eventsByDate, today }: {
               {cell.day}
             </span>
             <div className="flex flex-col gap-0.5 flex-1">
+              {visibleEvents.map((e) => <EventChip key={e.id} event={e} />)}
               {visibleTasks.map((t) => <TaskChip key={t.id} task={t} />)}
               {visibleCards.map((c) => <CardChip key={c.id} card={c} />)}
               {overflow > 0 && <span className="text-xs text-muted-foreground px-1">+{overflow} more</span>}
@@ -272,7 +337,7 @@ function MobileListView({ year, month, eventsByDate }: { year: number; month: nu
   for (let d = 1; d <= daysInMonth; d++) {
     const key = dateKey(year, month, d);
     const events = eventsByDate.get(key);
-    if (events && (events.tasks.length > 0 || events.cards.length > 0)) {
+    if (events && (events.tasks.length > 0 || events.cards.length > 0 || events.events.length > 0)) {
       entries.push({ day: d, events });
     }
   }
@@ -292,6 +357,7 @@ function MobileListView({ year, month, eventsByDate }: { year: number; month: nu
               {date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
             </div>
             <div className="p-2 space-y-1">
+              {events.events.map((e) => <EventChip key={e.id} event={e} />)}
               {events.tasks.map((t) => <TaskChip key={t.id} task={t} />)}
               {events.cards.map((c) => <CardChip key={c.id} card={c} />)}
             </div>
@@ -331,8 +397,13 @@ export default function CalendarPage() {
   const [month, setMonth] = useState(today.getMonth());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [cards, setCards] = useState<ProjectCard[]>([]);
+  const [events, setEvents] = useState<CalEvent[]>([]);
+  const [calendars, setCalendars] = useState<CalendarLayer[]>([]);
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [subscribeUrl, setSubscribeUrl] = useState("");
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     function check() { setIsMobile(window.innerWidth < 768); }
@@ -347,14 +418,35 @@ export default function CalendarPage() {
       .then((data) => {
         setTasks((data.tasks ?? []).filter((t: Task) => !!t.dueDate));
         setCards(data.cards ?? []);
+        setEvents(data.events ?? []);
       })
       .finally(() => setLoading(false));
+    fetch("/api/calendars").then((r) => r.json()).then((d) => setCalendars(d.calendars ?? [])).catch(() => {});
   }, []);
+
+  const toggleCalendar = (id: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const subscribe = async () => {
+    if (!subscribeUrl) {
+      const res = await fetch("/api/calendar/ical-token");
+      if (res.ok) { const d = await res.json(); setSubscribeUrl(d.url); }
+    }
+  };
+
+  const copyUrl = async () => {
+    try { await navigator.clipboard.writeText(subscribeUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* ignore */ }
+  };
 
   const eventsByDate = useCallback((): Map<string, DayEvents> => {
     const map = new Map<string, DayEvents>();
     const getOrCreate = (k: string) => {
-      if (!map.has(k)) map.set(k, { tasks: [], cards: [] });
+      if (!map.has(k)) map.set(k, { tasks: [], cards: [], events: [] });
       return map.get(k)!;
     };
     for (const t of tasks) {
@@ -366,8 +458,45 @@ export default function CalendarPage() {
       const d = new Date(c.dueDate);
       getOrCreate(dateKey(d.getFullYear(), d.getMonth(), d.getDate())).cards.push(c);
     }
+
+    // Expand stored events across the visible month, honoring multi-day spans,
+    // weekly/monthly recurrence, and hidden calendar layers.
+    const monthStart = new Date(year, month, 1);
+    const monthEnd = new Date(year, month + 1, 0);
+    const spanDays = (e: CalEvent) => {
+      const s = new Date(e.date);
+      const en = e.endDate ? new Date(e.endDate) : s;
+      return Math.max(0, Math.round((en.getTime() - s.getTime()) / 86400000));
+    };
+    const place = (e: CalEvent, occStart: Date) => {
+      const days = spanDays(e);
+      for (let i = 0; i <= days; i++) {
+        const d = new Date(occStart);
+        d.setDate(d.getDate() + i);
+        if (d < monthStart || d > monthEnd) continue;
+        getOrCreate(dateKey(d.getFullYear(), d.getMonth(), d.getDate())).events.push(e);
+      }
+    };
+    for (const e of events) {
+      if (hidden.has(e.calendar.id)) continue;
+      const start = new Date(e.date);
+      if (!e.recurrence) { place(e, start); continue; }
+      if (e.recurrence === "weekly") {
+        // Walk weekly occurrences from the event start up to the month end.
+        const occ = new Date(start);
+        while (occ <= monthEnd) {
+          if (occ >= new Date(monthStart.getTime() - spanDays(e) * 86400000)) place(e, new Date(occ));
+          occ.setDate(occ.getDate() + 7);
+        }
+      } else if (e.recurrence === "monthly") {
+        for (let m = -1; m <= 1; m++) {
+          const occ = new Date(year, month + m, start.getDate());
+          if (occ >= start) place(e, occ);
+        }
+      }
+    }
     return map;
-  }, [tasks, cards]);
+  }, [tasks, cards, events, hidden, year, month]);
 
   const prevMonth = () => {
     if (month === 0) { setYear(y => y - 1); setMonth(11); }
@@ -406,6 +535,38 @@ export default function CalendarPage() {
           </button>
         </div>
       </div>
+
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {calendars.map((c) => {
+              const on = !hidden.has(c.id);
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => toggleCalendar(c.id)}
+                  className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-opacity", !on && "opacity-40")}
+                  style={{ backgroundColor: c.color + "20", borderColor: c.color + "60", color: c.color }}
+                  title={on ? "Hide this calendar" : "Show this calendar"}
+                >
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} />
+                  {c.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            {subscribeUrl ? (
+              <div className="flex items-center gap-1">
+                <input readOnly value={subscribeUrl} className="text-xs border border-border rounded px-2 py-1 bg-muted/40 w-52 text-muted-foreground" onFocus={(e) => e.target.select()} />
+                <button onClick={copyUrl} className="px-2 py-1 text-xs font-medium border border-border rounded-md hover:bg-muted transition-colors">{copied ? "Copied!" : "Copy"}</button>
+              </div>
+            ) : (
+              <button onClick={subscribe} className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-border rounded-md hover:bg-muted transition-colors">
+                <CalendarDays className="h-4 w-4" /> Subscribe (iCal)
+              </button>
+            )}
+          </div>
+        </div>
 
       <div className="mb-4 hidden md:block">
         <Legend />

@@ -20,6 +20,8 @@ export default withAuth(
     // Client routes - only for clients (or admins who are impersonating)
     if (
       (pathname.startsWith("/dashboard") ||
+        pathname.startsWith("/crm") ||
+        pathname.startsWith("/marketing") ||
         pathname.startsWith("/seo") ||
         pathname.startsWith("/keywords") ||
         pathname.startsWith("/brand-book") ||
@@ -71,5 +73,5 @@ export default withAuth(
 );
 
 export const config = {
-  matcher: ["/admin/:path*", "/super-admin/:path*", "/dashboard/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/gmb", "/gmb/:path*", "/ai-visibility", "/ai-visibility/:path*", "/tasks/:path*", "/calendar", "/calendar/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*", "/profile/:path*", "/timeline", "/timeline/:path*", "/messages", "/messages/:path*", "/meetings", "/meetings/:path*", "/files", "/files/:path*", "/forms", "/forms/:path*", "/support", "/support/:path*", "/knowledge-base", "/knowledge-base/:path*", "/activity", "/activity/:path*", "/api/files", "/api/files/:path*", "/api/team", "/api/calendar-events", "/api/search", "/api/notifications", "/api/notifications/:path*"],
+  matcher: ["/admin/:path*", "/super-admin/:path*", "/dashboard/:path*", "/crm", "/crm/:path*", "/marketing", "/marketing/:path*", "/seo/:path*", "/keywords/:path*", "/brand-book/:path*", "/reports/:path*", "/gmb", "/gmb/:path*", "/ai-visibility", "/ai-visibility/:path*", "/tasks/:path*", "/calendar", "/calendar/:path*", "/projects/:path*", "/time/:path*", "/approvals/:path*", "/proposals/:path*", "/invoices/:path*", "/profile/:path*", "/timeline", "/timeline/:path*", "/messages", "/messages/:path*", "/meetings", "/meetings/:path*", "/files", "/files/:path*", "/forms", "/forms/:path*", "/support", "/support/:path*", "/knowledge-base", "/knowledge-base/:path*", "/activity", "/activity/:path*", "/api/files", "/api/files/:path*", "/api/team", "/api/calendar-events", "/api/search", "/api/notifications", "/api/notifications/:path*"],
 };

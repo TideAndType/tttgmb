@@ -3,6 +3,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 import { projectTimeMap } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,9 @@ export async function GET() {
   const user = session.user as any;
 
   if ((user.role === "ADMIN" || user.role === "SUPER_ADMIN")) {
+    const scope = await getAgencyScope(session);
     const projects = await prisma.project.findMany({
+      where: scope.clientUserIds === null ? {} : { userId: { in: scope.clientUserIds } },
       include: {
         user: { select: { name: true, companyName: true } },
         _count: { select: { messages: true, cards: true } },

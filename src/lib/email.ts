@@ -269,3 +269,40 @@ export async function sendPasswordResetEmail(
     console.error("Password reset email failed:", err);
   }
 }
+
+// New lead captured from an embedded form — notify the business.
+export async function sendLeadNotificationEmail(
+  to: string, leadName: string, leadEmail: string | null, leadPhone: string | null, source: string, portalUrl: string
+): Promise<void> {
+  try {
+    const details = [leadEmail && `Email: ${leadEmail}`, leadPhone && `Phone: ${leadPhone}`, `Source: ${source}`].filter(Boolean).join("<br>");
+    const html = buildHtml("New lead captured", `<strong>${leadName}</strong> just came in.<br><br>${details}`, "View in CRM", portalUrl);
+    await sendMail(to, `New lead: ${leadName}`, html);
+  } catch (err) {
+    console.error("Lead notification email failed:", err);
+  }
+}
+
+// Booking confirmation — to the person who booked.
+export async function sendBookingConfirmationEmail(
+  to: string, name: string, businessName: string, whenLabel: string
+): Promise<void> {
+  try {
+    const html = buildHtml("Your booking is confirmed", `Hi ${name},<br><br>Your meeting with <strong>${businessName}</strong> is confirmed for:<br><br><strong>${whenLabel}</strong><br><br>We look forward to speaking with you.`, "Add to calendar", "#");
+    await sendMail(to, `Booking confirmed — ${whenLabel}`, html);
+  } catch (err) {
+    console.error("Booking confirmation email failed:", err);
+  }
+}
+
+// New booking — notify the business.
+export async function sendBookingNotificationEmail(
+  to: string, name: string, email: string, whenLabel: string, portalUrl: string
+): Promise<void> {
+  try {
+    const html = buildHtml("New booking", `<strong>${name}</strong> (${email}) booked a meeting for:<br><br><strong>${whenLabel}</strong>`, "View bookings", portalUrl);
+    await sendMail(to, `New booking: ${name} — ${whenLabel}`, html);
+  } catch (err) {
+    console.error("Booking notification email failed:", err);
+  }
+}

@@ -61,12 +61,21 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!isAdmin(session)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const { calendarId, title, date, description } = await req.json();
+  const { calendarId, title, date, endDate, recurrence, description } = await req.json();
   if (!calendarId || !title || !date) {
     return NextResponse.json({ error: "calendarId, title and date are required" }, { status: 400 });
   }
+  const rec = recurrence === "weekly" || recurrence === "monthly" ? recurrence : null;
+  const end = endDate ? new Date(endDate) : null;
   const event = await prisma.calendarEvent.create({
-    data: { calendarId, title: String(title).trim(), date: new Date(date), description: description || null },
+    data: {
+      calendarId,
+      title: String(title).trim(),
+      date: new Date(date),
+      endDate: end && end >= new Date(date) ? end : null,
+      recurrence: rec,
+      description: description || null,
+    },
     include: { calendar: { select: { id: true, name: true, color: true } } },
   });
   return NextResponse.json({ event }, { status: 201 });

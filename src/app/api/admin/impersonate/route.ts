@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,13 @@ export async function POST(req: NextRequest) {
   });
 
   if (!clientUser || clientUser.role !== "CLIENT") {
+    return NextResponse.json({ error: "Client not found" }, { status: 404 });
+  }
+
+  // Enforce agency isolation: an admin may only impersonate clients in their
+  // own agency (super admin may impersonate anyone).
+  const scope = await getAgencyScope(session);
+  if (scope.clientUserIds !== null && !scope.clientUserIds.includes(clientId)) {
     return NextResponse.json({ error: "Client not found" }, { status: 404 });
   }
 

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { google } from "googleapis";
+import { resolveRange } from "@/lib/date-range";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ function formatDate(d: Date) {
   return d.toISOString().split("T")[0];
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -46,9 +47,10 @@ export async function GET() {
   const auth = getOAuth2Client(user.gaAccessToken, user.gaRefreshToken);
   const analyticsData = google.analyticsdata({ version: "v1beta", auth });
 
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 29);
+  const { startDate, endDate, label: rangeLabel } = resolveRange(
+    new URL(req.url).searchParams,
+    30
+  );
 
   try {
     // Fetch aggregate metrics
@@ -106,7 +108,7 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ metrics, timeSeries });
+    return NextResponse.json({ metrics, timeSeries, rangeLabel });
   } catch (error: any) {
     console.error("GA data error:", error);
     return NextResponse.json({ error: "Failed to fetch GA data" }, { status: 500 });

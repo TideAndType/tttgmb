@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCompanyUserIds } from "@/lib/company";
+import { getAgencyScope } from "@/lib/agency-scope";
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,8 @@ export async function GET(req: NextRequest) {
   let where: any = {};
   if (isAdmin(u) && !viewing) {
     if (status) where.status = status;
+    const scope = await getAgencyScope(session);
+    if (scope.clientUserIds !== null) where.userId = { in: scope.clientUserIds };
   } else {
     const ids = await getCompanyUserIds(effectiveId(session));
     where.userId = { in: ids };

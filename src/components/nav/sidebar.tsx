@@ -33,6 +33,19 @@ import {
   Video,
   Activity,
   ClipboardList,
+  Bookmark,
+  Sparkles,
+  Target,
+  Swords,
+  Star,
+  Workflow,
+  Globe,
+  Plug,
+  KanbanSquare,
+  Users,
+  FileInput,
+  CalendarClock,
+  Mail,
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
@@ -45,7 +58,36 @@ const navGroups: {
     title: "Overview",
     items: [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { href: "/activity", label: "Activity", icon: Activity },
+      { href: "/my-bar", label: "My Bar", icon: Bookmark },
+      { href: "/activity", label: "Everything", icon: Activity },
+    ],
+  },
+  {
+    title: "Marketing OS",
+    items: [
+      { href: "/marketing", label: "Workspace", icon: Sparkles },
+      { href: "/marketing/assistant", label: "AI Assistant", icon: MessageCircle },
+      { href: "/marketing/content", label: "Content Studio", icon: FileText },
+      { href: "/marketing/calendar", label: "Content Calendar", icon: CalendarDays },
+      { href: "/marketing/tasks", label: "Task Engine", icon: Target },
+      { href: "/marketing/competitors", label: "Competitors", icon: Swords },
+      { href: "/marketing/reputation", label: "Reputation", icon: Star },
+      { href: "/marketing/website", label: "Website Advisor", icon: Globe },
+      { href: "/marketing/seo-scan", label: "SEO & Local Scan", icon: Search },
+      { href: "/marketing/reports", label: "Reports", icon: BarChart2 },
+      { href: "/marketing/automations", label: "Automations", icon: Workflow },
+      { href: "/marketing/knowledge", label: "Knowledge Base", icon: BookOpen },
+    ],
+  },
+  {
+    title: "CRM",
+    items: [
+      { href: "/crm", label: "Pipeline", icon: KanbanSquare },
+      { href: "/crm/contacts", label: "Contacts", icon: Users },
+      { href: "/crm/forms", label: "Forms", icon: FileInput },
+      { href: "/crm/booking", label: "Booking", icon: CalendarClock },
+      { href: "/crm/campaigns", label: "Email Campaigns", icon: Mail },
+      { href: "/crm/workflows", label: "Workflows", icon: Workflow },
     ],
   },
   {
@@ -202,6 +244,19 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         >
           <User className="h-4 w-4 flex-shrink-0" />
           Profile
+        </Link>
+        <Link
+          href="/settings"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Plug className="h-4 w-4 flex-shrink-0" />
+          Settings
         </Link>
         <div className="flex items-center justify-between">
           <button

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getAgencyScope } from "@/lib/agency-scope";
 
 export const dynamic = "force-dynamic";
 
@@ -44,36 +45,43 @@ export async function GET(req: NextRequest) {
     100
   );
 
+  // Agency isolation: restrict all activity to the admin's own clients.
+  const scope = await getAgencyScope(session);
+  const ids = scope.clientUserIds;
+  const userScope = ids === null ? {} : { userId: { in: ids } };
+  const projectScope = ids === null ? {} : { project: { is: { userId: { in: ids } } } };
+  const delivScope = ids === null ? {} : { deliverable: { is: { userId: { in: ids } } } };
+
   const [tasks, proposals, invoices, deliverables, messages, timeEntries, approvalComments, clients] =
     await Promise.all([
       prisma.task.findMany({
-        take: 30,
+        take: 30, where: userScope,
         include: { user: { select: { id: true, name: true, companyName: true } } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.proposal.findMany({
         take: 30,
-        where: { status: { notIn: ["DRAFT"] } },
+        where: { status: { notIn: ["DRAFT"] }, ...userScope },
         include: { user: { select: { id: true, name: true, companyName: true } } },
         orderBy: { updatedAt: "desc" },
       }),
       prisma.invoice.findMany({
-        take: 30,
+        take: 30, where: userScope,
         include: { user: { select: { id: true, name: true, companyName: true } } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.deliverable.findMany({
-        take: 30,
+        take: 30, where: userScope,
         include: { user: { select: { id: true, name: true, companyName: true } } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.message.findMany({
-        take: 20,
+        take: 20, where: projectScope,
         include: { project: { select: { name: true, userId: true } } },
         orderBy: { createdAt: "desc" },
       }),
       prisma.timeEntry.findMany({
-        take: 30,
+        take: 30, where: userScope,
         include: {
           user: { select: { id: true, name: true, companyName: true } },
           task: { select: { title: true } },
@@ -82,7 +90,7 @@ export async function GET(req: NextRequest) {
       }),
       prisma.approvalComment.findMany({
         take: 20,
-        where: { action: { in: ["approved", "changes_requested"] } },
+        where: { action: { in: ["approved", "changes_requested"] }, ...delivScope },
         include: {
           deliverable: {
             include: { user: { select: { id: true, name: true, companyName: true } } },
@@ -91,7 +99,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
       }),
       prisma.user.findMany({
-        where: { role: "CLIENT" },
+        where: ids === null ? { role: "CLIENT" } : { id: { in: ids } },
         select: { id: true, name: true, companyName: true },
         orderBy: { name: "asc" },
       }),
