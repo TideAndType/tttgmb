@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Trash2, Phone, Mail, StickyNote, CalendarClock, MessageSquare, Send } from "lucide-react";
+import { ArrowLeft, Save, Trash2, Phone, Mail, StickyNote, CalendarClock, MessageSquare, Send, Workflow } from "lucide-react";
 
 interface Activity { id: string; type: string; body: string; authorName: string | null; createdAt: string; }
 interface Opp { id: string; title: string; value: number; status: string; pipeline: { name: string }; stage: { name: string; color: string }; }
@@ -30,6 +30,9 @@ export default function ContactDetailPage() {
   const [smsBody, setSmsBody] = useState("");
   const [smsErr, setSmsErr] = useState("");
   const [sending, setSending] = useState(false);
+  const [workflows, setWorkflows] = useState<{ id: string; name: string; enabled: boolean }[]>([]);
+  const [wfPick, setWfPick] = useState("");
+  const [wfMsg, setWfMsg] = useState("");
 
   const loadSms = () => fetch(`/api/crm/contacts/${id}/sms`).then((r) => r.json()).then((d) => setSms(d.messages ?? [])).catch(() => {});
 
@@ -37,7 +40,21 @@ export default function ContactDetailPage() {
     const r = await fetch(`/api/crm/contacts/${id}`);
     if (r.ok) setC((await r.json()).contact);
   };
-  useEffect(() => { load(); loadSms(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => {
+    load(); loadSms();
+    fetch("/api/crm/workflows").then((r) => r.json()).then((d) => setWorkflows((d.workflows ?? []).map((w: any) => ({ id: w.id, name: w.name, enabled: w.enabled })))).catch(() => {});
+    /* eslint-disable-next-line */
+  }, [id]);
+
+  const enroll = async () => {
+    if (!wfPick) return;
+    setWfMsg("");
+    const r = await fetch(`/api/crm/workflows/${wfPick}/enroll`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ contactId: id }) });
+    const d = await r.json();
+    setWfMsg(r.ok ? "Enrolled ✓" : (d.error || "Couldn't enroll."));
+    if (r.ok) { setWfPick(""); load(); }
+    setTimeout(() => setWfMsg(""), 3000);
+  };
 
   const sendSmsMsg = async () => {
     if (!smsBody.trim()) return;
@@ -152,6 +169,22 @@ export default function ContactDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {workflows.length > 0 && (
+            <Card>
+              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Workflow className="h-4 w-4 text-primary" /> Add to workflow</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex gap-2">
+                  <select value={wfPick} onChange={(e) => setWfPick(e.target.value)} className="flex-1 border border-input rounded-md px-3 py-2 text-sm bg-background h-10">
+                    <option value="">Choose a workflow…</option>
+                    {workflows.map((w) => <option key={w.id} value={w.id}>{w.name}{w.enabled ? "" : " (off)"}</option>)}
+                  </select>
+                  <Button size="sm" onClick={enroll} disabled={!wfPick}>Enroll</Button>
+                </div>
+                {wfMsg && <p className="text-xs text-muted-foreground">{wfMsg}</p>}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 
