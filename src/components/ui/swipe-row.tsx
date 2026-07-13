@@ -47,8 +47,8 @@ export function SwipeRow({ children, actions }: { children: React.ReactNode; act
         {actions.map((a) => (
           <button
             key={a.label}
-            onClick={() => { setDx(0); a.onAction(); }}
-            className={`w-[72px] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold ${a.className}`}
+            onClick={() => { setDx(0); try { navigator.vibrate?.(12); } catch { /* no haptics */ } a.onAction(); }}
+            className={`w-[72px] flex flex-col items-center justify-center gap-1 text-[11px] font-semibold active:opacity-80 transition-opacity ${a.className}`}
           >
             {a.icon}
             {a.label}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SwipeRow } from "@/components/ui/swipe-row";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { Users, Plus, Search, KanbanSquare, Mail, Phone, Building2, Trash2 } from "lucide-react";
 
 interface Contact {
@@ -50,6 +51,7 @@ export default function ContactsPage() {
   };
 
   return (
+    <PullToRefresh onRefresh={load}>
     <div className="max-w-5xl mx-auto space-y-5">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
@@ -128,5 +130,6 @@ export default function ContactsPage() {
         </div>
       )}
     </div>
+    </PullToRefresh>
   );
 }
