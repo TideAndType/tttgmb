@@ -102,7 +102,7 @@ export default function CrmBoardPage() {
       {loading ? (
         <div className="flex gap-3">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 w-64" />)}</div>
       ) : !pipeline ? null : (
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-3 overflow-x-auto pb-4 no-scrollbar snap-x-touch">
           {pipeline.stages.map((stage) => {
             const stageValue = stage.opportunities.filter((o) => o.status === "open").reduce((a, o) => a + o.value, 0);
             return (
@@ -110,7 +110,7 @@ export default function CrmBoardPage() {
                 key={stage.id}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => { if (dragId) { moveOpp(dragId, stage.id); setDragId(null); } }}
-                className="w-72 shrink-0 rounded-lg border border-border bg-surface-2 bg-muted/30 flex flex-col"
+                className="w-[80vw] max-w-72 sm:w-72 shrink-0 rounded-lg border border-border bg-muted/30 flex flex-col snap-col"
               >
                 <div className="px-3 py-2.5 border-b border-border flex items-center gap-2">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: stage.color }} />
@@ -134,10 +134,19 @@ export default function CrmBoardPage() {
                           <p className="text-xs font-semibold text-foreground mt-0.5">{money(o.value)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setStatus(o.id, o.status === "won" ? "open" : "won")} title="Won" className="text-muted-foreground hover:text-green-600"><Trophy className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => setStatus(o.id, o.status === "lost" ? "open" : "lost")} title="Lost" className="text-muted-foreground hover:text-red-600"><XCircle className="h-3.5 w-3.5" /></button>
-                        <button onClick={() => remove(o.id)} title="Delete" className="text-muted-foreground hover:text-destructive ml-auto"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <div className="flex items-center gap-2 mt-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => setStatus(o.id, o.status === "won" ? "open" : "won")} title="Won" className="p-1 -m-1 text-muted-foreground hover:text-green-600"><Trophy className="h-4 w-4" /></button>
+                        <button onClick={() => setStatus(o.id, o.status === "lost" ? "open" : "lost")} title="Lost" className="p-1 -m-1 text-muted-foreground hover:text-red-600"><XCircle className="h-4 w-4" /></button>
+                        {/* Touch devices can't HTML5-drag — native picker moves the deal. */}
+                        <select
+                          value={o.stageId}
+                          onChange={(e) => moveOpp(o.id, e.target.value)}
+                          className="md:hidden flex-1 min-w-0 text-[11px] border border-input rounded px-1 py-0.5 bg-background text-muted-foreground"
+                          aria-label="Move to stage"
+                        >
+                          {pipeline.stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                        </select>
+                        <button onClick={() => remove(o.id)} title="Delete" className="p-1 -m-1 text-muted-foreground hover:text-destructive ml-auto"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
                   ))}

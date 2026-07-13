@@ -66,7 +66,7 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto h-[calc(100vh-8rem)] flex gap-4">
+    <div className="max-w-6xl mx-auto h-[calc(100dvh-15rem)] lg:h-[calc(100vh-8rem)] flex gap-4">
       {/* Conversations */}
       <div className="hidden md:flex w-60 flex-col border border-border rounded-lg bg-card">
         <div className="p-3 border-b border-border">
