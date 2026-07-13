@@ -71,3 +71,41 @@
 @media (prefers-reduced-motion: reduce) {
   .page-transition { animation: none; }
 }
+
+/* ── Mobile app-grade polish ─────────────────────────────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* Hide scrollbars on horizontal boards while keeping momentum scroll. */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+/* Kanban column snap on touch. */
+.snap-x-touch { scroll-snap-type: x proximity; }
+.snap-col { scroll-snap-align: start; }
+
+/* Bottom tab bar (mobile only) — respects the iOS home-indicator inset. */
+.mobile-tabbar {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 45;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  background: hsl(var(--card) / 0.92);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-top: 1px solid hsl(var(--border));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.mobile-tabbar a, .mobile-tabbar button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; min-height: 56px; font-size: 10px; font-weight: 600;
+}
+/* Keep page content clear of the tab bar. */
+@media (max-width: 1023px) {
+  .has-tabbar { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+}
+
+/* On touch devices, controls revealed by hover must always be visible. */
+@media (hover: none) {
+  .group-hover\:opacity-100 { opacity: 1 !important; }
+}
