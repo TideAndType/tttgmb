@@ -59,7 +59,7 @@ export default async function ClientLayout({ children }: { children: React.React
         {/* pt-14 on mobile clears the fixed mobile top bar so the banner/content aren't hidden under it */}
         <div className="flex-1 flex flex-col overflow-auto min-w-0 pt-14 lg:pt-0">
           {impersonationBanner}
-          <div className="px-4 lg:px-8 py-3 border-b border-border bg-background flex items-center gap-2">
+          <div className="sticky top-0 z-30 px-4 lg:px-8 py-3 border-b border-border glass flex items-center gap-2">
             <div className="flex-1"><GlobalSearch /></div>
             <NotificationBell />
           </div>
