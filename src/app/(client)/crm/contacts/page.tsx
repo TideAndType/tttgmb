@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Plus, Search, KanbanSquare, Mail, Phone, Building2 } from "lucide-react";
+import { SwipeRow } from "@/components/ui/swipe-row";
+import { Users, Plus, Search, KanbanSquare, Mail, Phone, Building2, Trash2 } from "lucide-react";
 
 interface Contact {
   id: string; name: string; email: string | null; phone: string | null; company: string | null;
@@ -36,6 +37,11 @@ export default function ContactsPage() {
   };
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [filter]);
   useEffect(() => { const t = setTimeout(load, 250); return () => clearTimeout(t); /* eslint-disable-next-line */ }, [q]);
+
+  const remove = async (id: string) => {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    await fetch(`/api/crm/contacts/${id}`, { method: "DELETE" });
+  };
 
   const add = async () => {
     if (!form.name.trim()) return;
@@ -94,7 +100,14 @@ export default function ContactsPage() {
       ) : (
         <div className="space-y-2">
           {contacts.map((c) => (
-            <Link key={c.id} href={`/crm/contacts/${c.id}`} className="block rounded-lg border border-border bg-card p-3 hover:border-primary/50 transition-colors">
+            <SwipeRow
+              key={c.id}
+              actions={[
+                ...(c.phone ? [{ label: "Call", icon: <Phone className="h-4 w-4" />, className: "bg-primary text-primary-foreground", onAction: () => { window.location.href = `tel:${c.phone}`; } }] : []),
+                { label: "Delete", icon: <Trash2 className="h-4 w-4" />, className: "bg-red-600 text-white", onAction: () => remove(c.id) },
+              ]}
+            >
+            <Link href={`/crm/contacts/${c.id}`} className="block rounded-lg border border-border bg-card p-3 hover:border-primary/50 transition-colors">
               <div className="flex items-center gap-3 flex-wrap">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -110,6 +123,7 @@ export default function ContactsPage() {
                 {(c._count?.opportunities ?? 0) > 0 && <span className="text-xs text-muted-foreground shrink-0">{c._count!.opportunities} deal{c._count!.opportunities !== 1 ? "s" : ""}</span>}
               </div>
             </Link>
+            </SwipeRow>
           ))}
         </div>
       )}

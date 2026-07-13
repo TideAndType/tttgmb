@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const opportunity = await prisma.opportunity.update({
     where: { id: params.id }, data,
-    include: { contact: { select: { id: true, name: true, company: true } } },
+    include: { contact: { select: { id: true, name: true, company: true, phone: true, email: true } } },
   });
   return NextResponse.json({ opportunity });
 }

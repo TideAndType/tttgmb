@@ -27,7 +27,7 @@ export async function GET() {
         include: {
           opportunities: {
             orderBy: { position: "asc" },
-            include: { contact: { select: { id: true, name: true, company: true } } },
+            include: { contact: { select: { id: true, name: true, company: true, phone: true, email: true } } },
           },
         },
       },
@@ -43,7 +43,7 @@ export async function GET() {
     });
     pipelines = await prisma.crmPipeline.findMany({
       where: { userId }, orderBy: { position: "asc" },
-      include: { stages: { orderBy: { position: "asc" }, include: { opportunities: { orderBy: { position: "asc" }, include: { contact: { select: { id: true, name: true, company: true } } } } } } },
+      include: { stages: { orderBy: { position: "asc" }, include: { opportunities: { orderBy: { position: "asc" }, include: { contact: { select: { id: true, name: true, company: true, phone: true, email: true } } } } } } },
     });
   }
   return NextResponse.json({ pipelines });

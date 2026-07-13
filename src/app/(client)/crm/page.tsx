@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { KanbanSquare, Plus, Users, Trophy, XCircle, GripVertical, Trash2 } from "lucide-react";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { KanbanSquare, Plus, Users, Trophy, XCircle, GripVertical, Trash2, Phone, Mail, MessageSquare, User } from "lucide-react";
 
-interface Contact { id: string; name: string; company: string | null; }
+interface Contact { id: string; name: string; company: string | null; phone?: string | null; email?: string | null; }
 interface Opp { id: string; title: string; value: number; status: string; stageId: string; position: number; contact: Contact | null; }
 interface Stage { id: string; name: string; color: string; position: number; opportunities: Opp[]; }
 interface Pipeline { id: string; name: string; stages: Stage[]; }
@@ -24,6 +25,17 @@ export default function CrmBoardPage() {
   const [adding, setAdding] = useState<string | null>(null); // stageId
   const [form, setForm] = useState({ title: "", value: "", contactId: "" });
   const [dragId, setDragId] = useState<string | null>(null);
+  const [openOpp, setOpenOpp] = useState<Opp | null>(null);
+  const [sheetDraft, setSheetDraft] = useState({ title: "", value: "" });
+
+  const openSheet = (o: Opp) => { setOpenOpp(o); setSheetDraft({ title: o.title, value: String(o.value) }); };
+  const saveSheet = async () => {
+    if (!openOpp) return;
+    const patch = { title: sheetDraft.title, value: Number(sheetDraft.value) || 0 };
+    setPipelines((prev) => prev.map((p) => ({ ...p, stages: p.stages.map((s) => ({ ...s, opportunities: s.opportunities.map((o) => o.id === openOpp.id ? { ...o, ...patch } : o) })) })));
+    setOpenOpp(null);
+    await fetch(`/api/crm/opportunities/${openOpp.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+  };
 
   const load = useCallback(async () => {
     const d = await fetch("/api/crm/pipelines").then((r) => r.json());
@@ -124,6 +136,7 @@ export default function CrmBoardPage() {
                       key={o.id}
                       draggable
                       onDragStart={() => setDragId(o.id)}
+                      onClick={() => openSheet(o)}
                       className={`group rounded-md border border-border bg-card p-2.5 cursor-grab active:cursor-grabbing ${o.status === "won" ? "border-green-500/50" : o.status === "lost" ? "opacity-50" : ""}`}
                     >
                       <div className="flex items-start gap-1.5">
@@ -134,7 +147,7 @@ export default function CrmBoardPage() {
                           <p className="text-xs font-semibold text-foreground mt-0.5">{money(o.value)}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2 mt-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setStatus(o.id, o.status === "won" ? "open" : "won")} title="Won" className="p-1 -m-1 text-muted-foreground hover:text-green-600"><Trophy className="h-4 w-4" /></button>
                         <button onClick={() => setStatus(o.id, o.status === "lost" ? "open" : "lost")} title="Lost" className="p-1 -m-1 text-muted-foreground hover:text-red-600"><XCircle className="h-4 w-4" /></button>
                         {/* Touch devices can't HTML5-drag — native picker moves the deal. */}
@@ -170,6 +183,67 @@ export default function CrmBoardPage() {
           })}
         </div>
       )}
+
+      {/* Deal detail sheet (tap a card) */}
+      <BottomSheet open={!!openOpp} onClose={() => setOpenOpp(null)} title="Deal">
+        {openOpp && (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground">Title</label>
+              <Input value={sheetDraft.title} onChange={(e) => setSheetDraft((d) => ({ ...d, title: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Value ($)</label>
+                <Input type="number" value={sheetDraft.value} onChange={(e) => setSheetDraft((d) => ({ ...d, value: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Stage</label>
+                <select
+                  value={openOpp.stageId}
+                  onChange={(e) => { moveOpp(openOpp.id, e.target.value); setOpenOpp((o) => o ? { ...o, stageId: e.target.value } : o); }}
+                  className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background h-10"
+                >
+                  {pipeline?.stages.map((st) => <option key={st.id} value={st.id}>{st.name}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {openOpp.contact && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-sm font-medium text-foreground">{openOpp.contact.name}</p>
+                {openOpp.contact.company && <p className="text-xs text-muted-foreground">{openOpp.contact.company}</p>}
+                <div className="flex gap-2 mt-2">
+                  {openOpp.contact.phone && (
+                    <>
+                      <a href={`tel:${openOpp.contact.phone}`} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border py-2 text-sm text-foreground"><Phone className="h-4 w-4 text-primary" /> Call</a>
+                      <a href={`sms:${openOpp.contact.phone}`} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border py-2 text-sm text-foreground"><MessageSquare className="h-4 w-4 text-primary" /> Text</a>
+                    </>
+                  )}
+                  {openOpp.contact.email && (
+                    <a href={`mailto:${openOpp.contact.email}`} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-md border border-border py-2 text-sm text-foreground"><Mail className="h-4 w-4 text-primary" /> Email</a>
+                  )}
+                </div>
+                <Link href={`/crm/contacts/${openOpp.contact.id}`} className="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline"><User className="h-3.5 w-3.5" /> View contact</Link>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="outline" className={`flex-1 ${openOpp.status === "won" ? "border-green-500 text-green-600" : ""}`} onClick={() => { setStatus(openOpp.id, openOpp.status === "won" ? "open" : "won"); setOpenOpp((o) => o ? { ...o, status: o.status === "won" ? "open" : "won" } : o); }}>
+                <Trophy className="h-4 w-4 mr-1.5" /> {openOpp.status === "won" ? "Won ✓" : "Mark won"}
+              </Button>
+              <Button variant="outline" className={`flex-1 ${openOpp.status === "lost" ? "border-red-500 text-red-600" : ""}`} onClick={() => { setStatus(openOpp.id, openOpp.status === "lost" ? "open" : "lost"); setOpenOpp((o) => o ? { ...o, status: o.status === "lost" ? "open" : "lost" } : o); }}>
+                <XCircle className="h-4 w-4 mr-1.5" /> {openOpp.status === "lost" ? "Lost ✓" : "Mark lost"}
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <Button className="flex-1" onClick={saveSheet}>Save</Button>
+              <Button variant="ghost" className="text-muted-foreground hover:text-destructive" onClick={() => { remove(openOpp.id); setOpenOpp(null); }}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }
