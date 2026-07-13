@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { TaskCard } from "@/components/tasks/task-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckSquare } from "lucide-react";
+import { SwipeRow } from "@/components/ui/swipe-row";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { CheckSquare, RotateCcw, Check } from "lucide-react";
 
 interface Task {
   id: string;
@@ -65,6 +67,7 @@ export default function TasksPage() {
   const completedTasks = tasks.filter((t) => t.status === "COMPLETED");
 
   return (
+    <PullToRefresh onRefresh={fetchTasks}>
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Tasks</h1>
@@ -113,12 +116,12 @@ export default function TasksPage() {
             ) : (
               <div className="space-y-4">
                 {activeTasks.map((task) => (
-                  <TaskCard
+                  <SwipeRow
                     key={task.id}
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    loading={updating === task.id}
-                  />
+                    actions={[{ label: "Done", icon: <Check className="h-4 w-4" />, className: "bg-green-600 text-white", onAction: () => handleStatusChange(task.id, "COMPLETED") }]}
+                  >
+                    <TaskCard task={task} onStatusChange={handleStatusChange} loading={updating === task.id} />
+                  </SwipeRow>
                 ))}
               </div>
             )}
@@ -132,12 +135,12 @@ export default function TasksPage() {
             ) : (
               <div className="space-y-4">
                 {completedTasks.map((task) => (
-                  <TaskCard
+                  <SwipeRow
                     key={task.id}
-                    task={task}
-                    onStatusChange={handleStatusChange}
-                    loading={updating === task.id}
-                  />
+                    actions={[{ label: "Reopen", icon: <RotateCcw className="h-4 w-4" />, className: "bg-primary text-primary-foreground", onAction: () => handleStatusChange(task.id, "PENDING") }]}
+                  >
+                    <TaskCard task={task} onStatusChange={handleStatusChange} loading={updating === task.id} />
+                  </SwipeRow>
                 ))}
               </div>
             )}
@@ -145,5 +148,6 @@ export default function TasksPage() {
         </Tabs>
       )}
     </div>
+    </PullToRefresh>
   );
 }

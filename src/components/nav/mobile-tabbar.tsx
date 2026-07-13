@@ -123,7 +123,7 @@ export function MobileTabBar() {
           const Icon = t.icon;
           const active = isActive(t.href) && !moreOpen;
           return (
-            <Link key={t.href} href={t.href} className={cn(active ? "text-primary" : "text-muted-foreground")}>
+            <Link key={t.href} href={t.href} className={cn("active:scale-90 transition-transform", active ? "text-primary" : "text-muted-foreground")}>
               <Icon className="h-5 w-5" />
               {t.label}
             </Link>

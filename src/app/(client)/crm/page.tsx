@@ -72,6 +72,7 @@ export default function CrmBoardPage() {
   };
 
   const setStatus = async (oppId: string, status: string) => {
+    try { navigator.vibrate?.(12); } catch { /* no haptics */ }
     setPipelines((prev) => prev.map((p) => ({ ...p, stages: p.stages.map((s) => ({ ...s, opportunities: s.opportunities.map((o) => o.id === oppId ? { ...o, status } : o) })) })));
     await fetch(`/api/crm/opportunities/${oppId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
   };
@@ -137,7 +138,7 @@ export default function CrmBoardPage() {
                       draggable
                       onDragStart={() => setDragId(o.id)}
                       onClick={() => openSheet(o)}
-                      className={`group rounded-md border border-border bg-card p-2.5 cursor-grab active:cursor-grabbing ${o.status === "won" ? "border-green-500/50" : o.status === "lost" ? "opacity-50" : ""}`}
+                      className={`group rounded-md border border-border bg-card p-2.5 cursor-grab active:cursor-grabbing active:scale-[0.98] transition-transform ${o.status === "won" ? "border-green-500/50" : o.status === "lost" ? "opacity-50" : ""}`}
                     >
                       <div className="flex items-start gap-1.5">
                         <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50 mt-0.5 shrink-0" />
