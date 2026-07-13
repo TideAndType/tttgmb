@@ -3,51 +3,65 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light theme (default) */
+  /* Light theme — a considered teal-tinted neutral system. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 190 30% 98.5%;
+    --foreground: 200 26% 13%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 200 26% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 174 72% 40%;
+    --popover-foreground: 200 26% 13%;
+    --primary: 173 80% 36%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 42%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --destructive: 0 72% 51%;
+    --secondary: 195 30% 95%;
+    --secondary-foreground: 200 26% 16%;
+    --muted: 195 28% 95.5%;
+    --muted-foreground: 200 12% 44%;
+    --accent: 188 40% 94%;
+    --accent-foreground: 200 30% 18%;
+    --destructive: 0 74% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 174 72% 40%;
-    --radius: 0.5rem;
+    --border: 200 22% 90%;
+    --input: 200 22% 89%;
+    --ring: 173 80% 38%;
+    --radius: 0.75rem;
+
+    --shadow-color: 200 40% 20%;
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+    --shadow: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 4px 12px hsl(var(--shadow-color) / 0.06);
+    --shadow-md: 0 2px 4px hsl(var(--shadow-color) / 0.05), 0 8px 20px hsl(var(--shadow-color) / 0.08);
+    --shadow-lg: 0 4px 8px hsl(var(--shadow-color) / 0.06), 0 16px 36px hsl(var(--shadow-color) / 0.11);
+    --shadow-xl: 0 8px 16px hsl(var(--shadow-color) / 0.08), 0 28px 56px hsl(var(--shadow-color) / 0.16);
   }
 
-  /* Dark theme */
+  /* Dark theme — deep teal-navy with real elevation layering. */
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 47% 14%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 174 72% 56%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 20%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 20%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62% 55%;
+    --background: 200 30% 7%;
+    --foreground: 190 20% 96%;
+    --card: 200 26% 10.5%;
+    --card-foreground: 190 20% 96%;
+    --popover: 200 26% 11%;
+    --popover-foreground: 190 20% 96%;
+    --primary: 172 76% 55%;
+    --primary-foreground: 200 45% 8%;
+    --secondary: 200 22% 16%;
+    --secondary-foreground: 190 20% 96%;
+    --muted: 200 20% 15%;
+    --muted-foreground: 200 13% 63%;
+    --accent: 195 30% 18%;
+    --accent-foreground: 190 24% 96%;
+    --destructive: 0 62% 52%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 22%;
-    --input: 217 33% 22%;
-    --ring: 174 72% 56%;
+    --border: 200 18% 19%;
+    --input: 200 18% 20%;
+    --ring: 172 76% 50%;
+
+    --shadow-color: 200 60% 2%;
+    --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.4);
+    --shadow: 0 1px 2px hsl(var(--shadow-color) / 0.35), 0 4px 12px hsl(var(--shadow-color) / 0.45);
+    --shadow-md: 0 2px 4px hsl(var(--shadow-color) / 0.4), 0 8px 20px hsl(var(--shadow-color) / 0.5);
+    --shadow-lg: 0 4px 8px hsl(var(--shadow-color) / 0.45), 0 16px 36px hsl(var(--shadow-color) / 0.55);
+    --shadow-xl: 0 8px 16px hsl(var(--shadow-color) / 0.5), 0 28px 56px hsl(var(--shadow-color) / 0.6);
   }
 }
 
@@ -57,7 +71,34 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+  ::selection { background: hsl(var(--primary) / 0.22); }
+  /* Consistent, calm keyboard focus. */
+  :focus-visible { outline: 2px solid hsl(var(--ring) / 0.6); outline-offset: 2px; border-radius: 4px; }
+  /* Refined scrollbars (desktop). */
+  @media (pointer: fine) {
+    * { scrollbar-width: thin; scrollbar-color: hsl(var(--border)) transparent; }
+    *::-webkit-scrollbar { width: 10px; height: 10px; }
+    *::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 999px; border: 3px solid hsl(var(--background)); }
+    *::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+    *::-webkit-scrollbar-track { background: transparent; }
+  }
+  h1, h2, h3 { letter-spacing: -0.018em; }
+}
+
+/* Softer, layered elevation — remaps Tailwind's shadow utilities to the token
+   scale so every existing card/button/popover is upgraded at once. */
+@layer utilities {
+  .shadow-sm { box-shadow: var(--shadow-sm); }
+  .shadow { box-shadow: var(--shadow); }
+  .shadow-md { box-shadow: var(--shadow-md); }
+  .shadow-lg { box-shadow: var(--shadow-lg); }
+  .shadow-xl { box-shadow: var(--shadow-xl); }
+  .shadow-2xl { box-shadow: var(--shadow-xl); }
 }
 
 /* Subtle page-transition on route change (see PageTransition). */
@@ -114,3 +155,12 @@ button, a, [role="button"] {
 @keyframes sheet-up { from { transform: translateY(24px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
 .sheet-in { animation: sheet-up .22s ease-out; }
 @media (prefers-reduced-motion: reduce) { .sheet-in { animation: none; } }
+
+/* Interactive card hover-lift (opt-in via .card-lift). */
+.card-lift { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+@media (hover: hover) {
+  .card-lift:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: hsl(var(--primary) / 0.35); }
+}
+
+/* Frosted top bars / sticky headers read as glass over content. */
+.glass { background: hsl(var(--card) / 0.72); -webkit-backdrop-filter: saturate(140%) blur(12px); backdrop-filter: saturate(140%) blur(12px); }

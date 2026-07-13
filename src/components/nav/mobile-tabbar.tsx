@@ -124,13 +124,17 @@ export function MobileTabBar() {
           const active = isActive(t.href) && !moreOpen;
           return (
             <Link key={t.href} href={t.href} className={cn("active:scale-90 transition-transform", active ? "text-primary" : "text-muted-foreground")}>
-              <Icon className="h-5 w-5" />
+              <span className={cn("flex items-center justify-center rounded-full px-4 py-1 transition-colors", active && "bg-primary/12")}>
+                <Icon className="h-5 w-5" />
+              </span>
               {t.label}
             </Link>
           );
         })}
-        <button onClick={() => setMoreOpen((o) => !o)} className={cn(moreOpen ? "text-primary" : "text-muted-foreground")} aria-label="More">
-          {moreOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        <button onClick={() => setMoreOpen((o) => !o)} className={cn("active:scale-90 transition-transform", moreOpen ? "text-primary" : "text-muted-foreground")} aria-label="More">
+          <span className={cn("flex items-center justify-center rounded-full px-4 py-1 transition-colors", moreOpen && "bg-primary/12")}>
+            {moreOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </span>
           More
         </button>
       </nav>
