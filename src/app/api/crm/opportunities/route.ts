@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       value: Number(b.value) || 0,
       position: count,
     },
-    include: { contact: { select: { id: true, name: true, company: true } } },
+    include: { contact: { select: { id: true, name: true, company: true, phone: true, email: true } } },
   });
   return NextResponse.json({ opportunity: opp });
 }

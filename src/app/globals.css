@@ -109,3 +109,8 @@ button, a, [role="button"] {
 @media (hover: none) {
   .group-hover\:opacity-100 { opacity: 1 !important; }
 }
+
+/* Bottom sheet slide-up. */
+@keyframes sheet-up { from { transform: translateY(24px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+.sheet-in { animation: sheet-up .22s ease-out; }
+@media (prefers-reduced-motion: reduce) { .sheet-in { animation: none; } }
